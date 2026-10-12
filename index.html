@@ -12,7 +12,7 @@
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.dataset.heroIntro = 'pending';
     addEventListener('error', event => {
       const source = event.target?.getAttribute?.('src') || event.filename || '';
-      if (/(?:^|\/)(?:galaxy|app)\.js(?:[?#]|$)/.test(source)) {
+      if (/(?:^|\/)(?:galaxy|app|particle-logos)\.js(?:[?#]|$)/.test(source)) {
         document.documentElement.dataset.heroIntro = 'complete';
         document.documentElement.dataset.heroIntroFailed = 'true';
         const title = document.getElementById('hero-title');
@@ -22,7 +22,8 @@
   </script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preload" href="space-grotesk-regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="modulepreload" href="galaxy.js">
+  <link rel="modulepreload" href="galaxy.js?v=ai-icons-1">
+  <link rel="modulepreload" href="particle-logos.js">
   <link rel="modulepreload" href="vendor/three.module.min.js">
   <link rel="modulepreload" href="vendor/three.core.min.js">
   <link rel="stylesheet" href="styles.css">
@@ -78,10 +79,20 @@
       <div class="particle-caption"><p class="eyebrow mono">POSSIBILITIES IN BLOOM</p><h2 id="particle-blossom-title" tabindex="-1">让可能，继续生长。</h2><p id="particle-blossom-hint">每一颗星点，都与另一种可能相连。</p></div>
     </section>
 
+    <section id="particle-deepseek" class="particle-interlude" aria-labelledby="particle-deepseek-title">
+      <button class="particle-hit" data-particle-scene="deepseek" aria-label="DeepSeek 鲸鱼粒子图标，可拖动或用方向键旋转，Home 键重置"></button>
+      <div class="particle-caption"><p class="eyebrow mono">AN OCEAN OF POSSIBILITIES</p><h2 id="particle-deepseek-title" tabindex="-1">DeepSeek</h2><p>让好奇，继续向深处。</p></div>
+    </section>
+
+    <section id="particle-claude" class="particle-interlude" aria-labelledby="particle-claude-title">
+      <button class="particle-hit" data-particle-scene="claude" aria-label="Claude 放射星粒子图标，可拖动或用方向键旋转，Home 键重置"></button>
+      <div class="particle-caption"><p class="eyebrow mono">IDEAS INTO REALITY</p><h2 id="particle-claude-title" tabindex="-1">Claude Code</h2><p>让灵感，成为下一次创造。</p></div>
+    </section>
+
     <section id="contact" class="contact" aria-labelledby="contact-title"><div class="container"><div class="section-heading"><p class="eyebrow mono">04 / UNTIL OUR NEXT ORBIT</p><span>保持联结</span></div><div class="contact-main reveal"><p class="eyebrow mono">THE UNIVERSE IS STILL UNFOLDING.</p><h2 id="contact-title" tabindex="-1">Stay curious<span>.</span></h2><p>下一次灵感，可能从一次相遇开始。<br>欢迎收藏我的个人宇宙。</p><div class="contact-actions"><button class="pill-button" id="copy-link">复制主页链接 <span aria-hidden="true">↗</span></button><button class="text-button share-button" id="share-page">分享这个宇宙 <span aria-hidden="true">↗</span></button></div></div><footer><a class="wordmark" href="#home">SherlockMen<span>✳</span></a><span class="mono">© 2026 / A PERSONAL UNIVERSE</span><a href="#home" class="back-top">回到顶部 <span aria-hidden="true">↑</span></a></footer></div></section>
   </main>
 
   <dialog id="project-dialog" class="project-dialog" aria-labelledby="case-title"><div class="case-header"><a class="wordmark" href="#home" id="case-home">SherlockMen<span>✳</span></a><p class="mono" id="case-index">CREATIVE EXPERIMENT / 01</p><button id="close-case" class="close-button" aria-label="关闭作品详情">×</button></div><div class="case-content"><div class="case-intro"><p class="eyebrow mono" id="case-eyebrow">INTERACTIVE / DEMO PROJECT</p><h2 id="case-title" class="display-heading" tabindex="-1">INFINITY<br>KNOT.</h2><p id="case-description"></p><div class="case-tags" id="case-tags"></div></div><div class="case-stage" id="case-stage"><canvas id="hero-canvas" tabindex="0" role="img" aria-label="可交互三维雕塑，拖动或方向键旋转"></canvas><div class="case-static-art" id="case-static-art" hidden></div><p id="scene-status" role="status"></p><div class="case-controls" id="case-controls"><button class="text-button" id="reset-scene">重置视角 <span aria-hidden="true">↺</span></button><button class="pause-button" id="pause-scene" aria-label="暂停作品动画" aria-pressed="false">Ⅱ</button></div></div></div><div class="case-story"><div><p class="eyebrow mono">THE IDEA</p><h3 id="case-story-title">把一条线，变成一种可能。</h3></div><p id="case-story-text"></p></div><div class="case-next"><button id="previous-case" class="text-button">← 上一个作品</button><span class="mono" id="case-counter">01 / 06</span><button id="next-case" class="text-button">下一个作品 →</button></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-  <script src="scene.js"></script><script type="module" src="galaxy.js"></script><script src="app.js"></script>
+  <script src="scene.js"></script><script type="module" src="galaxy.js?v=ai-icons-1"></script><script src="app.js"></script>
 </body></html>

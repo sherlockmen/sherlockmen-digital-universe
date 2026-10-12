@@ -1,4 +1,19 @@
 import * as THREE from './vendor/three.module.min.js';
+import { LOGO_GEOMETRY, buildLogoSamples } from './particle-logos.js';
+
+export const SCULPTURE_KINDS=Object.freeze({cursor:0,blossom:1,deepseek:2,claude:3});
+export function sculptureState(name,rect,viewportHeight,reduced=false,neighbors={}){
+  if(!Object.hasOwn(SCULPTURE_KINDS,name)||!rect||rect.height<=0||viewportHeight<=0)return null;
+  const progress=(viewportHeight-rect.top)/(viewportHeight+rect.height);
+  const enter=neighbors.beforeHeight ? .5-(neighbors.beforeHeight+rect.height)/(4*(viewportHeight+rect.height)) : 0;
+  const exit=neighbors.afterHeight ? .5+(neighbors.afterHeight+rect.height)/(4*(viewportHeight+rect.height)) : .86;
+  if(progress<=enter||progress>=exit)return null;
+  const peak=neighbors.beforeHeight ? .44 : .36,fadeStart=neighbors.afterHeight ? .56 : .5;
+  const rise=smoother((progress-enter)/(peak-enter)),fall=1-smoother((progress-fadeStart)/(exit-fadeStart));
+  // Keep adjacent handoffs quiet while giving the assembled icon a wider hold.
+  const strength=reduced?1:(neighbors.beforeHeight?rise*rise:rise)*(neighbors.afterHeight?fall*fall:fall);
+  return{scene:name,kind:SCULPTURE_KINDS[name],scatter:1,tilt:1,strength,progress,centerY:SCULPTURE_KINDS[name]>1?.44:.50};
+}
 
 const inBrowser = typeof window !== 'undefined';
 const canvas = inBrowser ? document.getElementById('galaxy-canvas') : null;
@@ -76,20 +91,20 @@ function createField(canvas, initialPause) {
   const orbit = [0, 0];
   const pointer = { x: 0, y: 0, sampleX: 0, sampleY: 0, active: false, moved: false, pressed: false };
   let state = { scene: 'galaxy', scatter: 0, tilt: 0, strength: 1, centerY: .45 };
-  const sections = Object.fromEntries(['home', 'particle-intro', 'particle-cursor', 'particle-blossom'].map(id => [id, document.getElementById(id)]));
+  const sections = Object.fromEntries(['home', 'particle-intro', 'particle-cursor', 'particle-blossom','particle-deepseek','particle-claude'].map(id => [id, document.getElementById(id)]));
   const gl = renderer.getContext();
   const referenceSamples=buildCurveSamples();
   const referenceTexture=new THREE.DataTexture(referenceSamples,512,5,THREE.RGBAFormat,THREE.FloatType);
   referenceTexture.minFilter=referenceTexture.magFilter=THREE.NearestFilter;
   referenceTexture.needsUpdate=true;
-  const shapeTexture=new THREE.DataTexture(buildShapeSamples(),1024,2,THREE.RGBAFormat,THREE.FloatType);
+  const shapeTexture=new THREE.DataTexture(buildShapeSamples(),1024,4,THREE.RGBAFormat,THREE.FloatType);
   shapeTexture.minFilter=shapeTexture.magFilter=THREE.NearestFilter;shapeTexture.needsUpdate=true;
   const shapeTravel=new Float32Array(6);
   const uniforms = {
     uWeights: { value: new THREE.Vector4(1,0,0,0) },
     uPixelRatio: { value: 1 }, uPointLimit: { value: Math.min(gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1],320) },
     uTime: { value: 0 }, uViewSize: { value: new THREE.Vector2(10.9,10.9) },
-    uBackground:{value:0},uSpiralPaths:{value:referenceTexture},uShapePaths:{value:shapeTexture},uRailStart:{value:.72},uTwinkleRate:{value:1},uEntry:{value:1},
+    uBackground:{value:0},uSpiralPaths:{value:referenceTexture},uShapePaths:{value:shapeTexture},uShapeKind:{value:0},uLogoColors:{value:LOGO_GEOMETRY.map(logo=>new THREE.Color(logo.color))},uRailStart:{value:.72},uTwinkleRate:{value:1},uEntry:{value:1},
     uGalaxyMatrix:{value:new THREE.Matrix4()},uCoreMatrix:{value:new THREE.Matrix4()},uGalaxyOrigin:{value:new THREE.Vector3()},uShapeMatrix:{value:new THREE.Matrix4()},uShapeOrigin:{value:new THREE.Vector3()},uShapeSize:{value:new THREE.Vector2()},uShapeTravel:{value:shapeTravel}
   };
   const material = new THREE.ShaderMaterial({
@@ -104,7 +119,8 @@ function createField(canvas, initialPause) {
       attribute vec3 aOffset;
       uniform vec4 uWeights;
       uniform vec2 uViewSize;
-      uniform float uPixelRatio,uPointLimit,uTime,uBackground,uRailStart,uTwinkleRate,uEntry;
+      uniform float uPixelRatio,uPointLimit,uTime,uBackground,uRailStart,uTwinkleRate,uEntry,uShapeKind;
+      uniform vec3 uLogoColors[2];
       uniform sampler2D uSpiralPaths,uShapePaths;
       uniform mat4 uGalaxyMatrix,uCoreMatrix,uShapeMatrix;
       uniform vec3 uGalaxyOrigin,uShapeOrigin;
@@ -118,7 +134,7 @@ function createField(canvas, initialPause) {
         return mix(texture2D(uSpiralPaths,vec2((a+.5)/512.,y)).xyz,texture2D(uSpiralPaths,vec2((b+.5)/512.,y)).xyz,fract(along));
       }
       vec4 outline(float kind,float p){
-        float along=clamp(p,0.,1.)*1023.,a=floor(along),b=min(a+1.,1023.),y=(kind+.5)/2.;
+        float along=clamp(p,0.,1.)*1023.,a=floor(along),b=min(a+1.,1023.),y=(kind+.5)/4.;
         return mix(texture2D(uShapePaths,vec2((a+.5)/1024.,y)),texture2D(uShapePaths,vec2((b+.5)/1024.,y)),fract(along));
       }
       float layerTravel(float arm){if(arm<.5)return uShapeTravel[0];if(arm<1.5)return uShapeTravel[1];if(arm<2.5)return uShapeTravel[2];if(arm<3.5)return uShapeTravel[3];if(arm<4.5)return uShapeTravel[4];return uShapeTravel[5];}
@@ -139,10 +155,16 @@ function createField(canvas, initialPause) {
         float frequency=.4+.4*aSeed.z,amount=.035+.085*aSeed.z,phase=aSeed.y*6.28318530718+2.7*aSeed.z,phaseY=aSeed.z*6.28318530718+3.1*aSeed.x;
         vec2 drift=vec2(sin(phase+uTime*frequency)-sin(phase),cos(phaseY+uTime*frequency*.73)-cos(phaseY))*amount;
         vec3 cloud=vec3(cloudX,(aSeed.y-.5)*uViewSize.y*1.12,(aSeed.z-.5)*.5);cloud.xy+=drift;
-        vec3 sculpture=vec3(0.);float shapeP=0.,depthCue=1.,opacityCue=1.;
+        vec3 sculpture=vec3(0.);float shapeP=0.,depthCue=1.,opacityCue=1.,logoEdge=0.;
         if(shape>0.&&uBackground<.5){
-          float kind=uWeights.w>0.?1.:0.;
-          vec2 range=texture2D(uShapePaths,vec2((min(floor(clamp(aShape.x,0.,.999999)*1024.),1023.)+.5)/1024.,(kind+.5)/2.)).zw;
+          float kind=uShapeKind;
+          if(kind>1.5){
+            vec4 point=texture2D(uShapePaths,vec2((min(floor(clamp(aShape.x,0.,.999999)*1024.),1023.)+.5)/1024.,(kind+.5)/4.));
+            shapeP=density(fract(aShape.x+layerTravel(aLoop.x)));
+            float z=sin(shapeP*3.14159265359*1.35+aShape.z)*aShape.y*sin(shapeP*3.14159265359)+aLoop.w*.75+(aSeed.z-.5)*.22;
+            sculpture=vec3(point.xy*uShapeSize,z);logoEdge=point.z;
+          }else{
+          vec2 range=texture2D(uShapePaths,vec2((min(floor(clamp(aShape.x,0.,.999999)*1024.),1023.)+.5)/1024.,(kind+.5)/4.)).zw;
           float span=max(range.y-range.x,1./1024.);
           float local=clamp((aShape.x-range.x)/span,0.,1.);
           shapeP=density(fract(local+layerTravel(aLoop.x)/span));
@@ -153,6 +175,7 @@ function createField(canvas, initialPause) {
           float across=aLoop.z*1.1+(aSeed.x+aSeed.y-1.)*.12;
           float z=sin(shapeP*3.14159265359*1.35+aShape.z)*aShape.y*sin(shapeP*3.14159265359)+aLoop.w*.75+(aSeed.z-.5)*.22;
           sculpture=vec3(point*uShapeSize+vec2(-tangent.y,tangent.x)*across,z);
+          }
           sculpture=(uShapeMatrix*vec4(sculpture,1.)).xyz;
           float frontness=smoothstep(-1.15,1.15,sculpture.z);
           depthCue=mix(.78,1.18,frontness);opacityCue=mix(.72,1.,frontness);
@@ -171,7 +194,7 @@ function createField(canvas, initialPause) {
         float endpoint=aStyle.z>1.5?1.:smoothstep(0.,.055,progress)*(1.-smoothstep(.945,1.,progress));
         float envelope=aStyle.z>1.5?1.:mix(1.,.14+.86*pow(max(sin(progress*3.14159265359),0.),.68),.45);
         endpoint=mix(1.,endpoint,uWeights.x);envelope=mix(1.,envelope,uWeights.x);
-        if(shape>0.){endpoint=mix(endpoint,smoothstep(0.,.055,shapeP)*(1.-smoothstep(.945,1.,shapeP)),shape);envelope=mix(envelope,mix(1.,.14+.86*pow(max(sin(shapeP*3.14159265359),0.),.68),.45),shape);}
+        if(shape>0.&&uShapeKind<1.5){endpoint=mix(endpoint,smoothstep(0.,.055,shapeP)*(1.-smoothstep(.945,1.,shapeP)),shape);envelope=mix(envelope,mix(1.,.14+.86*pow(max(sin(shapeP*3.14159265359),0.),.68),.45),shape);}
         float brightKeep=max(aShape.w,step(.5,fract(sin(aLoop.y*193.7+aStyle.w*417.2)*43758.5453)));
         float bright=smoothstep(1.35,1.65,aLight.x),suppressed=shape*bright*(1.-brightKeep);
         float intensity=1.35*(uWeights.x+uWeights.y*.18+shape)*(aStyle.z>1.5?1.22:1.);
@@ -180,8 +203,12 @@ function createField(canvas, initialPause) {
         if(uBackground>.5){endpoint=1.;envelope=1.;sizeScale=mix(sqrt(.2),.45,1.-uTwinkleRate);intensity=1.35*(.18+.82*uTwinkleRate);brightness=aLight.x;}
         float twinkle=.86+.14*sin(aStyle.w+uTime*.62*aLight.y*uTwinkleRate);
         vDiameter=(.35+aStyle.x*envelope*endpoint*3.8)*sizeScale*(.97+twinkle*.03)*mix(1.,depthCue,shape)*uPixelRatio;
+        float logo=step(1.5,uShapeKind)*shape*(1.-uBackground);
+        vDiameter=mix(vDiameter,min(vDiameter,5.5*uPixelRatio),logo);
         gl_PointSize=clamp(max(vDiameter,4.),4.,uPointLimit);
         vColor=mix(aColor,vec3(1.),aOffset.z*.16);vOpacity=aStyle.y*endpoint*mix(1.,opacityCue,shape)*(.92+twinkle*.08);
+        vec3 brand=uShapeKind<2.5?uLogoColors[0]:uLogoColors[1];
+        vColor=mix(vColor,mix(brand,vec3(1.),.12+.48*logoEdge+.25*step(.82,aSeed.w)),logo);
         vBrightness=brightness*intensity*twinkle*(1.+aOffset.z*.7);vRay=smoothstep(1.45,2.8,aLight.x)*mix(1.,brightKeep,shape);vKind=aStyle.z;
       }
     `,
@@ -232,10 +259,12 @@ function createField(canvas, initialPause) {
     dirty=false;
     const h=height||innerHeight,home=sections.home?.getBoundingClientRect(),intro=sections['particle-intro']?.getBoundingClientRect();
     const previousScene=state.scene;let next=null;
-    for(const [id,name] of [['particle-blossom','blossom'],['particle-cursor','cursor']]){
-      const rect=sections[id]?.getBoundingClientRect();if(!rect)continue;
-      const progress=(h-rect.top)/(h+rect.height);
-      if(progress>0&&progress<.86){const strength=reduced.matches?1:smoother(progress/.36)*(1-smoother((progress-.5)/.36));next={scene:name,scatter:1,tilt:1,strength,progress,centerY:.50};break;}
+    for(const name of Object.keys(SCULPTURE_KINDS)){
+      const section=sections['particle-'+name],rect=section?.getBoundingClientRect();if(!rect)continue;
+      const before=section.previousElementSibling,after=section.nextElementSibling;
+      const neighborHeight=element=>element?.id?.startsWith('particle-')&&Object.hasOwn(SCULPTURE_KINDS,element.id.slice(9))?element.getBoundingClientRect().height:0;
+      const neighbors={beforeHeight:neighborHeight(before),afterHeight:neighborHeight(after)};
+      next=sculptureState(name,rect,h,reduced.matches,neighbors);if(next)break;
     }
     if(!next&&home&&(home.bottom>0||(intro&&intro.top<h&&intro.bottom>0))){
       const start=(intro?.top??home.bottom)-h*.66,end=(intro?.top??home.bottom)+(intro?.height??h)*.5-h*.5;
@@ -271,8 +300,8 @@ function createField(canvas, initialPause) {
     if(entryActive&&document.documentElement.dataset.heroIntroFailed==='true')completeIntro();
     const timeline=introState(entryTime,maxOrder),assembly=entryActive&&!reduced.matches?timeline.assembly:1,weights=uniforms.uWeights.value,t=state.tilt;
     updateTitleIntro(timeline);
-    if(state.scene==='cursor')weights.set(0,1-state.strength,state.strength,0);
-    else if(state.scene==='blossom')weights.set(0,1-state.strength,0,state.strength);
+    const kind=SCULPTURE_KINDS[state.scene]??0;uniforms.uShapeKind.value=kind;
+    if(state.scene in SCULPTURE_KINDS)weights.set(0,1-state.strength,kind===1?0:state.strength,kind===1?state.strength:0);
     else weights.set(1-currentScatter,currentScatter,0,0);
     const shape=weights.z+weights.w,g=weights.x,vh=camera.top-camera.bottom;
     const flatten=-52*Math.PI/180*Math.sin(Math.min(t/.75,1)*Math.PI*.5)*(1-smoother((t-.75)/.25));
@@ -281,7 +310,7 @@ function createField(canvas, initialPause) {
     coreEuler.set(reduced.matches?0:.08*Math.sin(.22*elapsed)*g,reduced.matches?0:.14*Math.cos(.28*elapsed)*g,reduced.matches?0:coreRotation*g,'XYZ');
     uniforms.uCoreMatrix.value.makeRotationFromEuler(coreEuler);
     uniforms.uGalaxyOrigin.value.set(0,vh*(.5-state.centerY),0);
-    const aspect=weights.w>0?1726/1538:1,widthPx=Math.min(576,width*.88,height*.8*aspect),worldWidth=widthPx/height*vh;
+    const aspect=kind>1?LOGO_GEOMETRY[kind-2].viewBox[2]/LOGO_GEOMETRY[kind-2].viewBox[3]:kind===1?1726/1538:1,widthPx=Math.min(576,width*.88,height*(kind>1?.58:.8)*aspect),worldWidth=widthPx/height*vh;
     uniforms.uShapeSize.value.set(worldWidth,worldWidth/aspect);
     const sweep=reduced.matches?1:smoother((shape-.04)/.78),gate=smoother((shape-.001)/.119),pointerGate=smoother((shape-.05)/.35),entrance=reduced.matches?0:Math.sin(sweep*Math.PI),amount=paused?0:.42;
     const rx=orbit[1]*pointerGate-entrance*amount*.34*gate,ry=orbit[0]*pointerGate-(1-sweep)*amount*gate;
@@ -292,9 +321,9 @@ function createField(canvas, initialPause) {
     backgroundMaterial.uniforms.uTime.value=elapsed;backgroundMaterial.uniforms.uEntry.value=assembly;
     backgroundMaterial.uniforms.uTwinkleRate.value=1-currentScatter;backgroundMaterial.uniforms.uViewSize.value.copy(uniforms.uViewSize.value);
     params.weights.set([weights.x,weights.y,weights.z,weights.w]);params.time=elapsed;params.view.set([uniforms.uViewSize.value.x,uniforms.uViewSize.value.y]);params.rail=uniforms.uRailStart.value;
-    params.galaxyOrigin.set([uniforms.uGalaxyOrigin.value.x,uniforms.uGalaxyOrigin.value.y,uniforms.uGalaxyOrigin.value.z]);params.shapeOrigin.set([uniforms.uShapeOrigin.value.x,uniforms.uShapeOrigin.value.y,uniforms.uShapeOrigin.value.z]);params.shapeSize.set([worldWidth,worldWidth/aspect]);params.entry=assembly;
+    params.galaxyOrigin.set([uniforms.uGalaxyOrigin.value.x,uniforms.uGalaxyOrigin.value.y,uniforms.uGalaxyOrigin.value.z]);params.shapeOrigin.set([uniforms.uShapeOrigin.value.x,uniforms.uShapeOrigin.value.y,uniforms.uShapeOrigin.value.z]);params.shapeSize.set([worldWidth,worldWidth/aspect]);params.entry=assembly;params.shapeKind=kind;
     scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
-    canvas.dataset.transitionProgress=(state.scene==='cursor'||state.scene==='blossom'?state.strength:currentScatter).toFixed(3);canvas.dataset.assembly=assembly.toFixed(3);
+    canvas.dataset.transitionProgress=(state.scene in SCULPTURE_KINDS?state.strength:currentScatter).toFixed(3);canvas.dataset.assembly=assembly.toFixed(3);canvas.dataset.shapeKind=String(kind);
   }
   function updateOpticalLights(){
     const weights=uniforms.uWeights.value,g=weights.x,shape=weights.z+weights.w;
@@ -304,7 +333,7 @@ function createField(canvas, initialPause) {
       opticalPoint.set(sample[0],sample[1],sample[2]).project(camera);
       opticalPoint.x+=data.offsets[i*3];opticalPoint.y+=data.offsets[i*3+1];
       const edge=1-cubic((Math.max(Math.abs(opticalPoint.x),Math.abs(opticalPoint.y))-.88)/.2);
-      opticalLights[n].set((opticalPoint.x+1)*.5,(opticalPoint.y+1)*.5,edge*(g+shape+.1*weights.y));
+      opticalLights[n].set((opticalPoint.x+1)*.5,(opticalPoint.y+1)*.5,edge*(g+(params.shapeKind>1?.18:1)*shape+.1*weights.y));
     }
     glow.setLights(opticalLights);
   }
@@ -427,7 +456,7 @@ function createField(canvas, initialPause) {
   window.addEventListener('resize',resize);
   if('ResizeObserver'in window){
     const observer=new ResizeObserver(()=>{dirty=true;schedule(true);});
-    document.querySelectorAll('main,#home,#particle-intro,#particle-cursor,#particle-blossom').forEach(element=>observer.observe(element));
+    document.querySelectorAll('main,#home,#particle-intro,#particle-cursor,#particle-blossom,#particle-deepseek,#particle-claude').forEach(element=>observer.observe(element));
     new ResizeObserver(resize).observe(canvas);
   }
   document.querySelectorAll('[data-particle-scene]').forEach(element=>{element.style.touchAction='pan-y';});
@@ -520,7 +549,7 @@ function sourceCurveNormal(samples,out,arm,p){
 }
 export function buildShapeSamples(){
   if(cachedShapeSamples)return cachedShapeSamples;
-  const table=new Float32Array(2*1024*4);
+  const table=new Float32Array(4*1024*4);
   for(const [kind,paths]of [[cursorReferencePath],blossomPaths].entries()){
     const width=kind?1726:19,height=kind?1538:19;
     const lines=paths.map(path=>svgPolyline(path)),lengths=lines.map(line=>{const d=new Float64Array(line.length);for(let i=1;i<line.length;i++)d[i]=d[i-1]+Math.hypot(line[i][0]-line[i-1][0],line[i][1]-line[i-1][1]);return d;});
@@ -534,11 +563,19 @@ export function buildShapeSamples(){
       table.set([x/width-.5,.5-y/height,offset/total,(offset+d.at(-1))/total],j);
     }
   }
+  table.set(buildLogoSamples(),2*1024*4);
   return cachedShapeSamples=table;
 }
 function shapeSample(samples,out,kind,p){const along=clamp01(p)*1023,a=Math.floor(along),b=Math.min(a+1,1023),f=along-a,j=(kind*1024+a)*4,k=(kind*1024+b)*4;for(let axis=0;axis<4;axis++)out[axis]=samples[j+axis]+(samples[k+axis]-samples[j+axis])*f;}
 export function createPositionScratch(){return{base:new Float64Array(3),normal:new Float64Array(3),shape:{point:new Float64Array(4),before:new Float64Array(4),after:new Float64Array(4)}};}
 export function shapeCoordinates(data,i,kind,travel,size,out,scratch=createPositionScratch().shape){
+  if(kind>1){
+    const k=i*4,seed=data.shape[k],samples=buildShapeSamples(),entry=(kind*1024+Math.min(Math.floor(Math.min(seed,.999999)*1024),1023))*4;
+    const p=densityProgress(fract(seed+travel[data.loops[k]]));
+    out[0]=samples[entry]*size[0];out[1]=samples[entry+1]*size[1];
+    out[2]=Math.sin(p*Math.PI*1.35+data.shape[k+2])*data.shape[k+1]*Math.sin(p*Math.PI)+data.loops[k+3]*.75+(data.seeds[k+2]-.5)*.22;
+    return p;
+  }
   const k=i*4,seed=data.shape[k],samples=buildShapeSamples(),entry=(kind*1024+Math.min(Math.floor(Math.min(seed,.999999)*1024),1023))*4,start=samples[entry+2],end=samples[entry+3],span=Math.max(end-start,1/1024);
   const local=clamp01((seed-start)/span),phase=fract(local+travel[data.loops[k]]/span),p=densityProgress(phase),global=start+(end-start)*p;
   const {point,before,after}=scratch;
@@ -564,7 +601,7 @@ export function particlePosition(data,i,params,out,scratch=createPositionScratch
     out[0]+=((center?(sx-.5)*params.view[0]*1.12:outer*params.view[0]*.5)+(Math.sin(phase+time*frequency)-Math.sin(phase))*amount)*w[1];
     out[1]+=((sy-.5)*params.view[1]*1.12+(Math.cos(phaseY+time*frequency*.73)-Math.cos(phaseY))*amount)*w[1];out[2]+=(sz-.5)*.5*w[1];
   }
-  if(w[2]+w[3]>0){shapeCoordinates(data,i,w[3]>0?1:0,params.travel,params.shapeSize,base,shapeScratch);transformPoint(base,params.shapeMatrix);for(let a=0;a<3;a++)out[a]+=(base[a]+params.shapeOrigin[a])*(w[2]+w[3]);}
+  if(w[2]+w[3]>0){shapeCoordinates(data,i,params.shapeKind??(w[3]>0?1:0),params.travel,params.shapeSize,base,shapeScratch);transformPoint(base,params.shapeMatrix);for(let a=0;a<3;a++)out[a]+=(base[a]+params.shapeOrigin[a])*(w[2]+w[3]);}
   if(params.background){const sx=data.seeds[k],sy=data.seeds[k+1],sz=data.seeds[k+2],frequency=.4+.4*sz,amount=.035+.085*sz,phase=sy*Math.PI*2+2.7*sz,phaseY=sz*Math.PI*2+3.1*sx;out[0]=(sx-.5)*params.view[0]*1.12+(Math.sin(phase+time*frequency)-Math.sin(phase))*amount;out[1]=(sy-.5)*params.view[1]*1.12+(Math.cos(phaseY+time*frequency*.73)-Math.cos(phaseY))*amount;out[2]=(sz-.5)*.5;}
   if(params.entry<1){const sx=data.seeds[k],sy=data.seeds[k+1],sz=data.seeds[k+2],local=clamp01(params.entry/(.82+.18*sy)),smooth=smoother(local),pull=(smooth+Math.sin(smooth*Math.PI*.5))*.5,angle=Math.sin(pull*Math.PI)*(.44+.22*sz),c=Math.cos(angle),s=Math.sin(angle),x=(sx-.5)*params.view[0]*1.12,y=(sy-.5)*params.view[1]*1.12;out[0]=(c*x-s*y)*(1-pull)+out[0]*pull;out[1]=(s*x+c*y)*(1-pull)+out[1]*pull;out[2]=(sz-.5)*.5*(1-pull)+out[2]*pull;}
 }

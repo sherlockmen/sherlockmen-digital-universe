@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from '../vendor/three.module.min.js';
-import { buildParticleField, buildShapeSamples, shapeCoordinates, particlePosition, createPositionScratch, introState, introLetterProgress } from '../galaxy.js';
+import { buildParticleField, buildShapeSamples, shapeCoordinates, particlePosition, createPositionScratch, introState, introLetterProgress, SCULPTURE_KINDS, sculptureState } from '../galaxy.js';
+import { LOGO_GEOMETRY, buildLogoSamples, logoContains } from '../particle-logos.js';
 
 // Source contracts: 019ulkdkl8r2h.js nucleus generator and path-shape shader.
 const sourceCore = [
@@ -114,11 +115,133 @@ for (const [quality, authored, backgroundCount, cores] of [[2, 2048, 274, 48], [
 }
 assert(minDepth < -.8 && maxDepth > .8, 'side view needs the authored world-depth span');
 
+// These empty points were checked independently against the official SVG paths.
+const logoEmptyPoints = new Map([
+  [2, [[8, 14, 1], [16.5, 11.7, .35], [14.46, 11.25, .14], [24, 9, .3]]],
+  [3, [[.20, .40, .025], [.20, .58, .025], [.84, .35, .025], [.40, .90, .025]]]
+]);
+const logoFilledPoints = new Map([[2, [[8, 6], [24, 6]]], [3, [[47, 47], [26, 8]]]]);
+const logoSamples = buildLogoSamples();
+assert.deepEqual(LOGO_GEOMETRY.map(({name, kind}) => [name, kind]), [['deepseek', 2], ['claude', 3]]);
+assert.equal(logoSamples.length, 2 * 1024 * 4);
+assert.equal(shapes.length, 4 * 1024 * 4);
+assert.deepEqual(shapes.slice(2 * 1024 * 4), logoSamples, 'the GPU atlas must contain the same complete logo targets');
+let logoSampleChecks = 0;
+for (const logo of LOGO_GEOMETRY) {
+  const [left, top, width, height] = logo.viewBox;
+  const row = (logo.kind - 2) * 1024 * 4;
+  let edgeCount = 0, minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let i = 0; i < 1024; i++) {
+    const j = row + i * 4, [x, y, edge, available] = logoSamples.slice(j, j + 4);
+    assert([x, y, edge, available].every(Number.isFinite), `${logo.name} has a non-finite target`);
+    assert(Math.abs(x) <= .500001 && Math.abs(y) <= .500001, `${logo.name} target escaped its official bounds`);
+    assert(logoContains(logo.kind, x, y), `${logo.name} target entered negative space`);
+    assert(edge === 0 || edge === 1, `${logo.name} has an invalid boundary marker`);
+    assert.equal(available, 1);
+    edgeCount += edge; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    logoSampleChecks++;
+  }
+  assert(edgeCount > 20 && edgeCount < 1000, `${logo.name} needs both silhouette and filled-body samples`);
+  assert(minX < -.4 && maxX > .4 && minY < -.4 && maxY > .4, `${logo.name} samples must cover the complete mark`);
+  for (const [x, y] of logoFilledPoints.get(logo.kind)) {
+    assert(logoContains(logo.kind, (x - left) / width - .5, .5 - (y - top) / height), `${logo.name} official solid body is missing`);
+  }
+  for (const [a, b, radius] of logoEmptyPoints.get(logo.kind)) {
+    const u = logo.kind === 2 ? (a - left) / width : a, v = logo.kind === 2 ? (b - top) / height : b;
+    assert.equal(logoContains(logo.kind, u - .5, .5 - v), false, `${logo.name} official cutout was filled`);
+    for (let i = 0; i < 1024; i++) {
+      const j = row + i * 4;
+      const dx = (logoSamples[j] + .5 - u) * (logo.kind === 2 ? width : 1);
+      const dy = (.5 - logoSamples[j + 1] - v) * (logo.kind === 2 ? height : 1);
+      assert(Math.hypot(dx, dy) > radius, `${logo.name} sample entered a verified empty region`);
+    }
+  }
+}
+
+// Independently apply the shader's nearest-texel, depth, world and clip transforms.
+let logoWorldChecks = 0;
+const logoCamera = new THREE.OrthographicCamera(-9.6, 9.6, 5.45, -5.45, .1, 100);
+logoCamera.position.z = 12; logoCamera.updateMatrixWorld();
+for (const quality of [2, 4]) {
+  const { stars } = buildParticleField(quality);
+  const travel = new Float32Array([.012, .028, .041, .016, .074, .033]);
+  const scratch = createPositionScratch(), local = new Float64Array(3), world = new Float64Array(3);
+  for (const logo of LOGO_GEOMETRY) {
+    const size = [7.2, 7.2 * logo.viewBox[3] / logo.viewBox[2]];
+    for (let i = 0; i < stars.masses.length; i += 127) {
+      const k = i * 4, seed = stars.shape[k], texel = (logo.kind * 1024 + Math.min(Math.floor(Math.min(seed, .999999) * 1024), 1023)) * 4;
+      const phase = density(fract(seed + travel[stars.loops[k]]));
+      const expected = [shapes[texel] * size[0], shapes[texel + 1] * size[1],
+        Math.sin(phase * Math.PI * 1.35 + stars.shape[k + 2]) * stars.shape[k + 1] * Math.sin(phase * Math.PI)
+          + stars.loops[k + 3] * .75 + (stars.seeds[k + 2] - .5) * .22];
+      near(shapeCoordinates(stars, i, logo.kind, travel, size, local, scratch.shape), phase, `${logo.name} GPU contour phase`);
+      vectorNear(Array.from(local), expected, `${logo.name} GPU texel and depth contract`);
+      const laterTravel = travel.map(value => value + .27);
+      shapeCoordinates(stars, i, logo.kind, laterTravel, size, world, scratch.shape);
+      vectorNear(Array.from(world.slice(0, 2)), expected.slice(0, 2), `${logo.name} flow must not cross a cutout`);
+      for (const angle of [0, Math.PI / 2, .73]) {
+        const params = { weights: [0, 0, 1, 0], shapeKind: logo.kind, time: 3.7, view: [19.2, 10.9], rail: .402,
+          galaxyMatrix: identity, galaxyOrigin: [0, -1.09, 0], shapeMatrix: new THREE.Matrix4().makeRotationY(angle),
+          shapeOrigin: [0, .4, 0], shapeSize: size, travel, entry: 1 };
+        particlePosition(stars, i, params, world, scratch);
+        const rotated = [Math.cos(angle) * expected[0] + Math.sin(angle) * expected[2], expected[1] + .4,
+          -Math.sin(angle) * expected[0] + Math.cos(angle) * expected[2]];
+        vectorNear(Array.from(world), rotated, `${logo.name} rotated world target`);
+        const clip = new THREE.Vector3(...world).project(logoCamera), offset = [.012, -.024];
+        near(clip.x + offset[0], rotated[0] / 9.6 + offset[0], `${logo.name} disturbed horizontal clip target`);
+        near(clip.y + offset[1], rotated[1] / 5.45 + offset[1], `${logo.name} disturbed vertical clip target`);
+        params.weights = [0, .35, .65, 0]; particlePosition(stars, i, params, world, scratch);
+        params.weights = [0, 1, 0, 0]; particlePosition(stars, i, params, local, scratch);
+        vectorNear(Array.from(world), rotated.map((value, axis) => value * .65 + local[axis] * .35), `${logo.name} cloud blend`);
+        logoWorldChecks++;
+      }
+    }
+  }
+}
+let logoScrollChecks = 0;
+for (const logo of LOGO_GEOMETRY) {
+  assert.equal(SCULPTURE_KINDS[logo.name], logo.kind);
+  for (const height of [653, 854]) {
+    for (const top of [height, height * .4, 0, -height * .4, -height]) {
+      const rect = { top, height }, normal = sculptureState(logo.name, rect, height), reduced = sculptureState(logo.name, rect, height, true);
+      assert.equal(Boolean(normal), Boolean(reduced));
+      if (normal) {
+        assert.equal(normal.kind, logo.kind); assert(normal.strength >= 0 && normal.strength <= 1);
+        assert.equal(reduced.scene, logo.name); assert.equal(reduced.strength, 1, 'reduced motion must show a complete stationary logo');
+      }
+      logoScrollChecks++;
+    }
+    near(sculptureState(logo.name, { top: 0, height }, height).strength, 1, `${logo.name} fully formed at the viewport center`);
+  }
+}
+// Adjacent shapes must meet through the dispersed field instead of overlapping.
+for (const [first, second] of [['blossom', 'deepseek'], ['deepseek', 'claude']]) {
+  const viewport = 653, firstHeight = 720, secondHeight = 854;
+  const seam = viewport / 2 - (3 * firstHeight + secondHeight) / 4;
+  for (const offset of [-50, -1, 0, 1, 50]) {
+    const a = sculptureState(first, { top: seam - offset, height: firstHeight }, viewport, false, { afterHeight: secondHeight });
+    const b = sculptureState(second, { top: seam + firstHeight - offset, height: secondHeight }, viewport, false, { beforeHeight: firstHeight });
+    assert(!(a && b), `${first}/${second} overlap at their shared midpoint`);
+    if (a || b) assert((a || b).strength < .02, 'neighbor handoff must pass through dispersed particles');
+    logoScrollChecks++;
+  }
+}
+assert.equal(sculptureState('unknown', { top: 0, height: 854 }, 854), null);
+
 // Read the shipped names so changing a word also changes the verified timeline.
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 const galaxy = readFileSync(new URL('../galaxy.js', import.meta.url), 'utf8');
+const logoScenes = ['deepseek', 'claude'];
+for (const scene of logoScenes) {
+  const sections = [...html.matchAll(new RegExp(`<section id="particle-${scene}"[\\s\\S]*?<\\/section>`, 'g'))];
+  assert.equal(sections.length, 1, `${scene} needs exactly one scroll section`);
+  assert(sections[0][0].includes(`data-particle-scene="${scene}"`), `${scene} needs a reachable rotation target`);
+  assert(sections[0][0].includes(`id="particle-${scene}-title"`), `${scene} needs a named section`);
+}
+const logoOrder = ['particle-blossom', 'particle-deepseek', 'particle-claude', 'contact'].map(id => html.indexOf(`<section id="${id}"`));
+assert(logoOrder.every((position, i) => position >= 0 && (!i || position > logoOrder[i - 1])), 'logo scenes must follow the blossom and precede contact');
 assert(!galaxy.includes('uVisibility'), 'letter animation must not hide the particle field');
 assert(!galaxy.match(/opticalLights\[n\]\.set\([^;]*assembly/), 'star glow must stay lit before assembly');
 const orders = [...html.matchAll(/data-intro-letter="(\d+)"/g)].map(match => Number(match[1]));
@@ -132,12 +255,12 @@ assert(!css.includes(String.fromCharCode(92) + 'n'), 'CSS contains a literal new
 assert(css.includes('.pause-button{'), 'the project dialog pause button must retain its styling');
 const maxOrder = Math.max(...orders), timing = introState(0, maxOrder);
 const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-for (const reduced of [false, true]) {
+for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=ai-icons-1', 'particle-logos.js']) {
   const root = { dataset: {} }, title = { dataset: {}, getAnimations: () => [{ cancel: () => { title.cancelled = true; } }] };
   let onError;
   runInNewContext(bootstrap, { matchMedia: () => ({ matches: reduced }), document: { documentElement: root, getElementById: () => title }, addEventListener: (type, handler) => { if (type === 'error') onError = handler; } });
   assert.equal(root.dataset.heroIntro === 'pending', !reduced, 'only normal-motion first paint hides the title');
-  onError({ filename: 'https://example.com/portfolio/galaxy.js', target: {} });
+  onError({ filename: 'https://example.com/portfolio/' + filename, target: {} });
   assert.equal(root.dataset.heroIntro, 'complete', 'a module SyntaxError must restore the full name');
   assert.equal(root.dataset.heroIntroFailed, 'true');
   assert.equal(title.cancelled, true, 'failed execution must remove existing character opacity animations');
@@ -159,4 +282,4 @@ for (let n = 0; n <= 170; n++) {
   assert(timeline.assembly >= previousAssembly && timeline.assembly <= 1, 'assembly must be monotonic');
   previousAssembly = timeline.assembly;
 }
-console.log(JSON.stringify({ status: 'passed', sourceCounts: '2048+274 / 4096+546', sourceCoreFixtures: sourceCore.length, depthAndSideViewComparisons: comparisons, minDepth, maxDepth, intro: { letters: orders.length, titleEnd: timing.titleEnd, gatherStart: timing.gatherStart, end: timing.end } }));
+console.log(JSON.stringify({ status: 'passed', sourceCounts: '2048+274 / 4096+546', sourceCoreFixtures: sourceCore.length, depthAndSideViewComparisons: comparisons, minDepth, maxDepth, intro: { letters: orders.length, titleEnd: timing.titleEnd, gatherStart: timing.gatherStart, end: timing.end }, logos: { samples: logoSampleChecks, worldAndClipComparisons: logoWorldChecks, scrollAndReducedChecks: logoScrollChecks } }));

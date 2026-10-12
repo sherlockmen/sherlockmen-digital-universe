@@ -11,3 +11,10 @@ GitHub Pages 使用 `master` 分支的根目录。线上地址：
 https://sherlockmen.github.io/sherlockmen-digital-universe/
 
 第三方许可证见 `vendor/three-LICENSE.txt` 与 `space-grotesk-license.txt`。
+
+品牌图标来源：
+
+- [DeepSeek 官方鲸鱼标志](https://api-docs.deepseek.com/img/logo-mark-light.svg)
+- [Anthropic 官方 Claude Spark 品牌素材](https://www.anthropic.com/press-kit)
+
+图标的品牌权利归各品牌方；本项目将矢量轮廓转换为实时三维粒子。
