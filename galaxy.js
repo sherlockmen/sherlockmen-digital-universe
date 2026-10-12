@@ -2,10 +2,10 @@ import * as THREE from './vendor/three.module.min.js';
 
 const inBrowser = typeof window !== 'undefined';
 const canvas = inBrowser ? document.getElementById('galaxy-canvas') : null;
-export const INTRO_TIMING=Object.freeze({labelDelay:.85,labelStagger:.1,labelDuration:1,breath:.1,convergeDuration:5.5});
+export const INTRO_TIMING=Object.freeze({labelDelay:.85,labelStagger:.1,labelDuration:1,convergeDuration:5.5});
 export function introState(time,maxOrder=7){
-  const titleEnd=INTRO_TIMING.labelDelay+maxOrder*INTRO_TIMING.labelStagger+INTRO_TIMING.labelDuration,gatherStart=titleEnd+INTRO_TIMING.breath,end=gatherStart+INTRO_TIMING.convergeDuration;
-  return{titleEnd,gatherStart,end,titleComplete:time>=titleEnd,assembly:clamp01((time-gatherStart)/INTRO_TIMING.convergeDuration),phase:time<titleEnd?'letters':time<gatherStart?'hold':time<end?'gather':'complete'};
+  const titleEnd=INTRO_TIMING.labelDelay+maxOrder*INTRO_TIMING.labelStagger+INTRO_TIMING.labelDuration,gatherStart=titleEnd,end=gatherStart+INTRO_TIMING.convergeDuration;
+  return{titleEnd,gatherStart,end,titleComplete:time>=titleEnd,assembly:clamp01((time-gatherStart)/INTRO_TIMING.convergeDuration),phase:time<titleEnd?'letters':time<end?'gather':'complete'};
 }
 export function introLetterProgress(time,order){return clamp01((time-INTRO_TIMING.labelDelay-order*INTRO_TIMING.labelStagger)/INTRO_TIMING.labelDuration);}
 const cursorReferencePath='M9.60978 17.0223C9.24308 17.739 8.76808 18.189 8.18478 18.3723C7.60148 18.564 7.03478 18.4931 6.48478 18.1598C5.93478 17.8348 5.53061 17.314 5.27228 16.5973L0.672282 3.68478C0.497282 3.19312 0.455612 2.72645 0.547282 2.28478C0.638952 1.83478 0.838952 1.45561 1.14728 1.14728C1.45561 0.838948 1.83478 0.638949 2.28478 0.547279C2.73478 0.455619 3.20561 0.497279 3.69728 0.672279L16.6098 5.27228C17.3265 5.53062 17.8473 5.93478 18.1723 6.48478C18.5056 7.02648 18.5765 7.58898 18.3848 8.17228C18.2015 8.75558 17.7515 9.23058 17.0348 9.59728L12.1098 12.1098L9.60978 17.0223Z';
@@ -86,7 +86,7 @@ function createField(canvas, initialPause) {
   shapeTexture.minFilter=shapeTexture.magFilter=THREE.NearestFilter;shapeTexture.needsUpdate=true;
   const shapeTravel=new Float32Array(6);
   const uniforms = {
-    uWeights: { value: new THREE.Vector4(1,0,0,0) }, uVisibility: { value: 1 },
+    uWeights: { value: new THREE.Vector4(1,0,0,0) },
     uPixelRatio: { value: 1 }, uPointLimit: { value: Math.min(gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1],320) },
     uTime: { value: 0 }, uViewSize: { value: new THREE.Vector2(10.9,10.9) },
     uBackground:{value:0},uSpiralPaths:{value:referenceTexture},uShapePaths:{value:shapeTexture},uRailStart:{value:.72},uTwinkleRate:{value:1},uEntry:{value:1},
@@ -104,7 +104,7 @@ function createField(canvas, initialPause) {
       attribute vec3 aOffset;
       uniform vec4 uWeights;
       uniform vec2 uViewSize;
-      uniform float uVisibility,uPixelRatio,uPointLimit,uTime,uBackground,uRailStart,uTwinkleRate,uEntry;
+      uniform float uPixelRatio,uPointLimit,uTime,uBackground,uRailStart,uTwinkleRate,uEntry;
       uniform sampler2D uSpiralPaths,uShapePaths;
       uniform mat4 uGalaxyMatrix,uCoreMatrix,uShapeMatrix;
       uniform vec3 uGalaxyOrigin,uShapeOrigin;
@@ -161,7 +161,7 @@ function createField(canvas, initialPause) {
         vec3 target=galaxy*uWeights.x+cloud*uWeights.y+sculpture*shape;
         if(uBackground>.5)target=vec3((aSeed.xy-.5)*uViewSize*1.12+drift,(aSeed.z-.5)*.5);
         if(uEntry<1.){
-          float local=clamp((uEntry-(.14+.18*aSeed.z))/(.58+.1*aSeed.y),0.,1.),smoothPull=ease(local),pull=(smoothPull+sin(smoothPull*1.57079632679))*.5;
+          float local=clamp(uEntry/(.82+.18*aSeed.y),0.,1.),smoothPull=ease(local),pull=(smoothPull+sin(smoothPull*1.57079632679))*.5;
           float angle=sin(pull*3.14159265359)*(.44+.22*aSeed.z),c=cos(angle),s=sin(angle);
           vec2 scattered=(aSeed.xy-.5)*uViewSize*1.12;
           vec3 intro=vec3(c*scattered.x-s*scattered.y,s*scattered.x+c*scattered.y,(aSeed.z-.5)*.5);
@@ -181,7 +181,7 @@ function createField(canvas, initialPause) {
         float twinkle=.86+.14*sin(aStyle.w+uTime*.62*aLight.y*uTwinkleRate);
         vDiameter=(.35+aStyle.x*envelope*endpoint*3.8)*sizeScale*(.97+twinkle*.03)*mix(1.,depthCue,shape)*uPixelRatio;
         gl_PointSize=clamp(max(vDiameter,4.),4.,uPointLimit);
-        vColor=mix(aColor,vec3(1.),aOffset.z*.16);vOpacity=aStyle.y*endpoint*mix(1.,opacityCue,shape)*uVisibility*(.92+twinkle*.08);
+        vColor=mix(aColor,vec3(1.),aOffset.z*.16);vOpacity=aStyle.y*endpoint*mix(1.,opacityCue,shape)*(.92+twinkle*.08);
         vBrightness=brightness*intensity*twinkle*(1.+aOffset.z*.7);vRay=smoothstep(1.45,2.8,aLight.x)*mix(1.,brightKeep,shape);vKind=aStyle.z;
       }
     `,
@@ -288,7 +288,7 @@ function createField(canvas, initialPause) {
     shapeRotation.multiplyMatrices(rotationY.makeRotationY(ry),rotationX.makeRotationX(rx));
     uniforms.uShapeMatrix.value.copy(shapeRotation);
     uniforms.uShapeOrigin.value.set(0,vh*(.5-state.centerY),0);
-    uniforms.uVisibility.value=entryActive?smoother((entryTime-timeline.gatherStart)/.35):1;uniforms.uTime.value=elapsed;uniforms.uEntry.value=assembly;uniforms.uTwinkleRate.value=1-currentScatter;
+    uniforms.uTime.value=elapsed;uniforms.uEntry.value=assembly;uniforms.uTwinkleRate.value=1-currentScatter;
     backgroundMaterial.uniforms.uTime.value=elapsed;backgroundMaterial.uniforms.uEntry.value=assembly;
     backgroundMaterial.uniforms.uTwinkleRate.value=1-currentScatter;backgroundMaterial.uniforms.uViewSize.value.copy(uniforms.uViewSize.value);
     params.weights.set([weights.x,weights.y,weights.z,weights.w]);params.time=elapsed;params.view.set([uniforms.uViewSize.value.x,uniforms.uViewSize.value.y]);params.rail=uniforms.uRailStart.value;
@@ -297,14 +297,14 @@ function createField(canvas, initialPause) {
     canvas.dataset.transitionProgress=(state.scene==='cursor'||state.scene==='blossom'?state.strength:currentScatter).toFixed(3);canvas.dataset.assembly=assembly.toFixed(3);
   }
   function updateOpticalLights(){
-    const weights=uniforms.uWeights.value,g=weights.x,shape=weights.z+weights.w,assembly=uniforms.uEntry.value;
+    const weights=uniforms.uWeights.value,g=weights.x,shape=weights.z+weights.w;
     params.background=false;
     for(let n=0;n<opticalStars.length;n++){
       const i=opticalStars[n];particlePosition(data,i,params,sample,scratch);
       opticalPoint.set(sample[0],sample[1],sample[2]).project(camera);
       opticalPoint.x+=data.offsets[i*3];opticalPoint.y+=data.offsets[i*3+1];
       const edge=1-cubic((Math.max(Math.abs(opticalPoint.x),Math.abs(opticalPoint.y))-.88)/.2);
-      opticalLights[n].set((opticalPoint.x+1)*.5,(opticalPoint.y+1)*.5,edge*(g+shape+.1*weights.y)*smoother(assembly));
+      opticalLights[n].set((opticalPoint.x+1)*.5,(opticalPoint.y+1)*.5,edge*(g+shape+.1*weights.y));
     }
     glow.setLights(opticalLights);
   }
@@ -566,7 +566,7 @@ export function particlePosition(data,i,params,out,scratch=createPositionScratch
   }
   if(w[2]+w[3]>0){shapeCoordinates(data,i,w[3]>0?1:0,params.travel,params.shapeSize,base,shapeScratch);transformPoint(base,params.shapeMatrix);for(let a=0;a<3;a++)out[a]+=(base[a]+params.shapeOrigin[a])*(w[2]+w[3]);}
   if(params.background){const sx=data.seeds[k],sy=data.seeds[k+1],sz=data.seeds[k+2],frequency=.4+.4*sz,amount=.035+.085*sz,phase=sy*Math.PI*2+2.7*sz,phaseY=sz*Math.PI*2+3.1*sx;out[0]=(sx-.5)*params.view[0]*1.12+(Math.sin(phase+time*frequency)-Math.sin(phase))*amount;out[1]=(sy-.5)*params.view[1]*1.12+(Math.cos(phaseY+time*frequency*.73)-Math.cos(phaseY))*amount;out[2]=(sz-.5)*.5;}
-  if(params.entry<1){const sx=data.seeds[k],sy=data.seeds[k+1],sz=data.seeds[k+2],local=clamp01((params.entry-(.14+.18*sz))/(.58+.1*sy)),smooth=smoother(local),pull=(smooth+Math.sin(smooth*Math.PI*.5))*.5,angle=Math.sin(pull*Math.PI)*(.44+.22*sz),c=Math.cos(angle),s=Math.sin(angle),x=(sx-.5)*params.view[0]*1.12,y=(sy-.5)*params.view[1]*1.12;out[0]=(c*x-s*y)*(1-pull)+out[0]*pull;out[1]=(s*x+c*y)*(1-pull)+out[1]*pull;out[2]=(sz-.5)*.5*(1-pull)+out[2]*pull;}
+  if(params.entry<1){const sx=data.seeds[k],sy=data.seeds[k+1],sz=data.seeds[k+2],local=clamp01(params.entry/(.82+.18*sy)),smooth=smoother(local),pull=(smooth+Math.sin(smooth*Math.PI*.5))*.5,angle=Math.sin(pull*Math.PI)*(.44+.22*sz),c=Math.cos(angle),s=Math.sin(angle),x=(sx-.5)*params.view[0]*1.12,y=(sy-.5)*params.view[1]*1.12;out[0]=(c*x-s*y)*(1-pull)+out[0]*pull;out[1]=(s*x+c*y)*(1-pull)+out[1]*pull;out[2]=(sz-.5)*.5*(1-pull)+out[2]*pull;}
 }
 function spiralCoordinates(out,arm,p){
   pathCoordinates(buildReferenceSamples(),out,arm,p);

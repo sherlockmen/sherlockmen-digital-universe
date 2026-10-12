@@ -102,6 +102,15 @@ for (const [quality, authored, backgroundCount, cores] of [[2, 2048, 274, 48], [
   const projected = new THREE.Vector3(...output).project(camera);
   near(projected.x, xz / 9.6, 'rotated nucleus horizontal hover projection');
   near(projected.y, (xy - 1.09) / 5.45, 'rotated nucleus vertical hover projection');
+  for (let i = 0; i < authored; i += 127) {
+    params.entry = 0;
+    particlePosition(stars, i, params, output, scratch);
+    const dispersed = Array.from(output), k = i * 4;
+    vectorNear(dispersed, [(stars.seeds[k] - .5) * params.view[0] * 1.12, (stars.seeds[k + 1] - .5) * params.view[1] * 1.12, (stars.seeds[k + 2] - .5) * .5], 'letters must retain the dispersed field');
+    params.entry = .02;
+    particlePosition(stars, i, params, output, scratch);
+    assert(Math.hypot(...output.map((value, axis) => value - dispersed[axis])) > 1e-7, 'particle convergence must start without a per-star waiting period');
+  }
 }
 assert(minDepth < -.8 && maxDepth > .8, 'side view needs the authored world-depth span');
 
@@ -109,6 +118,9 @@ assert(minDepth < -.8 && maxDepth > .8, 'side view needs the authored world-dept
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+const galaxy = readFileSync(new URL('../galaxy.js', import.meta.url), 'utf8');
+assert(!galaxy.includes('uVisibility'), 'letter animation must not hide the particle field');
+assert(!galaxy.match(/opticalLights\[n\]\.set\([^;]*assembly/), 'star glow must stay lit before assembly');
 const orders = [...html.matchAll(/data-intro-letter="(\d+)"/g)].map(match => Number(match[1]));
 assert.deepEqual(orders, [7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3]);
 assert(html.includes('aria-label="SherlockMen 的个人主页"'));
@@ -131,15 +143,15 @@ for (const reduced of [false, true]) {
   assert.equal(title.cancelled, true, 'failed execution must remove existing character opacity animations');
 }
 near(timing.titleEnd, 2.55, 'complete title threshold');
-near(timing.gatherStart, 2.65, 'particle gather threshold');
-near(timing.end, 8.15, 'complete assembly threshold');
+near(timing.gatherStart, timing.titleEnd, 'particle gather starts as soon as the title completes');
+near(timing.end, 8.05, 'complete assembly threshold');
 assert.equal(introLetterProgress(.84, 0), 0);
 assert(introLetterProgress(.86, 0) > 0);
 assert(orders.every(order => introLetterProgress(timing.titleEnd, order) > 1 - 1e-9));
-assert.equal(introState(2.60, maxOrder).phase, 'hold');
-assert.equal(introState(2.65, maxOrder).assembly, 0);
-near(introState(5.40, maxOrder).assembly, .5, 'assembly midpoint');
-assert.equal(introState(8.15, maxOrder).phase, 'complete');
+assert.equal(introState(timing.titleEnd, maxOrder).assembly, 0);
+assert(introState(timing.titleEnd + .01, maxOrder).assembly > 0);
+near(introState(5.30, maxOrder).assembly, .5, 'assembly midpoint');
+assert.equal(introState(8.05, maxOrder).phase, 'complete');
 let previousAssembly = 0;
 for (let n = 0; n <= 170; n++) {
   const timeline = introState(n * .05, maxOrder);
