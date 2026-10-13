@@ -38,7 +38,7 @@ export function sculptureState(name,rect,viewportHeight,reduced=false,neighbors=
   const rise=smoother((progress-enter)/(peak-enter)),fall=1-smoother((progress-fadeStart)/(exit-fadeStart));
   // Keep adjacent handoffs quiet while giving the assembled icon a wider hold.
   const strength=reduced?1:(neighbors.beforeHeight?rise*rise:rise)*(neighbors.afterHeight?fall*fall:fall);
-  return{scene:name,kind:SCULPTURE_KINDS[name],scatter:1,tilt:1,strength,progress,centerY:name==='logos'?.50:SCULPTURE_KINDS[name]>1?.44:.50};
+  return{scene:name,kind:SCULPTURE_KINDS[name],scatter:1,tilt:1,strength,progress,centerY:name==='logos'?.50:name==='cursor'||SCULPTURE_KINDS[name]>1?.44:.50};
 }
 
 const inBrowser = typeof window !== 'undefined';
