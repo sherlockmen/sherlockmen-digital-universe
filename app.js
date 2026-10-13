@@ -66,7 +66,7 @@
     document.querySelectorAll('[data-folder]').forEach((item) => item.setAttribute('aria-expanded', String(item === button)));
     $('#folder-panel-label').textContent = `COLLECTION / ${folderDetails[key].index}`;
     $('#folder-panel-title').textContent = folderDetails[key].title;
-    $('#project-list').innerHTML = projects.filter((project) => project.folder === key).map((project) => `<button class="project-card" data-project="${project.id}" aria-label="查看${project.title}作品详情"><span class="project-art art-${project.art}" aria-hidden="true">${artHTML(project.art)}</span><span class="project-title"><span>${project.title}</span><span aria-hidden="true">↗</span></span><span class="mono">${project.mode ? 'INTERACTIVE 3D' : 'CREATIVE CONCEPT'} / DEMO PROJECT</span></button>`).join('');
+    $('#project-list').innerHTML = projects.filter((project) => project.folder === key).map((project) => `<button class="project-card" data-project="${project.id}" aria-label="查看${project.title}作品详情"><span class="project-art art-${project.art}" aria-hidden="true">${artHTML(project.art)}</span><span class="project-title"><span>${project.title}</span></span><span class="mono">${project.mode ? 'INTERACTIVE 3D' : 'CREATIVE CONCEPT'} / DEMO PROJECT</span></button>`).join('');
     folderPanel.hidden = false;
     folderPanel.scrollIntoView({behavior:reduced.matches || event.detail===0?'instant':'smooth',block:'nearest'});
     $('#folder-panel-title').focus({preventScroll:true});
