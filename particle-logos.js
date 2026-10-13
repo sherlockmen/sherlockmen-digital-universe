@@ -53,13 +53,27 @@ export function logoContains(kind,x,y) {
   }
   return winding!==0;
 }
-function radicalInverse(index,base){let value=0,factor=1/base;while(index){value+=(index%base)*factor;index=Math.floor(index/base);factor/=base;}return value;}
+export function logoClearance(kind,x,y){
+  let nearest=Infinity;
+  for(const {a,b} of geometry(kind).segments){
+    const dx=b[0]-a[0],dy=b[1]-a[1],length=dx*dx+dy*dy;
+    const t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/length));
+    nearest=Math.min(nearest,Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t));
+  }
+  return nearest;
+}
+function seededRandom(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let n=Math.imul(seed^seed>>>15,1|seed);n^=n+Math.imul(n^n>>>7,61|n);return((n^n>>>14)>>>0)/4294967296;};}
 export function buildLogoSamples(count=1024) {
   if(!Number.isInteger(count)||count<16)throw new Error('Invalid logo sample budget');
   const table=new Float32Array(LOGO_GEOMETRY.length*count*4);
   for(const definition of LOGO_GEOMETRY){
     const {kind}=definition,{segments,length}=geometry(kind),row=kind-2;
-    let candidate=1,segment=0;
+    const random=seededRandom(0x715f293d^kind),clusters=[];
+    for(let i=0;i<12;i++){
+      let x,y;do{x=random()-.5;y=random()-.5;}while(!logoContains(kind,x,y));
+      clusters.push([x,y,.026+.054*random()]);
+    }
+    let attempts=0,segment=0;
     for(let i=0;i<count;i++){
       let x,y,edge=0;
       if(i%5===0){
@@ -73,9 +87,17 @@ export function buildLogoSamples(count=1024) {
         const ax=x-dy/span*epsilon,ay=y+dx/span*epsilon;
         if(logoContains(kind,ax,ay)){x=ax;y=ay;}else{x+=dy/span*epsilon;y-=dx/span*epsilon;}
       }else{
-        do{x=radicalInverse(candidate,2)-.5;y=radicalInverse(candidate,3)-.5;candidate++;if(candidate>count*100)throw new Error('Particle logo has no fill');}while(!logoContains(kind,x,y));
+        do{
+          if(random()<.76){
+            const cluster=clusters[Math.floor(random()*clusters.length)],angle=random()*Math.PI*2,radius=Math.sqrt(-2*Math.log(Math.max(.000001,random())))*cluster[2];
+            x=cluster[0]+Math.cos(angle)*radius;y=cluster[1]+Math.sin(angle)*radius;
+          }else{x=random()-.5;y=random()-.5;}
+          if(++attempts>count*100)throw new Error('Particle logo has no fill');
+        }while(!logoContains(kind,x,y));
       }
-      table.set([x,y,edge,1],(row*count+i)*4);
+      // Every orbit stays inside a clearance disc, including small eye holes.
+      const safeRadius=Math.min(.03,logoClearance(kind,x,y)*.6);
+      table.set([x,y,edge,safeRadius],(row*count+i)*4);
     }
   }
   if(!table.every(Number.isFinite))throw new Error('Non-finite logo target');

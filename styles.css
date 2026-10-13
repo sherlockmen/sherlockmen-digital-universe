@@ -28,6 +28,7 @@ main>section{position:relative;z-index:1}.site-header.is-scrolled{background:lin
 .particle-intro-copy p{font-size:14px;color:#aab8c2;margin-top:22px}
 .particle-hit{position:absolute;inset:8% 20% 23%;z-index:2;cursor:grab;touch-action:pan-y;background:transparent;border:0;border-radius:20px}.particle-hit:active{cursor:grabbing}.particle-hit:focus-visible{outline:1px solid #bedbf277;outline-offset:-10px}
 .particle-caption{position:absolute;bottom:100px;inset-inline:24px;text-align:center;pointer-events:none;z-index:3}.particle-caption h2{font-size:30px;letter-spacing:-.035em;margin-top:11px;line-height:1.4}.particle-caption>p:last-child{font-size:12px;color:#aab8c2;margin-top:11px}
+.particle-logo-pair .logo-anchor{position:absolute;top:0;left:0;width:0;height:0;pointer-events:none}.particle-logo-pair .particle-hit{inset:12% auto 12%;width:44%}.particle-logo-pair [data-particle-scene="deepseek"]{left:4%}.particle-logo-pair [data-particle-scene="claude"]{right:4%}
 @media(max-width:680px){.particle-intro,.particle-interlude{min-height:720px}.particle-hit{inset:14% 0 24%}.particle-caption{bottom:130px}.particle-caption h2{font-size:26px}.particle-caption>p:last-child{font-size:11px}.particle-intro-copy h2{font-size:clamp(27px,7.9vw,42px)}.particle-intro-copy p{font-size:13px}.particle-intro-copy{top:47%}.hero .hero-bottom{bottom:106px}}
 
 .section>.container,.contact>.container{position:relative;isolation:isolate}
