@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { WORDMARK } from '../wordmark.js';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from '../vendor/three.module.min.js';
-import { buildParticleField, buildShapeSamples, shapeCoordinates, particlePosition, createPositionScratch, introState, introLetterProgress, SCULPTURE_KINDS, sculptureState, LOGO_SLOTS, logoSlot, logoRowLayout, logoMotionTime, logoMotionAngles, shapeFlowSpeed, shapeFlowDistance } from '../galaxy.js';
+import { buildParticleField, buildShapeSamples, shapeCoordinates, particlePosition, createPositionScratch, introState, introLetterProgress, SCULPTURE_KINDS, sculptureState, LOGO_SLOTS, logoSlot, logoRowLayout, logoMotionTime, logoMotionAngles, shapeFlowSpeed, shapeFlowDistance, wordmarkFlowScale, cursorPoint } from '../galaxy.js';
 import { LOGO_GEOMETRY, buildLogoFlowData, logoFlowLane, LOGO_FLOW_POINTS, LOGO_FLOW_BANDS, logoContains, logoClearance } from '../particle-logos.js';
 
 // Source contracts: 019ulkdkl8r2h.js nucleus generator and path-shape shader.
@@ -19,6 +20,42 @@ const density = p => p + .22 * Math.sin(p * Math.PI * 2) / (Math.PI * 2);
 const identity = new THREE.Matrix4();
 const sideView = new THREE.Matrix4().makeRotationY(Math.PI / 2);
 const shapes = buildShapeSamples();
+assert.equal(WORDMARK.text, 'SHERLOCK MEN');
+const wordAspect = WORDMARK.width / WORDMARK.height;
+let wordArc = 0, wordContours = 0;
+for (let from = 0; from < 1024;) {
+  const to = Math.round(shapes[from * 4 + 3] * 1024), last = (to - 1) * 4;
+  assert(to > from + 2 && to <= 1024, 'every letter contour has a complete sample range');
+  vectorNear(Array.from(shapes.slice(from * 4, from * 4 + 2)), Array.from(shapes.slice(last, last + 2)), 'closed letter contour');
+  for (let i = from + 1; i < to; i++) wordArc += Math.hypot(shapes[i * 4] - shapes[(i - 1) * 4], (shapes[i * 4 + 1] - shapes[(i - 1) * 4 + 1]) / wordAspect);
+  wordContours++;from = to;
+}
+assert.equal(wordContours, WORDMARK.paths.length);
+let cursorArc = 0, cursorPrevious = cursorPoint(0);
+for (let i = 1; i <= 8192; i++) {
+  const current = cursorPoint(i / 8192);cursorArc += Math.hypot(current[0] - cursorPrevious[0], current[1] - cursorPrevious[1]) / 7.2;cursorPrevious = current;
+}
+assert(Math.abs(wordArc * wordmarkFlowScale() / cursorArc - 1) < .01, 'letter flow must keep the original cursor world speed');
+const { stars: wordStars } = buildParticleField(2), wordScratch = createPositionScratch().shape;
+const wordSize = [7.2, 7.2 / wordAspect], wordA = new Float64Array(3), wordB = new Float64Array(3), wordTravel = new Float64Array(6);
+for (let from = 0; from < 1024;) {
+  const end = shapes[from * 4 + 3], start = from / 1024, span = end - start;
+  wordStars.shape[0] = start + span * .5;wordStars.loops[2] = .08;
+  const seamGap = epsilon => {
+    wordTravel[0] = (.5 - epsilon) * span / wordmarkFlowScale();shapeCoordinates(wordStars, 0, 0, wordTravel, wordSize, wordA, wordScratch);
+    wordTravel[0] = (.5 + epsilon) * span / wordmarkFlowScale();shapeCoordinates(wordStars, 0, 0, wordTravel, wordSize, wordB, wordScratch);
+    return Math.hypot(wordB[0] - wordA[0], wordB[1] - wordA[1]);
+  };
+  assert(seamGap(1e-6) <= seamGap(1e-4) * .025 + 1e-7, 'letter contours must flow across their seam without a jump');
+  from = Math.round(end * 1024);
+}
+for (let time = 0; time <= 10; time += .5) for (let i = 17; i < wordStars.masses.length; i += 17) {
+  wordTravel.forEach((_, layer) => { wordTravel[layer] = time * shapeFlowSpeed(layer); });shapeCoordinates(wordStars, i, 0, wordTravel, wordSize, wordA, wordScratch);
+  wordTravel.forEach((_, layer) => { wordTravel[layer] = (time + .001) * shapeFlowSpeed(layer); });shapeCoordinates(wordStars, i, 0, wordTravel, wordSize, wordB, wordScratch);
+  const speed = Math.hypot(wordB[0] - wordA[0], wordB[1] - wordA[1]) / .001;
+  assert(speed <= cursorArc * wordSize[0] * shapeFlowSpeed(wordStars.loops[i * 4]) * 1.30, 'letter corners must not accelerate stars beyond the original cursor flow range');
+}
+
 let comparisons = 0, minDepth = Infinity, maxDepth = -Infinity;
 
 for (const [quality, authored, backgroundCount, cores] of [[2, 2048, 274, 48], [4, 4096, 546, 96]]) {
@@ -64,9 +101,10 @@ for (const [quality, authored, backgroundCount, cores] of [[2, 2048, 274, 48], [
       const k = i * 4, seed = stars.shape[k], entry = (kind * 1024 + Math.min(Math.floor(Math.min(seed, .999999) * 1024), 1023)) * 4;
       const start = shapes[entry + 2], end = shapes[entry + 3], span = Math.max(end - start, 1 / 1024);
       const localSeed = Math.max(0, Math.min(1, (seed - start) / span));
-      const p = density(fract(localSeed + travel[stars.loops[k]] / span));
+      const p = density(fract(localSeed + travel[stars.loops[k]] * (kind === 0 ? wordmarkFlowScale() : 1) / span));
+      const styleP = kind === 0 ? density(fract(seed + travel[stars.loops[k]])) : p;
       near(shapeCoordinates(stars, i, kind, travel, [7.2, 7.2], local, shapeScratch), p, 'source contour phase');
-      const expectedZ = Math.sin(p * Math.PI * 1.35 + stars.shape[k + 2]) * stars.shape[k + 1] * Math.sin(p * Math.PI)
+      const expectedZ = Math.sin(styleP * Math.PI * 1.35 + stars.shape[k + 2]) * stars.shape[k + 1] * Math.sin(styleP * Math.PI)
         + stars.loops[k + 3] * .75 + (stars.seeds[k + 2] - .5) * .22;
       near(local[2], expectedZ, 'source world depth');
       shapeCoordinates(stars, i, kind, travel, [2, 2], wide, shapeScratch);
@@ -430,7 +468,7 @@ assert(!css.includes(String.fromCharCode(92) + 'n'), 'CSS contains a literal new
 assert(css.includes('.pause-button{'), 'the project dialog pause button must retain its styling');
 const maxOrder = Math.max(...orders), timing = introState(0, maxOrder);
 const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=deepseek-outline-1', 'particle-logos.js?v=deepseek-outline-1']) {
+for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=word-nebula-1', 'particle-logos.js?v=deepseek-outline-1']) {
   const root = { dataset: {} }, title = { dataset: {}, getAnimations: () => [{ cancel: () => { title.cancelled = true; } }] };
   let onError;
   runInNewContext(bootstrap, { matchMedia: () => ({ matches: reduced }), document: { documentElement: root, getElementById: () => title }, addEventListener: (type, handler) => { if (type === 'error') onError = handler; } });

@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
+import { WORDMARK } from './wordmark.js?v=word-nebula-1';
 import { LOGO_GEOMETRY, buildLogoFlowData,logoFlowLane,logoFlowSample,LOGO_FLOW_POINTS } from './particle-logos.js?v=deepseek-outline-1';
 
 export const SCULPTURE_KINDS=Object.freeze({cursor:0,blossom:1,deepseek:2,claude:3,logos:2});
@@ -61,7 +62,8 @@ const spiralPaths=[
   'M114.973 211.36C114.973 225.86 92.4727 226.86 92.4727 205.36C92.4727 183.86 109.938 175.36 127.973 175.36C146.008 175.36 174.473 195.86 174.473 230.86C174.473 264.36 148.473 281.86 133.973 287.36C119.473 292.86 81.6727 296.56 54.4727 269.36'
 ];
 let cachedReferenceSamples;
-let cachedCurveSamples,cachedShapeSamples,cachedFlowDistance;
+let cachedCurveSamples,cachedShapeSamples,cachedFlowDistance,cachedWordFlowScale;
+export function wordmarkFlowScale(){buildShapeSamples();return cachedWordFlowScale;}
 const blossomPaths=[
   'M1025.52 167.475C960.586 89.5754 862.821 40 753.477 40C557.968 40 399.477 198.491 399.477 394V737.278C399.477 757.119 409.975 775.478 427.074 785.541L851.477 1035.3',
   'M1465.07 608.95C1500.07 513.764 1494.12 404.309 1439.45 309.614C1341.69 140.298 1125.19 82.2866 955.872 180.041L658.585 351.68C641.402 361.6 630.752 379.872 630.587 399.712L626.49 892.135',
@@ -131,7 +133,7 @@ function createField(canvas, initialPause) {
     uWeights: { value: new THREE.Vector4(1,0,0,0) },
     uPixelRatio: { value: 1 }, uPointLimit: { value: Math.min(gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1],320) },
     uTime: { value: 0 }, uViewSize: { value: new THREE.Vector2(10.9,10.9) },
-    uBackground:{value:0},uSpiralPaths:{value:referenceTexture},uShapePaths:{value:shapeTexture},uLogoLanes:{value:flowTexture},uLogoDistance:{value:shapeFlowDistance()},uLogoStarts:{value:new THREE.Vector4(...flowData.laneInfo.filter(info=>info.kind===2&&info.row%8===0).map(info=>Math.round(info.start*1023)/1024))},uShapeKind:{value:0},uLogoPair:{value:0},uLogoTime:{value:0},uLogoOffset:{value:0},uLogoIconPixels:{value:400},uLogoMatrix0:{value:new THREE.Matrix4()},uLogoMatrix1:{value:new THREE.Matrix4()},uLogoMatrix2:{value:new THREE.Matrix4()},uRailStart:{value:.72},uTwinkleRate:{value:1},uEntry:{value:1},
+    uBackground:{value:0},uSpiralPaths:{value:referenceTexture},uShapePaths:{value:shapeTexture},uLogoLanes:{value:flowTexture},uLogoDistance:{value:shapeFlowDistance()},uLogoStarts:{value:new THREE.Vector4(...flowData.laneInfo.filter(info=>info.kind===2&&info.row%8===0).map(info=>Math.round(info.start*1023)/1024))},uWordFlowScale:{value:wordmarkFlowScale()},uShapeKind:{value:0},uLogoPair:{value:0},uLogoTime:{value:0},uLogoOffset:{value:0},uLogoIconPixels:{value:400},uLogoMatrix0:{value:new THREE.Matrix4()},uLogoMatrix1:{value:new THREE.Matrix4()},uLogoMatrix2:{value:new THREE.Matrix4()},uRailStart:{value:.72},uTwinkleRate:{value:1},uEntry:{value:1},
     uGalaxyMatrix:{value:new THREE.Matrix4()},uCoreMatrix:{value:new THREE.Matrix4()},uGalaxyOrigin:{value:new THREE.Vector3()},uShapeMatrix:{value:new THREE.Matrix4()},uShapeOrigin:{value:new THREE.Vector3()},uShapeSize:{value:new THREE.Vector2()},uShapeTravel:{value:shapeTravel}
   };
   const material = new THREE.ShaderMaterial({
@@ -147,7 +149,7 @@ function createField(canvas, initialPause) {
       uniform vec4 uWeights;
       uniform vec2 uViewSize;
       uniform float uPixelRatio,uPointLimit,uTime,uBackground,uRailStart,uTwinkleRate,uEntry,uShapeKind,uLogoPair,uLogoTime,uLogoOffset,uLogoIconPixels;
-      uniform float uLogoDistance;
+      uniform float uLogoDistance,uWordFlowScale;
       uniform vec4 uLogoStarts;
       uniform sampler2D uSpiralPaths,uShapePaths,uLogoLanes;
       uniform mat4 uGalaxyMatrix,uCoreMatrix,uShapeMatrix,uLogoMatrix0,uLogoMatrix1,uLogoMatrix2;
@@ -197,15 +199,19 @@ function createField(canvas, initialPause) {
           vec2 range=texture2D(uShapePaths,vec2((min(floor(clamp(aShape.x,0.,.999999)*1024.),1023.)+.5)/1024.,(kind+.5)/4.)).zw;
           float span=max(range.y-range.x,1./1024.);
           float local=clamp((aShape.x-range.x)/span,0.,1.);
-          shapeP=density(fract(local+layerTravel(aLoop.x)/span));
-          float sampleP=mix(range.x,range.y,shapeP),stepP=1./1023.;
+          shapeP=density(fract(local+layerTravel(aLoop.x)*(kind<.5?uWordFlowScale:1.)/span));
+          float sampleP=kind<.5?(range.x*1024.+shapeP*(span*1024.-1.))/1023.:mix(range.x,range.y,shapeP),stepP=1./1023.;
+          vec2 bounds=kind<.5?vec2(range.x*1024.,range.y*1024.-1.)/1023.:range;
           vec2 point=outline(kind,sampleP).xy;
           vec2 size=uShapeSize;
           if(uLogoPair>.5){float aspect=kind>2.5?1.:kind>1.5?1.358877551:1.12223667;size=kind<1.5?vec2(5.8,5.8/aspect):vec2(uShapeSize.x,uShapeSize.y/aspect);}
-          vec2 before=outline(kind,max(sampleP-stepP,range.x)).xy*size,after=outline(kind,min(sampleP+stepP,range.y)).xy*size;
+          float wordStep=1./max(span*1024.-1.,1.),normalP=kind<.5?density(local):shapeP;
+          float beforeP=kind<.5?(range.x*1024.+fract(normalP-wordStep)*(span*1024.-1.))/1023.:max(sampleP-stepP,bounds.x),afterP=kind<.5?(range.x*1024.+fract(normalP+wordStep)*(span*1024.-1.))/1023.:min(sampleP+stepP,bounds.y);
+          vec2 before=outline(kind,beforeP).xy*size,after=outline(kind,afterP).xy*size;
           vec2 tangent=normalize(after-before+vec2(.0001,0.));
           float across=aLoop.z*1.1+(aSeed.x+aSeed.y-1.)*.12;
-          float z=sin(shapeP*3.14159265359*1.35+aShape.z)*aShape.y*sin(shapeP*3.14159265359)+aLoop.w*.75+(aSeed.z-.5)*.22;
+          float styleP=kind<.5?density(fract(aShape.x+layerTravel(aLoop.x))):shapeP;
+          float z=sin(styleP*3.14159265359*1.35+aShape.z)*aShape.y*sin(styleP*3.14159265359)+aLoop.w*.75+(aSeed.z-.5)*.22;
           if(kind>1.5){
             float contour=kind>2.5?4.:aShape.x<uLogoStarts.y?0.:aShape.x<uLogoStarts.z?1.:aShape.x<uLogoStarts.w?2.:3.;
             float row=contour*8.+min(7.,floor(fract(aSeed.x*3.17+aSeed.y*5.31+aLoop.y*1.79)*8.));
@@ -221,6 +227,7 @@ function createField(canvas, initialPause) {
           depthCue=mix(.78,1.18,frontness);opacityCue=mix(.72,1.,frontness);
           if(uLogoPair>.5)sculpture.x+=(glyphSlot-1.)*uLogoOffset;
           sculpture+=uShapeOrigin;
+          if(kind<.5)shapeP=styleP;
         }
         vec3 target=galaxy*uWeights.x+cloud*uWeights.y+sculpture*shape;
         if(uBackground>.5)target=vec3((aSeed.xy-.5)*uViewSize*1.12+drift,(aSeed.z-.5)*.5);
@@ -356,8 +363,9 @@ function createField(canvas, initialPause) {
     coreEuler.set(reduced.matches?0:.08*Math.sin(.22*elapsed)*g,reduced.matches?0:.14*Math.cos(.28*elapsed)*g,reduced.matches?0:coreRotation*g,'XYZ');
     uniforms.uCoreMatrix.value.makeRotationFromEuler(coreEuler);
     uniforms.uGalaxyOrigin.value.set(0,vh*(.5-state.centerY),0);
-    const aspect=kind>1?LOGO_GEOMETRY[kind-2].viewBox[2]/LOGO_GEOMETRY[kind-2].viewBox[3]:kind===1?1726/1538:1,widthPx=Math.min(576,width*.88,height*(kind>1?.58:.8)*aspect),worldWidth=widthPx/height*vh;
+    const aspect=kind>1?LOGO_GEOMETRY[kind-2].viewBox[2]/LOGO_GEOMETRY[kind-2].viewBox[3]:kind===1?1726/1538:WORDMARK.width/WORDMARK.height,widthPx=Math.min(kind===0&&width>680?880:576,width*.88,height*(kind>1?.58:.8)*aspect),worldWidth=widthPx/height*vh;
     const pairLayout=pair?logoPairLayout(width,height,vh):null,size=pairLayout?pairLayout.size:[worldWidth,worldWidth/aspect];
+    uniforms.uWordFlowScale.value=wordmarkFlowScale()*Math.min(576,width*.88,height*.8)/widthPx;
     uniforms.uShapeSize.value.set(size[0],size[1]);uniforms.uLogoOffset.value=pairLayout?.offset||0;uniforms.uLogoIconPixels.value=pairLayout?.iconWidth||widthPx;
     for(let slot=0;slot<3;slot++){logoEuler.set(slotOrbit[slot][1],slotOrbit[slot][0],0,'XYZ');uniforms['uLogoMatrix'+slot].value.makeRotationFromEuler(logoEuler);}
     const sweep=reduced.matches?1:smoother((shape-.04)/.78),gate=smoother((shape-.001)/.119),pointerGate=smoother((shape-.05)/.35),entrance=reduced.matches?0:Math.sin(sweep*Math.PI),amount=paused?0:.42;
@@ -369,7 +377,7 @@ function createField(canvas, initialPause) {
     backgroundMaterial.uniforms.uTime.value=elapsed;backgroundMaterial.uniforms.uEntry.value=assembly;
     backgroundMaterial.uniforms.uTwinkleRate.value=1-currentScatter;backgroundMaterial.uniforms.uViewSize.value.copy(uniforms.uViewSize.value);
     params.weights.set([weights.x,weights.y,weights.z,weights.w]);params.time=elapsed;params.view.set([uniforms.uViewSize.value.x,uniforms.uViewSize.value.y]);params.rail=uniforms.uRailStart.value;
-    params.galaxyOrigin.set([uniforms.uGalaxyOrigin.value.x,uniforms.uGalaxyOrigin.value.y,uniforms.uGalaxyOrigin.value.z]);params.shapeOrigin.set([uniforms.uShapeOrigin.value.x,uniforms.uShapeOrigin.value.y,uniforms.uShapeOrigin.value.z]);params.shapeSize.set(size);params.entry=assembly;params.shapeKind=kind;params.logoPair=pair;params.logoSlots=pair?3:0;params.logoTime=logoTime;params.logoOffset=uniforms.uLogoOffset.value;params.logoMatrices=[uniforms.uLogoMatrix0.value,uniforms.uLogoMatrix1.value,uniforms.uLogoMatrix2.value];
+    params.galaxyOrigin.set([uniforms.uGalaxyOrigin.value.x,uniforms.uGalaxyOrigin.value.y,uniforms.uGalaxyOrigin.value.z]);params.shapeOrigin.set([uniforms.uShapeOrigin.value.x,uniforms.uShapeOrigin.value.y,uniforms.uShapeOrigin.value.z]);params.shapeSize.set(size);params.wordFlowScale=uniforms.uWordFlowScale.value;params.entry=assembly;params.shapeKind=kind;params.logoPair=pair;params.logoSlots=pair?3:0;params.logoTime=logoTime;params.logoOffset=uniforms.uLogoOffset.value;params.logoMatrices=[uniforms.uLogoMatrix0.value,uniforms.uLogoMatrix1.value,uniforms.uLogoMatrix2.value];
     scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
     canvas.dataset.transitionProgress=(state.scene in SCULPTURE_KINDS?state.strength:currentScatter).toFixed(3);canvas.dataset.assembly=assembly.toFixed(3);canvas.dataset.shapeKind=String(kind);
     canvas.dataset.logoPair=String(pair);canvas.dataset.logoTime=logoTime.toFixed(3);if(pair){canvas.dataset.logoWidth=pairLayout.iconWidth.toFixed(1);canvas.dataset.logoGap=pairLayout.gap.toFixed(1);}
@@ -638,14 +646,42 @@ export function buildShapeSamples(){
       table.set([x/width-.5,.5-y/height,offset/total,(offset+d.at(-1))/total],j);
     }
   }
+  buildWordmarkSamples(table);
   table.set(buildLogoFlowData().samples,2*1024*4);
   return cachedShapeSamples=table;
 }
+function buildWordmarkSamples(table){
+  const lines=WORDMARK.paths.map(svgPolyline),lengths=lines.map(line=>{
+    const distances=new Float64Array(line.length);
+    for(let i=1;i<line.length;i++)distances[i]=distances[i-1]+Math.hypot(line[i][0]-line[i-1][0],line[i][1]-line[i-1][1]);
+    return distances;
+  });
+  const total=lengths.reduce((sum,d)=>sum+d.at(-1),0),cursor=svgPolyline(cursorReferencePath);
+  let original=0;for(let i=1;i<cursor.length;i++)original+=Math.hypot(cursor[i][0]-cursor[i-1][0],cursor[i][1]-cursor[i-1][1]);
+  let sampledLength=0;
+  let offset=0,distance=0;
+  for(let contour=0;contour<lines.length;contour++){
+    const line=lines[contour],d=lengths[contour];distance+=d.at(-1);
+    const end=contour===lines.length-1?1024:Math.round(distance/total*1024),count=end-offset;
+    if(count<3)throw new Error('Wordmark contour needs more particle samples');
+    let segment=1;
+    for(let i=0;i<count;i++){
+      const target=i/(count-1)*d.at(-1);while(segment<line.length-1&&d[segment]<target)segment++;
+      const fraction=(target-d[segment-1])/Math.max(d[segment]-d[segment-1],1e-9);
+      const x=line[segment-1][0]+(line[segment][0]-line[segment-1][0])*fraction,y=line[segment-1][1]+(line[segment][1]-line[segment-1][1])*fraction;
+      table.set([x/WORDMARK.width-.5,.5-y/WORDMARK.height,offset/1024,end/1024],(offset+i)*4);
+    }
+    for(let i=offset+1;i<end;i++)sampledLength+=Math.hypot(table[i*4]-table[(i-1)*4],(table[i*4+1]-table[(i-1)*4+1])*WORDMARK.height/WORDMARK.width);
+    offset=end;
+  }
+  cachedWordFlowScale=Math.fround(original/19/sampledLength);
+}
 function shapeSample(samples,out,kind,p){const along=clamp01(p)*1023,a=Math.floor(along),b=Math.min(a+1,1023),f=along-a,j=(kind*1024+a)*4,k=(kind*1024+b)*4;for(let axis=0;axis<4;axis++)out[axis]=samples[j+axis]+(samples[k+axis]-samples[j+axis])*f;}
 export function createPositionScratch(){return{base:new Float64Array(3),normal:new Float64Array(3),logoSize:new Float64Array(2),shape:{point:new Float64Array(4),before:new Float64Array(4),after:new Float64Array(4)}};}
-export function shapeCoordinates(data,i,kind,travel,size,out,scratch=createPositionScratch().shape){
+export function shapeCoordinates(data,i,kind,travel,size,out,scratch=createPositionScratch().shape,wordFlowScale=wordmarkFlowScale()){
   const k=i*4,seed=data.shape[k],samples=buildShapeSamples(),entry=(kind*1024+Math.min(Math.floor(Math.min(seed,.999999)*1024),1023))*4,start=samples[entry+2],end=samples[entry+3],span=Math.max(end-start,1/1024);
-  const local=clamp01((seed-start)/span),phase=fract(local+travel[data.loops[k]]/span),p=densityProgress(phase),global=start+(end-start)*p;
+  const clock=travel[data.loops[k]],local=clamp01((seed-start)/span),phase=fract(local+clock*(kind===0?wordFlowScale:1)/span),p=densityProgress(phase),global=kind===0?(start*1024+p*(span*1024-1))/1023:start+(end-start)*p;
+  const styleP=kind===0?densityProgress(fract(seed+clock)):p,minSample=kind===0?start*1024/1023:start,maxSample=kind===0?(end*1024-1)/1023:end;
   const {point,before,after}=scratch;
   shapeSample(samples,point,kind,global);
   if(kind>1){
@@ -655,12 +691,14 @@ export function shapeCoordinates(data,i,kind,travel,size,out,scratch=createPosit
     out[2]=Math.sin(laneP*Math.PI*1.35+data.shape[k+2])*data.shape[k+1]*Math.sin(laneP*Math.PI)+data.loops[k+3]*.75+(data.seeds[k+2]-.5)*.22;
     return laneP;
   }else{
-    shapeSample(samples,before,kind,Math.max(global-1/1023,start));shapeSample(samples,after,kind,Math.min(global+1/1023,end));
+    // Keep each star's crosswise offset stable at letter corners.
+    const wordStep=1/Math.max(span*1024-1,1),normalP=kind===0?densityProgress(local):p,beforeP=kind===0?(start*1024+fract(normalP-wordStep)*(span*1024-1))/1023:Math.max(global-1/1023,minSample),afterP=kind===0?(start*1024+fract(normalP+wordStep)*(span*1024-1))/1023:Math.min(global+1/1023,maxSample);
+    shapeSample(samples,before,kind,beforeP);shapeSample(samples,after,kind,afterP);
     const dx=(after[0]-before[0])*size[0]+.0001,dy=(after[1]-before[1])*size[1],length=Math.hypot(dx,dy)||1;
     const across=data.loops[k+2]*1.1+(data.seeds[k]+data.seeds[k+1]-1)*.12;
     out[0]=point[0]*size[0]-dy/length*across;out[1]=point[1]*size[1]+dx/length*across;
   }
-  out[2]=Math.sin(p*Math.PI*1.35+data.shape[k+2])*data.shape[k+1]*Math.sin(p*Math.PI)+data.loops[k+3]*.75+(data.seeds[k+2]-.5)*.22;
+  out[2]=Math.sin(styleP*Math.PI*1.35+data.shape[k+2])*data.shape[k+1]*Math.sin(styleP*Math.PI)+data.loops[k+3]*.75+(data.seeds[k+2]-.5)*.22;
   return p;
 }
 function transformPoint(out,m){const x=out[0],y=out[1],z=out[2],e=m.elements||m;out[0]=e[0]*x+e[4]*y+e[8]*z+e[12];out[1]=e[1]*x+e[5]*y+e[9]*z+e[13];out[2]=e[2]*x+e[6]*y+e[10]*z+e[14];}
@@ -681,7 +719,7 @@ export function particlePosition(data,i,params,out,scratch=createPositionScratch
   if(w[2]+w[3]>0){
     const slot=logoSlot(data,i),kind=params.logoPair?LOGO_SLOTS[slot].kind:params.shapeKind??(w[3]>0?1:0),size=scratch.logoSize;
     size[0]=params.logoPair&&kind===1?5.8:params.shapeSize[0];size[1]=params.logoPair?size[0]/LOGO_SLOTS[slot].aspect:params.shapeSize[1];
-    shapeCoordinates(data,i,kind,params.travel,size,base,shapeScratch);
+    shapeCoordinates(data,i,kind,params.travel,size,base,shapeScratch,params.wordFlowScale);
     if(params.logoPair){
       if(kind===1){const scale=params.shapeSize[0]/5.8;for(let axis=0;axis<3;axis++)base[axis]*=scale;}else base[2]*=Math.min(1,params.shapeSize[0]/5.8);
       if(params.logoMatrices)transformPoint(base,params.logoMatrices[slot]);base[0]+=(slot-1)*params.logoOffset;
