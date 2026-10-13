@@ -143,7 +143,7 @@
       }
       color = tonemap(color);
       color += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
-      gl_FragColor = vec4(color, 1.0);
+      gl_FragColor = hit ? vec4(color, 1.0) : vec4(0.0);
     }
   `;
 
@@ -173,7 +173,7 @@
 
   function setup() {
     try {
-      gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, powerPreference: 'high-performance' });
+      gl = canvas.getContext('webgl', { alpha: true, antialias: false, depth: false, powerPreference: 'high-performance' });
       if (!gl) return fallback();
       const vertex = compile(gl.VERTEX_SHADER, vertexSource);
       const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);
