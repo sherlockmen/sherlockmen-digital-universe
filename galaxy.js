@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { WORDMARK } from './wordmark.js?v=word-nebula-1';
+import { WORDMARK } from './wordmark.js?v=word-clear-1';
 import { LOGO_GEOMETRY, buildLogoFlowData,logoFlowLane,logoFlowSample,LOGO_FLOW_POINTS } from './particle-logos.js?v=deepseek-outline-1';
 
 export const SCULPTURE_KINDS=Object.freeze({cursor:0,blossom:1,deepseek:2,claude:3,logos:2});
@@ -209,7 +209,7 @@ function createField(canvas, initialPause) {
           float beforeP=kind<.5?(range.x*1024.+fract(normalP-wordStep)*(span*1024.-1.))/1023.:max(sampleP-stepP,bounds.x),afterP=kind<.5?(range.x*1024.+fract(normalP+wordStep)*(span*1024.-1.))/1023.:min(sampleP+stepP,bounds.y);
           vec2 before=outline(kind,beforeP).xy*size,after=outline(kind,afterP).xy*size;
           vec2 tangent=normalize(after-before+vec2(.0001,0.));
-          float across=aLoop.z*1.1+(aSeed.x+aSeed.y-1.)*.12;
+          float across=(aLoop.z*1.1+(aSeed.x+aSeed.y-1.)*.12)*(kind<.5?(aSeed.w<.88?.12:.45):1.);
           float styleP=kind<.5?density(fract(aShape.x+layerTravel(aLoop.x))):shapeP;
           float z=sin(styleP*3.14159265359*1.35+aShape.z)*aShape.y*sin(styleP*3.14159265359)+aLoop.w*.75+(aSeed.z-.5)*.22;
           if(kind>1.5){
@@ -245,12 +245,14 @@ function createField(canvas, initialPause) {
         if(shape>0.){endpoint=mix(endpoint,smoothstep(0.,.055,shapeP)*(1.-smoothstep(.945,1.,shapeP)),shape);envelope=mix(envelope,mix(1.,.14+.86*pow(max(sin(shapeP*3.14159265359),0.),.68),.45),shape);}
         float logo=step(1.5,glyphKind)*shape*(1.-uBackground);
         float whale=logo*(1.-step(2.5,glyphKind));
-        endpoint=mix(endpoint,1.,whale);
+        float word=(1.-step(.5,glyphKind))*shape*(1.-uBackground);
+        endpoint=mix(endpoint,1.,max(whale,word));
         float brightKeep=max(aShape.w,step(.5,fract(sin(aLoop.y*193.7+aStyle.w*417.2)*43758.5453)));
         float bright=smoothstep(1.35,1.65,aLight.x),suppressed=shape*bright*(1.-brightKeep);
         float intensity=1.35*(uWeights.x+uWeights.y*.18+shape)*(aStyle.z>1.5?1.22:1.);
         float brightness=aLight.x*mix(1.,depthCue,shape)*mix(1.,.42,suppressed);
         brightness*=mix(1.,1.7,whale*(1.-bright));
+        brightness*=mix(1.,2.8,word*(1.-bright));
         float sizeScale=mix(uWeights.x+(uWeights.y+shape)*.45,1.,shape*bright*brightKeep);
         if(uBackground>.5){endpoint=1.;envelope=1.;sizeScale=mix(sqrt(.2),.45,1.-uTwinkleRate);intensity=1.35*(.18+.82*uTwinkleRate);brightness=aLight.x;}
         float twinkle=.86+.14*sin(aStyle.w+uTime*.62*aLight.y*uTwinkleRate);
@@ -695,7 +697,7 @@ export function shapeCoordinates(data,i,kind,travel,size,out,scratch=createPosit
     const wordStep=1/Math.max(span*1024-1,1),normalP=kind===0?densityProgress(local):p,beforeP=kind===0?(start*1024+fract(normalP-wordStep)*(span*1024-1))/1023:Math.max(global-1/1023,minSample),afterP=kind===0?(start*1024+fract(normalP+wordStep)*(span*1024-1))/1023:Math.min(global+1/1023,maxSample);
     shapeSample(samples,before,kind,beforeP);shapeSample(samples,after,kind,afterP);
     const dx=(after[0]-before[0])*size[0]+.0001,dy=(after[1]-before[1])*size[1],length=Math.hypot(dx,dy)||1;
-    const across=data.loops[k+2]*1.1+(data.seeds[k]+data.seeds[k+1]-1)*.12;
+    const across=(data.loops[k+2]*1.1+(data.seeds[k]+data.seeds[k+1]-1)*.12)*(kind===0?(data.seeds[k+3]<.88?.12:.45):1);
     out[0]=point[0]*size[0]-dy/length*across;out[1]=point[1]*size[1]+dx/length*across;
   }
   out[2]=Math.sin(styleP*Math.PI*1.35+data.shape[k+2])*data.shape[k+1]*Math.sin(styleP*Math.PI)+data.loops[k+3]*.75+(data.seeds[k+2]-.5)*.22;

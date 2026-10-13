@@ -468,7 +468,7 @@ assert(!css.includes(String.fromCharCode(92) + 'n'), 'CSS contains a literal new
 assert(css.includes('.pause-button{'), 'the project dialog pause button must retain its styling');
 const maxOrder = Math.max(...orders), timing = introState(0, maxOrder);
 const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=word-nebula-2', 'particle-logos.js?v=deepseek-outline-1']) {
+for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=word-clear-1', 'particle-logos.js?v=deepseek-outline-1']) {
   const root = { dataset: {} }, title = { dataset: {}, getAnimations: () => [{ cancel: () => { title.cancelled = true; } }] };
   let onError;
   runInNewContext(bootstrap, { matchMedia: () => ({ matches: reduced }), document: { documentElement: root, getElementById: () => title }, addEventListener: (type, handler) => { if (type === 'error') onError = handler; } });
