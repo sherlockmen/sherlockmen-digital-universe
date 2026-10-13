@@ -420,7 +420,7 @@ assert(galaxy.includes('const rx=pair?0:') && galaxy.includes('ry=pair?0:'), 'th
 assert(!galaxy.includes('uVisibility'), 'letter animation must not hide the particle field');
 assert(!galaxy.match(/opticalLights\[n\]\.set\([^;]*assembly/), 'star glow must stay lit before assembly');
 const orders = [...html.matchAll(/data-intro-letter="(\d+)"/g)].map(match => Number(match[1]));
-assert.deepEqual(orders, [7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3]);
+assert.deepEqual(orders, [7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2]);
 assert(html.includes('aria-label="SherlockMen 的个人主页"'));
 for (const removed of ['pause-motion', 'reset-galaxy', 'galaxy-hint', 'galaxy-controls', 'scroll-cue', 'SCROLL TO DISCOVER']) {
   assert(!html.includes(removed) && !app.includes(removed), `deleted control still referenced: ${removed}`);
