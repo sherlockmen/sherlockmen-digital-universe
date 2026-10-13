@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from '../vendor/three.module.min.js';
-import { buildParticleField, buildShapeSamples, shapeCoordinates, particlePosition, createPositionScratch, introState, introLetterProgress, SCULPTURE_KINDS, sculptureState, logoPairLayout, logoMotionTime, logoMotionAngles } from '../galaxy.js';
-import { LOGO_GEOMETRY, buildLogoSamples, logoContains, logoClearance } from '../particle-logos.js';
+import { buildParticleField, buildShapeSamples, shapeCoordinates, particlePosition, createPositionScratch, introState, introLetterProgress, SCULPTURE_KINDS, sculptureState, LOGO_SLOTS, logoSlot, logoRowLayout, logoMotionTime, logoMotionAngles, shapeFlowSpeed, shapeFlowScale } from '../galaxy.js';
+import { LOGO_GEOMETRY, buildLogoFlowData, logoContains, logoClearance } from '../particle-logos.js';
 
 // Source contracts: 019ulkdkl8r2h.js nucleus generator and path-shape shader.
 const sourceCore = [
@@ -115,110 +115,84 @@ for (const [quality, authored, backgroundCount, cores] of [[2, 2048, 274, 48], [
 }
 assert(minDepth < -.8 && maxDepth > .8, 'side view needs the authored world-depth span');
 
-// These empty points were checked independently against the official SVG paths.
+// Independently checked empty regions of the official nonzero-fill SVGs.
 const logoEmptyPoints = new Map([
   [2, [[8, 14, 1], [16.5, 11.7, .35], [14.46, 11.25, .14], [24, 9, .3]]],
   [3, [[.20, .40, .025], [.20, .58, .025], [.84, .35, .025], [.40, .90, .025]]]
 ]);
 const logoFilledPoints = new Map([[2, [[8, 6], [24, 6]]], [3, [[47, 47], [26, 8]]]]);
-const logoSamples = buildLogoSamples();
-assert.deepEqual(LOGO_GEOMETRY.map(({name, kind}) => [name, kind]), [['deepseek', 2], ['claude', 3]]);
-assert.equal(logoSamples.length, 2 * 1024 * 4);
+const flowData = buildLogoFlowData();
+assert.deepEqual(LOGO_SLOTS.map(({ name, kind }) => [name, kind]), [['deepseek', 2], ['gpt', 1], ['claude', 3]]);
+assert.equal(flowData.samples.length, 2 * 1024 * 4);
+assert.equal(flowData.frames.length, flowData.samples.length);
 assert.equal(shapes.length, 4 * 1024 * 4);
-assert.deepEqual(shapes.slice(2 * 1024 * 4), logoSamples, 'the GPU atlas must contain the same complete logo targets');
-function logoDensityStats(kind, points) {
-  const bins = 8, grid = 128, n = points.length;
-  const area = Array(bins * bins).fill(0), counts = area.slice();
-  const cell = (x, y) => Math.min(7, Math.max(0, Math.floor((y + .5) * bins))) * bins + Math.min(7, Math.max(0, Math.floor((x + .5) * bins)));
-  for (let y = 0; y < grid; y++) for (let x = 0; x < grid; x++) {
-    const u = (x + .5) / grid - .5, v = (y + .5) / grid - .5;
-    if (logoContains(kind, u, v)) area[cell(u, v)]++;
-  }
-  for (const [x, y] of points) counts[cell(x, y)]++;
-  const total = area.reduce((sum, value) => sum + value, 0);
-  const cells = area.map((value, i) => ({ p: value / total, c: counts[i] })).filter(({ p }) => n * p >= 4).map(item => ({ ...item, d: item.c / (n * item.p) }));
-  const validArea = cells.reduce((sum, item) => sum + item.p, 0), sparse = cells.filter(item => item.d < .5);
-  let topArea = 0, topMass = 0;
-  for (const item of cells.slice().sort((a, b) => b.d - a.d)) {
-    if (topArea >= .25) break;
-    topArea += item.p; topMass += item.c / n;
-  }
-  return { cv: Math.sqrt(cells.reduce((sum, item) => sum + item.p * (item.d - 1) ** 2, 0) / validArea), topMass,
-    sparseArea: sparse.reduce((sum, item) => sum + item.p, 0), sparseMass: sparse.reduce((sum, item) => sum + item.c, 0) / n,
-    coverage: cells.filter(item => item.c > 0).reduce((sum, item) => sum + item.p, 0) / validArea };
-}
+assert.deepEqual(shapes.slice(2 * 1024 * 4), flowData.samples, 'CPU and GPU must share the same contour atlas');
 let logoSampleChecks = 0;
-const logoSamplingStats = [];
+const contourCounts = [];
 for (const logo of LOGO_GEOMETRY) {
-  const [left, top, width, height] = logo.viewBox;
-  const row = (logo.kind - 2) * 1024 * 4;
-  let edgeCount = 0, minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  const [left, top, width, height] = logo.viewBox, row = (logo.kind - 2) * 1024 * 4, ranges = new Set();
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (let i = 0; i < 1024; i++) {
-    const j = row + i * 4, [x, y, edge, radius] = logoSamples.slice(j, j + 4);
-    assert([x, y, edge, radius].every(Number.isFinite), `${logo.name} has a non-finite target`);
-    assert(Math.abs(x) <= .500001 && Math.abs(y) <= .500001, `${logo.name} target escaped its official bounds`);
-    assert(logoContains(logo.kind, x, y), `${logo.name} target entered negative space`);
-    assert(edge === 0 || edge === 1, `${logo.name} has an invalid boundary marker`);
-    assert(radius >= 0 && radius <= .030001, `${logo.name} has an unsafe motion radius`);
-    assert(radius <= logoClearance(logo.kind, x, y) * .6001 + 1e-6, `${logo.name} motion may enter a cutout`);
-    edgeCount += edge; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    const j = row + i * 4, [x, y, start, end] = flowData.samples.slice(j, j + 4);
+    const [nx, ny, band, feature] = flowData.frames.slice(j, j + 4);
+    assert([x, y, start, end, nx, ny, band, feature].every(Number.isFinite), `${logo.name} has a non-finite flow sample`);
+    assert(Math.abs(x) <= .500001 && Math.abs(y) <= .500001, `${logo.name} flow escaped its official bounds`);
+    assert(start >= 0 && end <= 1 && end > start && i / 1023 >= start - 1e-6 && i / 1023 <= end + 1e-6, 'flow texels must stay in their own contour range');
+    assert(logoContains(logo.kind, x, y) && logoClearance(logo.kind, x, y) <= .01, 'the inward guide must stay painted and near the official boundary');
+    near(Math.hypot(nx, ny), 1, 'inward flow normal');
+    assert(band >= 0 && band <= .140801 && feature > 0 && feature <= 1, 'invalid inward lane or feature scale');
+    ranges.add(`${start},${end}`); minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
     logoSampleChecks++;
   }
-  assert(edgeCount > 20 && edgeCount < 1000, `${logo.name} needs both silhouette and filled-body samples`);
+  assert.equal(ranges.size, logo.kind === 2 ? 4 : 1, 'all whale cutouts and Claude rays need their own complete contours');
+  contourCounts.push(ranges.size);
   assert(minX < -.4 && maxX > .4 && minY < -.4 && maxY > .4, `${logo.name} samples must cover the complete mark`);
-  const fill = [];
-  for (let i = 0; i < 1024; i++) { const j = row + i * 4; if (logoSamples[j + 2] === 0) fill.push([logoSamples[j], logoSamples[j + 1]]); }
-  const stats = logoDensityStats(logo.kind, fill);
-  assert(stats.cv > .55 && stats.topMass > .45, `${logo.name} needs dense star clusters instead of uniform fill`);
-  assert(stats.sparseArea > .15 && stats.sparseMass > .025 && stats.coverage > .90, `${logo.name} needs sparse stars between its clusters`);
-  logoSamplingStats.push({ name: logo.name, ...stats });
-  for (const [x, y] of logoFilledPoints.get(logo.kind)) {
-    assert(logoContains(logo.kind, (x - left) / width - .5, .5 - (y - top) / height), `${logo.name} official solid body is missing`);
-  }
-  for (const [a, b, radius] of logoEmptyPoints.get(logo.kind)) {
+  for (const [x, y] of logoFilledPoints.get(logo.kind)) assert(logoContains(logo.kind, (x - left) / width - .5, .5 - (y - top) / height), `${logo.name} solid body is missing`);
+  for (const [a, b] of logoEmptyPoints.get(logo.kind)) {
     const u = logo.kind === 2 ? (a - left) / width : a, v = logo.kind === 2 ? (b - top) / height : b;
     assert.equal(logoContains(logo.kind, u - .5, .5 - v), false, `${logo.name} official cutout was filled`);
-    for (let i = 0; i < 1024; i++) {
-      const j = row + i * 4;
-      const dx = (logoSamples[j] + .5 - u) * (logo.kind === 2 ? width : 1);
-      const dy = (.5 - logoSamples[j + 1] - v) * (logo.kind === 2 ? height : 1);
-      assert(Math.hypot(dx, dy) > radius, `${logo.name} sample entered a verified empty region`);
-    }
   }
 }
+// These official vertices distinguish the radiating star from a rounded blob.
+const claudeTips = [[.399902,46.1553],[26.5067,.200195],[55.1433,1.56148],[78.7203,10.668],[93.6963,40.006],[93.9999,56.4822],[84.1845,77.4648],[69.9675,86.7121],[44.7714,93.8002],[23.8758,86.8999],[12.0873,73.1932],[7.58433,20.5256]];
+for (const [x, y] of claudeTips) {
+  let distance = Infinity;
+  for (let i = 0; i < 1024; i++) { const j = (1024 + i) * 4; distance = Math.min(distance, Math.hypot((flowData.samples[j] + .5) * 94 - x, (.5 - flowData.samples[j + 1]) * 94 - y)); }
+  assert(distance < 1.3, 'Claude flow atlas lost a characteristic ray tip');
+}
 
-// Independently apply the shader's nearest-texel, depth, world and clip transforms.
-let logoWorldChecks = 0;
+// Apply the GPU texture lookup and world transforms independently of the CPU helper.
+const sampleAtlas = (table, kind, progress) => {
+  const along = Math.max(0, Math.min(1, progress)) * 1023, a = Math.floor(along), b = Math.min(a + 1, 1023), f = along - a;
+  return [0, 1, 2, 3].map(axis => table[(kind * 1024 + a) * 4 + axis] * (1 - f) + table[(kind * 1024 + b) * 4 + axis] * f);
+};
+let logoWorldChecks = 0, flowHoleChecks = 0;
 const logoCamera = new THREE.OrthographicCamera(-9.6, 9.6, 5.45, -5.45, .1, 100);
 logoCamera.position.z = 12; logoCamera.updateMatrixWorld();
 for (const quality of [2, 4]) {
-  const { stars } = buildParticleField(quality);
-  const travel = new Float32Array([.012, .028, .041, .016, .074, .033]);
+  const { stars } = buildParticleField(quality), travel = new Float32Array([.012, .028, .041, .016, .074, .033]);
   const scratch = createPositionScratch(), local = new Float64Array(3), world = new Float64Array(3);
   for (const logo of LOGO_GEOMETRY) {
     const size = [7.2, 7.2 * logo.viewBox[3] / logo.viewBox[2]];
     for (let i = 0; i < stars.masses.length; i += 127) {
       const k = i * 4, seed = stars.shape[k], texel = (logo.kind * 1024 + Math.min(Math.floor(Math.min(seed, .999999) * 1024), 1023)) * 4;
-      const phase = density(fract(seed + travel[stars.loops[k]]));
-      const expected = [shapes[texel] * size[0], shapes[texel + 1] * size[1],
-        Math.sin(phase * Math.PI * 1.35 + stars.shape[k + 2]) * stars.shape[k + 1] * Math.sin(phase * Math.PI)
-          + stars.loops[k + 3] * .75 + (stars.seeds[k + 2] - .5) * .22];
+      const start = shapes[texel + 2], end = shapes[texel + 3], span = Math.max(end - start, 1 / 1024);
+      const phase = density(fract(Math.max(0, Math.min(1, (seed - start) / span)) + travel[stars.loops[k]] * shapeFlowScale(logo.kind) / span));
+      const global = start + (end - start) * phase, point = sampleAtlas(shapes, logo.kind, global), frame = sampleAtlas(flowData.frames, logo.kind - 2, global);
+      const norm = Math.hypot(frame[0] + .0001, frame[1]), band = frame[2] * (.04 + .96 * fract(stars.seeds[k] * 3.17 + stars.seeds[k + 1] * 5.31 + stars.loops[k + 1] * 1.79));
+      const expected = [(point[0] + (frame[0] + .0001) / norm * band) * size[0], (point[1] + frame[1] / norm * band) * size[1],
+        Math.sin(phase * Math.PI * 1.35 + stars.shape[k + 2]) * stars.shape[k + 1] * Math.sin(phase * Math.PI) + stars.loops[k + 3] * .75 + (stars.seeds[k + 2] - .5) * .22];
       near(shapeCoordinates(stars, i, logo.kind, travel, size, local, scratch.shape), phase, `${logo.name} GPU contour phase`);
-      vectorNear(Array.from(local), expected, `${logo.name} GPU texel and depth contract`);
-      const laterTravel = travel.map(value => value + .27);
-      shapeCoordinates(stars, i, logo.kind, laterTravel, size, world, scratch.shape);
-      vectorNear(Array.from(world.slice(0, 2)), expected.slice(0, 2), `${logo.name} flow must not cross a cutout`);
+      vectorNear(Array.from(local), expected, `${logo.name} GPU contour, inward band and depth contract`);
       for (const angle of [0, Math.PI / 2, .73]) {
         const params = { weights: [0, 0, 1, 0], shapeKind: logo.kind, time: 3.7, view: [19.2, 10.9], rail: .402,
-          galaxyMatrix: identity, galaxyOrigin: [0, -1.09, 0], shapeMatrix: new THREE.Matrix4().makeRotationY(angle),
-          shapeOrigin: [0, .4, 0], shapeSize: size, travel, entry: 1 };
+          galaxyMatrix: identity, galaxyOrigin: [0, -1.09, 0], shapeMatrix: new THREE.Matrix4().makeRotationY(angle), shapeOrigin: [0, .4, 0], shapeSize: size, travel, entry: 1 };
         particlePosition(stars, i, params, world, scratch);
-        const rotated = [Math.cos(angle) * expected[0] + Math.sin(angle) * expected[2], expected[1] + .4,
-          -Math.sin(angle) * expected[0] + Math.cos(angle) * expected[2]];
+        const rotated = [Math.cos(angle) * expected[0] + Math.sin(angle) * expected[2], expected[1] + .4, -Math.sin(angle) * expected[0] + Math.cos(angle) * expected[2]];
         vectorNear(Array.from(world), rotated, `${logo.name} rotated world target`);
-        const clip = new THREE.Vector3(...world).project(logoCamera), offset = [.012, -.024];
-        near(clip.x + offset[0], rotated[0] / 9.6 + offset[0], `${logo.name} disturbed horizontal clip target`);
-        near(clip.y + offset[1], rotated[1] / 5.45 + offset[1], `${logo.name} disturbed vertical clip target`);
+        const clip = new THREE.Vector3(...world).project(logoCamera);
+        near(clip.x + .012, rotated[0] / 9.6 + .012, `${logo.name} disturbed horizontal clip target`);
+        near(clip.y - .024, rotated[1] / 5.45 - .024, `${logo.name} disturbed vertical clip target`);
         params.weights = [0, .35, .65, 0]; particlePosition(stars, i, params, world, scratch);
         params.weights = [0, 1, 0, 0]; particlePosition(stars, i, params, local, scratch);
         vectorNear(Array.from(world), rotated.map((value, axis) => value * .65 + local[axis] * .35), `${logo.name} cloud blend`);
@@ -227,82 +201,130 @@ for (const quality of [2, 4]) {
     }
   }
 }
-let pairWorldChecks = 0, orbitChecks = 0;
-const pairStars = buildParticleField(4).stars, pairTravel = new Float32Array(6), pairScratch = createPositionScratch();
-const pairLocal = new Float64Array(3), pairWorld = new Float64Array(3);
-const matricesAt = time => [2, 3].map(kind => new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...logoMotionAngles(kind, time), 'XYZ')));
-const glyphCounts = [0, 0], brightCounts = [0, 0];
-for (let i = 0; i < pairStars.masses.length; i++) {
-  const side = Number(pairStars.seeds[i * 4 + 3] >= .5); glyphCounts[side]++;
-  if (pairStars.light[i * 3] >= 2) brightCounts[side]++;
+const rowStars = buildParticleField(4).stars, rowScratch = createPositionScratch(), rowLocal = new Float64Array(3), rowWorld = new Float64Array(3);
+const travelAt = time => Float32Array.from({ length: 6 }, (_, layer) => fract(time * shapeFlowSpeed(layer)));
+const glyphCounts = [0, 0, 0], brightCounts = [0, 0, 0];
+for (let i = 0; i < rowStars.masses.length; i++) {
+  const slot = logoSlot(rowStars, i); assert(slot >= 0 && slot < 3); glyphCounts[slot]++;
+  if (rowStars.light[i * 3] >= 2) brightCounts[slot]++;
 }
-assert(glyphCounts.every(count => count > pairStars.masses.length * .4), 'both glyphs need their share of the star field');
-assert(brightCounts.every(count => count > (brightCounts[0] + brightCounts[1]) * .35), 'both glyphs must retain the bright-star tail');
+assert(glyphCounts.every(count => count > rowStars.masses.length * .28), 'each glyph needs its share of the authored field');
+assert(brightCounts.every(count => count > brightCounts.reduce((a, b) => a + b, 0) * .27), 'all three glyphs must retain the bright-star tail');
+for (const layer of [0, 1, 2, 3, 4, 5]) near(shapeFlowSpeed(layer), [.020, .0144, .0168, .0128, .024, .0176][layer], 'original GPT flow clock');
+for (const time of [0, 6, 60]) for (const { kind } of LOGO_SLOTS) vectorNear(logoMotionAngles(kind, time), [0, 0, 0], 'automatic glyph rotation must stay disabled');
+let rowWorldChecks = 0;
+const rowGaps = [];
 for (const [width, height, viewHeight] of [[390, 844, 12.7], [1920, 854, 10.9]]) {
-  const layout = logoPairLayout(width, height, viewHeight);
-  assert(layout.iconWidth > 0 && layout.gap > 0 && layout.iconWidth * 2 + layout.gap <= width - 32, 'the pair must fit one row with a clear gap');
-  near(layout.offset * 2 - layout.size[0], layout.gap / height * viewHeight, 'local glyph centers must preserve the row gap');
-  near(layout.sizes[0][0] / layout.sizes[0][1], 26.634 / 19.6, 'DeepSeek must retain its official aspect ratio');
-  const manual = new THREE.Matrix4().makeRotationY(.73);
-  for (let i = 0; i < pairStars.masses.length; i += 137) {
-    const side = Number(pairStars.seeds[i * 4 + 3] >= .5), kind = side + 2, frames = [];
+  const layout = logoRowLayout(width, height, viewHeight);
+  assert.equal(layout.count, 3);
+  assert(layout.iconWidth > 0 && layout.gap > 0 && layout.iconWidth * 3 + layout.gap * 2 <= width - 32, 'three glyphs must fit one row');
+  vectorNear(layout.centers, [-layout.offset, 0, layout.offset], 'DeepSeek / GPT / Claude horizontal order');
+  near(layout.offset - layout.size[0], layout.gap / height * viewHeight, 'adjacent glyphs must keep a visible gap');
+  for (const [slot, definition] of LOGO_SLOTS.entries()) near(layout.sizes[slot][0] / layout.sizes[slot][1], definition.aspect, `${definition.name} official aspect`);
+  let minGap = Infinity;
+  for (const time of [0, 6, 30]) {
+    const bounds = Array.from({ length: 3 }, () => [Infinity, -Infinity]);
+    const params = { weights: [0, 0, 1, 0], time, view: [width / height * viewHeight, viewHeight], rail: .402,
+      galaxyMatrix: identity, galaxyOrigin: [0, 0, 0], shapeMatrix: identity, shapeOrigin: [0, 0, 0], shapeSize: layout.size,
+      travel: travelAt(time), entry: 1, logoPair: true, logoSlots: 3, logoOffset: layout.offset, logoMatrices: [identity, identity, identity] };
+    for (let i = 0; i < rowStars.masses.length; i++) {
+      particlePosition(rowStars, i, params, rowWorld, rowScratch);
+      const slot = logoSlot(rowStars, i); bounds[slot][0] = Math.min(bounds[slot][0], rowWorld[0]); bounds[slot][1] = Math.max(bounds[slot][1], rowWorld[0]);
+    }
+    for (const gap of [bounds[1][0] - bounds[0][1], bounds[2][0] - bounds[1][1]]) {
+      assert(gap * height / viewHeight > layout.gap * .5, 'actual flowing points must not overlap adjacent glyphs');
+      minGap = Math.min(minGap, gap * height / viewHeight);
+    }
+  }
+  rowGaps.push({ width, minGapPixels: +minGap.toFixed(2) });
+  const matrices = [identity, new THREE.Matrix4().makeRotationY(.73), sideView];
+  for (let i = 0; i < rowStars.masses.length; i += 137) {
+    const slot = logoSlot(rowStars, i), kind = LOGO_SLOTS[slot].kind, frames = [];
     for (const time of [0, 6]) {
-      const params = { weights: [0, 0, 1, 0], time, view: [width / height * viewHeight, viewHeight], rail: .402,
-        galaxyMatrix: identity, galaxyOrigin: [0, 0, 0], shapeMatrix: manual, shapeOrigin: [0, .3, 0],
-        shapeSize: layout.size, travel: pairTravel, entry: 1, logoPair: true, logoTime: logoMotionTime(time),
-        logoOffset: layout.offset, logoMatrices: matricesAt(logoMotionTime(time)) };
-      shapeCoordinates(pairStars, i, kind, pairTravel, layout.sizes[side], pairLocal, pairScratch.shape, params.logoTime);
-      pairLocal[2] *= Math.min(1, layout.size[0] / 5.8);
-      const expected = new THREE.Vector3(...pairLocal).applyMatrix4(params.logoMatrices[side]).applyMatrix4(manual);
-      expected.x += (side ? 1 : -1) * layout.offset; expected.y += .3;
-      particlePosition(pairStars, i, params, pairWorld, pairScratch);
-      vectorNear(Array.from(pairWorld), expected.toArray(), 'pair automatic/local/manual rotation before final row offset');
-      frames.push(Array.from(pairWorld)); pairWorldChecks++;
-      params.logoTime = logoMotionTime(time, true); params.logoMatrices = matricesAt(params.logoTime);
-      particlePosition(pairStars, i, params, pairWorld, pairScratch); const fixed = Array.from(pairWorld);
-      params.time = 1000; params.logoTime = logoMotionTime(1000, true); params.logoMatrices = matricesAt(params.logoTime);
-      particlePosition(pairStars, i, params, pairWorld, pairScratch);
-      vectorNear(Array.from(pairWorld), fixed, 'reduced motion fixes the complete pair independently of elapsed time');
+      const travel = travelAt(time), params = { weights: [0, 0, 1, 0], time, view: [width / height * viewHeight, viewHeight], rail: .402,
+        galaxyMatrix: identity, galaxyOrigin: [0, 0, 0], shapeMatrix: sideView, shapeOrigin: [0, .3, 0], shapeSize: layout.size,
+        travel, entry: 1, logoPair: true, logoSlots: 3, logoOffset: layout.offset, logoMatrices: matrices };
+      const size = kind === 1 ? [5.8, 5.8 / LOGO_SLOTS[slot].aspect] : layout.sizes[slot];
+      shapeCoordinates(rowStars, i, kind, travel, size, rowLocal, rowScratch.shape);
+      if (kind === 1) rowLocal.forEach((value, axis) => { rowLocal[axis] = value * layout.size[0] / 5.8; });
+      else rowLocal[2] *= Math.min(1, layout.size[0] / 5.8);
+      const expected = new THREE.Vector3(...rowLocal).applyMatrix4(matrices[slot]); expected.x += layout.centers[slot]; expected.y += .3;
+      particlePosition(rowStars, i, params, rowWorld, rowScratch);
+      vectorNear(Array.from(rowWorld), expected.toArray(), 'glyph-local matrix must precede the final horizontal slot offset');
+      frames.push(Array.from(rowWorld)); rowWorldChecks++;
+      params.time = 1000; particlePosition(rowStars, i, params, rowWorld, rowScratch);
+      vectorNear(Array.from(rowWorld), frames.at(-1), 'frozen travel and manual pose must freeze the glyph; elapsed alone cannot rotate it');
     }
-    assert(Math.hypot(...frames[0].map((value, axis) => frames[1][axis] - value)) > 1e-5, 'automatic motion must change the rendered world point');
+    assert(Math.hypot(...frames[0].map((value, axis) => frames[1][axis] - value)) > 1e-5, 'the actual rendered point must flow');
   }
 }
-for (const logo of LOGO_GEOMETRY) for (let i = 0; i < pairStars.masses.length; i += 17) {
-  const seed = pairStars.shape[i * 4], texel = (logo.kind * 1024 + Math.min(Math.floor(Math.min(seed, .999999) * 1024), 1023)) * 4;
-  for (const time of [0, 1, 6, 12]) {
-    shapeCoordinates(pairStars, i, logo.kind, pairTravel, [1, 1], pairLocal, pairScratch.shape, time);
-    assert(logoContains(logo.kind, pairLocal[0], pairLocal[1]), 'particle flow must preserve the logo cutouts');
-    assert(Math.hypot(pairLocal[0] - shapes[texel], pairLocal[1] - shapes[texel + 1]) <= shapes[texel + 3] + 1e-6, 'particle flow must stay inside its safe orbit');
-    orbitChecks++;
+for (const logo of LOGO_GEOMETRY) for (let i = 0; i < rowStars.masses.length; i++) for (const time of [0, 1, 6, 12, 30]) {
+  shapeCoordinates(rowStars, i, logo.kind, travelAt(time), [1, 1], rowLocal, rowScratch.shape);
+  assert(logoContains(logo.kind, rowLocal[0], rowLocal[1]), `${logo.name} flow entered negative space at index ${i}, time ${time}: ${rowLocal[0]}, ${rowLocal[1]}`);
+  const [left, top, width, height] = logo.viewBox;
+  for (const [a, b, radius] of logoEmptyPoints.get(logo.kind)) {
+    const u = logo.kind === 2 ? (a - left) / width : a, v = logo.kind === 2 ? (b - top) / height : b;
+    const dx = (rowLocal[0] + .5 - u) * (logo.kind === 2 ? width : 1), dy = (.5 - rowLocal[1] - v) * (logo.kind === 2 ? height : 1);
+    assert(Math.hypot(dx, dy) > radius, 'a moving point filled a verified eye, belly or ray gap');
   }
+  flowHoleChecks++;
 }
+assert.equal(logoMotionTime(1000, true), 0, 'reduced motion must not accumulate logo time');
+// Same phase is insufficient: compare actual XY world distance on the same lanes.
+const median = values => { const sorted = values.slice().sort((a, b) => a - b); return sorted[Math.floor(sorted.length / 2)]; };
+function velocitySample(i, kind, dt) {
+  const k = i * 4, seed = rowStars.shape[k], texel = (kind * 1024 + Math.min(Math.floor(Math.min(seed, .999999) * 1024), 1023)) * 4;
+  const start = shapes[texel + 2], end = shapes[texel + 3], size = [5.8, 5.8 / LOGO_SLOTS.find(slot => slot.kind === kind).aspect];
+  const points = [], phases = [];
+  for (const offset of [-2, -1, 0, 1, 2]) {
+    const phase = shapeCoordinates(rowStars, i, kind, travelAt(3.7 + offset * dt), size, rowLocal, rowScratch.shape);
+    if (phase <= .03 || phase >= .97) return null;
+    const index = Math.floor((start + (end - start) * phase) * 1023);
+    for (const nearby of [index - 2, index + 2]) {
+      if (nearby < 0 || nearby > 1023) return null;
+      const j = (kind * 1024 + nearby) * 4;
+      if (shapes[j + 2] !== start || shapes[j + 3] !== end) return null;
+    }
+    points.push(Array.from(rowLocal.slice(0, 2))); phases.push(phase);
+  }
+  if (phases.some((value, n) => n && value <= phases[n - 1])) return null;
+  const deltas = points.slice(1).map((point, n) => [point[0] - points[n][0], point[1] - points[n][1]]), lengths = deltas.map(delta => Math.hypot(...delta));
+  if (Math.min(...lengths) < 1e-9 || Math.max(...lengths) / Math.min(...lengths) > 1.15) return null;
+  for (let n = 1; n < deltas.length; n++) if ((deltas[n][0] * deltas[n - 1][0] + deltas[n][1] * deltas[n - 1][1]) / (lengths[n] * lengths[n - 1]) < .99) return null;
+  return Math.hypot(points[3][0] - points[1][0], points[3][1] - points[1][1]) / (2 * dt);
+}
+function measureWorldFlow() {
+  const steps = [.001, .005], velocities = steps.map(() => Array.from({ length: 6 }, () => [[], [], []]));
+  for (let i = 0; i < rowStars.masses.length; i++) {
+    const speeds = steps.map(dt => LOGO_SLOTS.map(({ kind }) => velocitySample(i, kind, dt)));
+    if (speeds.some(slots => slots.some(value => value === null))) continue;
+    speeds.forEach((slots, step) => slots.forEach((value, slot) => velocities[step][rowStars.loops[i * 4]][slot].push(value)));
+  }
+  return velocities.map(lanes => lanes.map((slots, lane) => {
+    assert(slots[0].length >= (lane === 5 ? 50 : 400), 'too few smooth-contour samples to compare visible speed');
+    const medians = slots.map(median);
+    assert(Math.min(...medians) > .3, 'flow must move visible XY points, not only depth or twinkle');
+    assert(Math.max(...medians) / Math.min(...medians) < 1.15, 'side glyphs must match the original GPT world speed');
+    return { lane, points: slots[0].length, medians };
+  }));
+}
+const [measuredFlow, alternateStep] = measureWorldFlow();
+const worldFlowSpeed = measuredFlow.map(({ lane, points, medians }) => {
+  medians.forEach((value, slot) => assert(Math.abs(alternateStep[lane].medians[slot] / value - 1) < .02, 'XY speed measurement must remain stable at a second small time step'));
+  return { lane, points, deepseek: +medians[0].toFixed(5), gpt: +medians[1].toFixed(5), claude: +medians[2].toFixed(5) };
+});
 let logoScrollChecks = 0;
-for (const name of ['logos']) {
-  assert.equal(SCULPTURE_KINDS[name], 2);
-  for (const height of [653, 854]) {
-    for (const top of [height, height * .4, 0, -height * .4, -height]) {
-      const rect = { top, height }, normal = sculptureState(name, rect, height), reduced = sculptureState(name, rect, height, true);
-      assert.equal(Boolean(normal), Boolean(reduced));
-      if (normal) {
-        assert.equal(normal.kind, 2); assert(normal.strength >= 0 && normal.strength <= 1);
-        assert.equal(reduced.scene, name); assert.equal(reduced.strength, 1, 'reduced motion must show the complete stationary pair');
-      }
-      logoScrollChecks++;
+for (const height of [653, 854]) {
+  for (const top of [height, height * .4, 0, -height * .4, -height]) {
+    const rect = { top, height }, normal = sculptureState('logos', rect, height), reduced = sculptureState('logos', rect, height, true);
+    assert.equal(Boolean(normal), Boolean(reduced));
+    if (normal) {
+      assert.equal(normal.kind, SCULPTURE_KINDS.logos); assert(normal.strength >= 0 && normal.strength <= 1);
+      assert.equal(reduced.scene, 'logos'); assert.equal(reduced.strength, 1, 'reduced motion must show the complete stationary row');
     }
-    near(sculptureState(name, { top: 0, height }, height).strength, 1, 'the pair is fully formed at the viewport center');
-  }
-}
-// Adjacent shapes must meet through the dispersed field instead of overlapping.
-for (const [first, second] of [['blossom', 'logos']]) {
-  const viewport = 653, firstHeight = 720, secondHeight = 854;
-  const seam = viewport / 2 - (3 * firstHeight + secondHeight) / 4;
-  for (const offset of [-50, -1, 0, 1, 50]) {
-    const a = sculptureState(first, { top: seam - offset, height: firstHeight }, viewport, false, { afterHeight: secondHeight });
-    const b = sculptureState(second, { top: seam + firstHeight - offset, height: secondHeight }, viewport, false, { beforeHeight: firstHeight });
-    assert(!(a && b), `${first}/${second} overlap at their shared midpoint`);
-    if (a || b) assert((a || b).strength < .02, 'neighbor handoff must pass through dispersed particles');
     logoScrollChecks++;
   }
+  near(sculptureState('logos', { top: 0, height }, height).strength, 1, 'the row is fully formed at the viewport center');
 }
 assert.equal(sculptureState('unknown', { top: 0, height: 854 }, 854), null);
 
@@ -311,11 +333,11 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 const galaxy = readFileSync(new URL('../galaxy.js', import.meta.url), 'utf8');
-const logoScenes = ['deepseek', 'claude'];
+const logoScenes = ['deepseek', 'gpt', 'claude'];
 const pairSections = [...html.matchAll(/<section id="particle-logos"[\s\S]*?<\/section>/g)];
-assert.equal(pairSections.length, 1, 'both marks need one shared star cloud section');
+assert.equal(pairSections.length, 1, 'all three marks need one shared star cloud section');
 const pairHTML = pairSections[0][0];
-assert(pairHTML.includes('aria-label="DeepSeek 与 Claude 星云"'), 'the shared cloud must have an accessible name');
+assert(pairHTML.includes('aria-label="DeepSeek、GPT 与 Claude 星云"'), 'the shared cloud must have an accessible name');
 assert(!pairHTML.includes('particle-caption') && !/<(?:p|h[1-6])(?:\s|>)/.test(pairHTML), 'the paired marks must not repeat captions');
 assert.equal(pairHTML.replace(/<[^>]+>/g, '').trim(), '', 'the paired marks must not contain visible explanations');
 for (const scene of logoScenes) {
@@ -323,8 +345,12 @@ for (const scene of logoScenes) {
   assert(pairHTML.includes(`id="particle-${scene}"`), `${scene} must retain its incoming hash anchor`);
   assert(!html.includes(`<section id="particle-${scene}"`), `${scene} must not remain a separate page scene`);
 }
-const logoOrder = ['particle-blossom', 'particle-logos', 'contact'].map(id => html.indexOf(`<section id="${id}"`));
-assert(logoOrder.every((position, i) => position >= 0 && (!i || position > logoOrder[i - 1])), 'logo scenes must follow the blossom and precede contact');
+assert(pairHTML.includes('id="particle-blossom"') && !html.includes('<section id="particle-blossom"'), 'the old GPT anchor must lead to the shared row');
+const logoOrder = ['featured', 'particle-logos', 'contact'].map(id => html.indexOf(`<section id="${id}"`));
+assert(logoOrder.every((position, i) => position >= 0 && (!i || position > logoOrder[i - 1])), 'the shared row must follow featured work and precede contact');
+assert(galaxy.includes('function canMotion(){return !paused&&!reduced.matches&&!lost&&!document.hidden;}'), 'paused and reduced motion must gate the shared animation clock');
+assert(galaxy.includes('dt*shapeFlowSpeed(layer)*flow'), 'all glyphs must use the original GPT clock');
+assert(galaxy.includes('const rx=pair?0:') && galaxy.includes('ry=pair?0:'), 'the row must not inherit the old automatic entrance rotation');
 assert(!galaxy.includes('uVisibility'), 'letter animation must not hide the particle field');
 assert(!galaxy.match(/opticalLights\[n\]\.set\([^;]*assembly/), 'star glow must stay lit before assembly');
 const orders = [...html.matchAll(/data-intro-letter="(\d+)"/g)].map(match => Number(match[1]));
@@ -338,7 +364,7 @@ assert(!css.includes(String.fromCharCode(92) + 'n'), 'CSS contains a literal new
 assert(css.includes('.pause-button{'), 'the project dialog pause button must retain its styling');
 const maxOrder = Math.max(...orders), timing = introState(0, maxOrder);
 const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=nebula-pair-1', 'particle-logos.js?v=nebula-pair-1']) {
+for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=nebula-trio-1', 'particle-logos.js?v=nebula-trio-1']) {
   const root = { dataset: {} }, title = { dataset: {}, getAnimations: () => [{ cancel: () => { title.cancelled = true; } }] };
   let onError;
   runInNewContext(bootstrap, { matchMedia: () => ({ matches: reduced }), document: { documentElement: root, getElementById: () => title }, addEventListener: (type, handler) => { if (type === 'error') onError = handler; } });
@@ -365,4 +391,4 @@ for (let n = 0; n <= 170; n++) {
   assert(timeline.assembly >= previousAssembly && timeline.assembly <= 1, 'assembly must be monotonic');
   previousAssembly = timeline.assembly;
 }
-console.log(JSON.stringify({ status: 'passed', sourceCounts: '2048+274 / 4096+546', sourceCoreFixtures: sourceCore.length, depthAndSideViewComparisons: comparisons, minDepth, maxDepth, intro: { letters: orders.length, titleEnd: timing.titleEnd, gatherStart: timing.gatherStart, end: timing.end }, logos: { samples: logoSampleChecks, worldAndClipComparisons: logoWorldChecks, scrollAndReducedChecks: logoScrollChecks, pairWorldChecks, orbitChecks, glyphCounts, brightCounts, density: logoSamplingStats.map(({name, cv, topMass, coverage}) => ({name, cv: +cv.toFixed(3), topMass: +topMass.toFixed(3), coverage: +coverage.toFixed(3)})) } }));
+console.log(JSON.stringify({ status: 'passed', sourceCounts: '2048+274 / 4096+546', sourceCoreFixtures: sourceCore.length, depthAndSideViewComparisons: comparisons, minDepth, maxDepth, intro: { letters: orders.length, titleEnd: timing.titleEnd, gatherStart: timing.gatherStart, end: timing.end }, logos: { samples: logoSampleChecks, contours: contourCounts, worldAndClipComparisons: logoWorldChecks, scrollAndReducedChecks: logoScrollChecks, rowWorldChecks, flowHoleChecks, glyphCounts, brightCounts, rowGaps, worldFlowSpeed } }));

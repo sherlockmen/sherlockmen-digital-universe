@@ -28,6 +28,7 @@ export const LOGO_GEOMETRY = Object.freeze([
   }
 ]);
 const cache = new Map();
+const flowCache = new Map();
 function geometry(kind) {
   const definition = LOGO_GEOMETRY.find(item => item.kind === kind);
   if (!definition) throw new Error('Unknown particle logo');
@@ -40,14 +41,17 @@ function geometry(kind) {
     const a=line[i-1],b=line[i],span=Math.hypot(b[0]-a[0],b[1]-a[1]);
     if(span>0){segments.push({a,b,start:length,end:length+span});length+=span;}
   }
-  const result={definition,contours,segments,length};
+  const bins=Array.from({length:128},()=>[]);
+  for(const segment of segments){const lo=Math.max(0,Math.floor((Math.min(segment.a[1],segment.b[1])+.5)*128)),hi=Math.min(127,Math.floor((Math.max(segment.a[1],segment.b[1])+.5)*128));for(let row=lo;row<=hi;row++)bins[row].push(segment);}
+  const result={definition,contours,segments,length,bins};
   cache.set(kind,result);return result;
 }
 export function logoContours(kind){return geometry(kind).contours;}
 export function logoContains(kind,x,y) {
   let winding=0;
-  for(const line of geometry(kind).contours)for(let i=1;i<line.length;i++){
-    const a=line[i-1],b=line[i],cross=(b[0]-a[0])*(y-a[1])-(x-a[0])*(b[1]-a[1]);
+  const row=Math.floor((y+.5)*128);if(row<0||row>127)return false;
+  for(const {a,b} of geometry(kind).bins[row]){
+    const cross=(b[0]-a[0])*(y-a[1])-(x-a[0])*(b[1]-a[1]);
     if(a[1]<=y&&b[1]>y&&cross>0)winding++;
     else if(a[1]>y&&b[1]<=y&&cross<0)winding--;
   }
@@ -62,46 +66,77 @@ export function logoClearance(kind,x,y){
   }
   return nearest;
 }
-function seededRandom(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let n=Math.imul(seed^seed>>>15,1|seed);n^=n+Math.imul(n^n>>>7,61|n);return((n^n>>>14)>>>0)/4294967296;};}
-export function buildLogoSamples(count=1024) {
-  if(!Number.isInteger(count)||count<16)throw new Error('Invalid logo sample budget');
-  const table=new Float32Array(LOGO_GEOMETRY.length*count*4);
-  for(const definition of LOGO_GEOMETRY){
-    const {kind}=definition,{segments,length}=geometry(kind),row=kind-2;
-    const random=seededRandom(0x715f293d^kind),clusters=[];
-    for(let i=0;i<12;i++){
-      let x,y;do{x=random()-.5;y=random()-.5;}while(!logoContains(kind,x,y));
-      clusters.push([x,y,.026+.054*random()]);
-    }
-    let attempts=0,segment=0;
-    for(let i=0;i<count;i++){
-      let x,y,edge=0;
-      if(i%5===0){
-        // A fifth of the targets follows all boundaries, including belly/eye holes.
-        const along=(i+.5)/count*length;
-        while(segment<segments.length-1&&segments[segment].end<along)segment++;
-        const line=segments[segment],f=(along-line.start)/(line.end-line.start);
-        x=line.a[0]+(line.b[0]-line.a[0])*f;y=line.a[1]+(line.b[1]-line.a[1])*f;edge=1;
-        // Move just inside the painted side so negative space remains empty.
-        const dx=line.b[0]-line.a[0],dy=line.b[1]-line.a[1],span=Math.hypot(dx,dy)||1,epsilon=.0008;
-        const ax=x-dy/span*epsilon,ay=y+dx/span*epsilon;
-        if(logoContains(kind,ax,ay)){x=ax;y=ay;}else{x+=dy/span*epsilon;y-=dx/span*epsilon;}
-      }else{
-        do{
-          if(random()<.76){
-            const cluster=clusters[Math.floor(random()*clusters.length)],angle=random()*Math.PI*2,radius=Math.sqrt(-2*Math.log(Math.max(.000001,random())))*cluster[2];
-            x=cluster[0]+Math.cos(angle)*radius;y=cluster[1]+Math.sin(angle)*radius;
-          }else{x=random()-.5;y=random()-.5;}
-          if(++attempts>count*100)throw new Error('Particle logo has no fill');
-        }while(!logoContains(kind,x,y));
+export function buildLogoFlowData(count=1024){
+  if(flowCache.has(count))return flowCache.get(count);
+  const samples=new Float32Array(2*count*4),frames=new Float32Array(2*count*4);
+  for(const {kind} of LOGO_GEOMETRY){
+    const lines=geometry(kind).contours,lengths=lines.map(line=>{const d=new Float64Array(line.length);for(let i=1;i<line.length;i++)d[i]=d[i-1]+Math.hypot(line[i][0]-line[i-1][0],line[i][1]-line[i-1][1]);return d;});
+    const total=lengths.reduce((sum,d)=>sum+d.at(-1),0),weights=lengths.map(d=>Math.max(.05,d.at(-1)/total)),weight=weights.reduce((a,b)=>a+b,0);
+    let offset=0;
+    for(let contour=0;contour<lines.length;contour++){
+      const line=lines[contour],d=lengths[contour],number=contour===lines.length-1?count-offset:Math.max(2,Math.round(count*weights[contour]/weight)),start=offset/(count-1),end=(offset+number-1)/(count-1);
+      let segment=1;
+      for(let n=0;n<number;n++){
+        const along=n/(number-1)*d.at(-1);while(segment<line.length-1&&d[segment]<along)segment++;
+        const a=line[segment-1],b=line[segment],f=(along-d[segment-1])/(d[segment]-d[segment-1]);let x=a[0]+(b[0]-a[0])*f,y=a[1]+(b[1]-a[1])*f;
+        const length=Math.hypot(b[0]-a[0],b[1]-a[1])||1;let nx=-(b[1]-a[1])/length,ny=(b[0]-a[0])/length;
+        if(!logoContains(kind,x+nx*.0006,y+ny*.0006)){nx=-nx;ny=-ny;}
+        // Keep the guide just inside the painted silhouette. At a sharp tip,
+        // use a valid interior bisector instead of either outside edge normal.
+        const inset=.001;
+        if(!logoContains(kind,x+nx*inset,y+ny*inset))for(let turn=0;turn<64;turn++){
+          const angle=turn/64*Math.PI*2,tx=Math.cos(angle),ty=Math.sin(angle);
+          if(logoContains(kind,x+tx*inset,y+ty*inset)){nx=tx;ny=ty;break;}
+        }
+        if(logoContains(kind,x+nx*inset,y+ny*inset)){x+=nx*inset;y+=ny*inset;}
+        let band=0;for(let step=1;step<=40;step++){const span=step*.004;if(!logoContains(kind,x+nx*span,y+ny*span))break;band=span;}
+        const feature=kind===2?(contour===0?1:contour===1?.65:contour===2?.28:.45):.8;
+        const j=((kind-2)*count+offset+n)*4;samples.set([x,y,start,end],j);frames.set([nx,ny,band*.88,feature],j);
       }
-      // Every orbit stays inside a clearance disc, including small eye holes.
-      const safeRadius=Math.min(.03,logoClearance(kind,x,y)*.6);
-      table.set([x,y,edge,safeRadius],(row*count+i)*4);
+      offset+=number;
+    }
+    if(offset!==count)throw new Error('Incomplete logo flow allocation');
+    // Route the guide itself inside very tight concavities; reducing the
+    // surrounding band cannot repair a chord which crosses a mouth cutout.
+    for(let pass=0;pass<3;pass++)for(let i=0;i<count-1;i++){
+      const j=((kind-2)*count+i)*4,k=j+4;if(samples[j+2]!==samples[k+2])continue;
+      const legal=(dx,dy)=>{
+        for(let interval=Math.max(0,i-1);interval<=Math.min(count-2,i+1);interval++){
+          const a=((kind-2)*count+interval)*4,b=a+4;if(samples[a+2]!==samples[b+2])continue;
+          const ax=samples[a]+(a===j||a===k?dx:0),ay=samples[a+1]+(a===j||a===k?dy:0),bx=samples[b]+(b===j||b===k?dx:0),by=samples[b+1]+(b===j||b===k?dy:0);
+          for(let step=0;step<=32;step++){const f=step/32;if(!logoContains(kind,ax+(bx-ax)*f,ay+(by-ay)*f))return false;}
+        }
+        return true;
+      };
+      if(legal(0,0))continue;
+      let repaired=false;
+      for(const radius of [.0005,.001,.002,.004,.008]){
+        for(let direction=0;direction<64;direction++){
+          const angle=direction/64*Math.PI*2,dx=Math.cos(angle)*radius,dy=Math.sin(angle)*radius;
+          if(!legal(dx,dy))continue;
+          samples[j]+=dx;samples[k]+=dx;samples[j+1]+=dy;samples[k+1]+=dy;frames[j+2]=frames[k+2]=0;repaired=true;break;
+        }
+        if(repaired)break;
+      }
+    }
+    // Bound interpolation at sharp corners, where two safe normals can mix
+    // into an unsafe inward direction across an eye or a concave notch.
+    for(let i=0;i<count-1;i++){
+      const j=((kind-2)*count+i)*4,k=j+4;if(samples[j+2]!==samples[k+2])continue;
+      for(let attempt=0;attempt<10;attempt++){
+        let valid=true;
+        for(let step=1;step<32&&valid;step++){
+          const f=step/32,x=samples[j]+(samples[k]-samples[j])*f,y=samples[j+1]+(samples[k+1]-samples[j+1])*f;
+          const nx=frames[j]+(frames[k]-frames[j])*f+.0001,ny=frames[j+1]+(frames[k+1]-frames[j+1])*f,length=Math.hypot(nx,ny)||1,band=frames[j+2]+(frames[k+2]-frames[j+2])*f;
+          for(let layer=0;layer<=16;layer++){const across=.04+.96*layer/16;if(!logoContains(kind,x+nx/length*band*across,y+ny/length*band*across)){valid=false;break;}}
+        }
+        if(valid)break;
+        if(attempt===9){frames[j+2]=frames[k+2]=0;}else{frames[j+2]*=.6;frames[k+2]*=.6;}
+      }
     }
   }
-  if(!table.every(Number.isFinite))throw new Error('Non-finite logo target');
-  return table;
+  if(!samples.every(Number.isFinite)||!frames.every(Number.isFinite))throw new Error('Non-finite logo flow');
+  const result={samples,frames};flowCache.set(count,result);return result;
 }
 function flattenPath(path) {
   const tokens=path.match(/[a-z]|[-+]?(?:\d*\.?\d+)(?:e[-+]?\d+)?/gi);
