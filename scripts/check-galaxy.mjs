@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import * as THREE from '../vendor/three.module.min.js';
-import { buildParticleField, buildShapeSamples, shapeCoordinates, particlePosition, createPositionScratch, introState, introLetterProgress, SCULPTURE_KINDS, sculptureState, LOGO_SLOTS, logoSlot, logoRowLayout, logoMotionTime, logoMotionAngles, shapeFlowSpeed, shapeFlowScale } from '../galaxy.js';
-import { LOGO_GEOMETRY, buildLogoFlowData, logoContains, logoClearance } from '../particle-logos.js';
+import { buildParticleField, buildShapeSamples, shapeCoordinates, particlePosition, createPositionScratch, introState, introLetterProgress, SCULPTURE_KINDS, sculptureState, LOGO_SLOTS, logoSlot, logoRowLayout, logoMotionTime, logoMotionAngles, shapeFlowSpeed, shapeFlowDistance } from '../galaxy.js';
+import { LOGO_GEOMETRY, buildLogoFlowData, logoFlowLane, LOGO_FLOW_POINTS, LOGO_FLOW_BANDS, logoContains, logoClearance } from '../particle-logos.js';
 
 // Source contracts: 019ulkdkl8r2h.js nucleus generator and path-shape shader.
 const sourceCore = [
@@ -124,7 +124,9 @@ const logoFilledPoints = new Map([[2, [[8, 6], [24, 6]]], [3, [[47, 47], [26, 8]
 const flowData = buildLogoFlowData();
 assert.deepEqual(LOGO_SLOTS.map(({ name, kind }) => [name, kind]), [['deepseek', 2], ['gpt', 1], ['claude', 3]]);
 assert.equal(flowData.samples.length, 2 * 1024 * 4);
-assert.equal(flowData.frames.length, flowData.samples.length);
+assert.equal(flowData.laneCount, 40);
+assert.equal(flowData.lanePoints, LOGO_FLOW_POINTS);
+assert.equal(flowData.lanes.length, 40 * LOGO_FLOW_POINTS * 4);
 assert.equal(shapes.length, 4 * 1024 * 4);
 assert.deepEqual(shapes.slice(2 * 1024 * 4), flowData.samples, 'CPU and GPU must share the same contour atlas');
 let logoSampleChecks = 0;
@@ -134,13 +136,10 @@ for (const logo of LOGO_GEOMETRY) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (let i = 0; i < 1024; i++) {
     const j = row + i * 4, [x, y, start, end] = flowData.samples.slice(j, j + 4);
-    const [nx, ny, band, feature] = flowData.frames.slice(j, j + 4);
-    assert([x, y, start, end, nx, ny, band, feature].every(Number.isFinite), `${logo.name} has a non-finite flow sample`);
+    assert([x, y, start, end].every(Number.isFinite), `${logo.name} has a non-finite flow sample`);
     assert(Math.abs(x) <= .500001 && Math.abs(y) <= .500001, `${logo.name} flow escaped its official bounds`);
     assert(start >= 0 && end <= 1 && end > start && i / 1023 >= start - 1e-6 && i / 1023 <= end + 1e-6, 'flow texels must stay in their own contour range');
     assert(logoContains(logo.kind, x, y) && logoClearance(logo.kind, x, y) <= .01, 'the inward guide must stay painted and near the official boundary');
-    near(Math.hypot(nx, ny), 1, 'inward flow normal');
-    assert(band >= 0 && band <= .140801 && feature > 0 && feature <= 1, 'invalid inward lane or feature scale');
     ranges.add(`${start},${end}`); minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
     logoSampleChecks++;
   }
@@ -166,6 +165,34 @@ const sampleAtlas = (table, kind, progress) => {
   const along = Math.max(0, Math.min(1, progress)) * 1023, a = Math.floor(along), b = Math.min(a + 1, 1023), f = along - a;
   return [0, 1, 2, 3].map(axis => table[(kind * 1024 + a) * 4 + axis] * (1 - f) + table[(kind * 1024 + b) * 4 + axis] * f);
 };
+const sampleLane = (row, progress) => {
+  const offset = row * LOGO_FLOW_POINTS * 4;
+  let a = 0, b = LOGO_FLOW_POINTS - 1;
+  while (b - a > 1) { const mid = Math.floor((a + b) / 2); if (flowData.lanes[offset + mid * 4 + 2] <= progress) a = mid; else b = mid; }
+  const j = offset + a * 4, k = offset + b * 4, fraction = (progress - flowData.lanes[j + 2]) / (flowData.lanes[k + 2] - flowData.lanes[j + 2]);
+  return [0, 1].map(axis => flowData.lanes[j + axis] + (flowData.lanes[k + axis] - flowData.lanes[j + axis]) * fraction);
+};
+let laneArcChecks = 0, referenceArc = 0;
+for (let i = 1; i < 1024; i++) { const j = (1024 + i) * 4, k = j - 4; if (shapes[j + 2] === shapes[k + 2]) referenceArc += Math.hypot(shapes[j] - shapes[k], (shapes[j + 1] - shapes[k + 1]) / LOGO_SLOTS[1].aspect); }
+near(shapeFlowDistance(), referenceArc, 'source GPT distance governs every lane');
+for (const lane of flowData.laneInfo) {
+  const aspect = LOGO_SLOTS.find(slot => slot.kind === lane.kind).aspect, offset = lane.row * LOGO_FLOW_POINTS * 4;
+  assert(lane.length > 0 && lane.feature > 0 && lane.feature <= 1);
+  vectorNear(Array.from(flowData.lanes.slice(offset, offset + 2)), Array.from(flowData.lanes.slice(offset + (LOGO_FLOW_POINTS - 1) * 4, offset + (LOGO_FLOW_POINTS - 1) * 4 + 2)), 'closed lane endpoints');
+  near(flowData.lanes[offset + 2], 0, 'lane cumulative start'); near(flowData.lanes[offset + (LOGO_FLOW_POINTS - 1) * 4 + 2], 1, 'lane cumulative end');
+  for (let i = 0; i < LOGO_FLOW_POINTS; i++) {
+    const j = offset + i * 4, [x, y, progress, length] = flowData.lanes.slice(j, j + 4);
+    assert([x, y, progress, length].every(Number.isFinite) && logoContains(lane.kind, x, y), 'a real flow lane entered negative space');
+    near(length, lane.length, 'CPU/GPU share the same stored lane length');
+    if (i) {
+      const k = j - 4, distance = Math.hypot(x - flowData.lanes[k], (y - flowData.lanes[k + 1]) / aspect);
+      assert(progress >= flowData.lanes[k + 2], 'cumulative arc must be monotonic');
+      assert(Math.abs(distance - (progress - flowData.lanes[k + 2]) * length) < 2e-6, 'stored arc must measure the repaired path, including corners');
+      assert(logoContains(lane.kind, (x + flowData.lanes[k]) / 2, (y + flowData.lanes[k + 1]) / 2), 'a lane segment crossed a cutout');
+    }
+    laneArcChecks++;
+  }
+}
 let logoWorldChecks = 0, flowHoleChecks = 0;
 const logoCamera = new THREE.OrthographicCamera(-9.6, 9.6, 5.45, -5.45, .1, 100);
 logoCamera.position.z = 12; logoCamera.updateMatrixWorld();
@@ -177,13 +204,14 @@ for (const quality of [2, 4]) {
     for (let i = 0; i < stars.masses.length; i += 127) {
       const k = i * 4, seed = stars.shape[k], texel = (logo.kind * 1024 + Math.min(Math.floor(Math.min(seed, .999999) * 1024), 1023)) * 4;
       const start = shapes[texel + 2], end = shapes[texel + 3], span = Math.max(end - start, 1 / 1024);
-      const phase = density(fract(Math.max(0, Math.min(1, (seed - start) / span)) + travel[stars.loops[k]] * shapeFlowScale(logo.kind) / span));
-      const global = start + (end - start) * phase, point = sampleAtlas(shapes, logo.kind, global), frame = sampleAtlas(flowData.frames, logo.kind - 2, global);
-      const norm = Math.hypot(frame[0] + .0001, frame[1]), band = frame[2] * (.04 + .96 * fract(stars.seeds[k] * 3.17 + stars.seeds[k + 1] * 5.31 + stars.loops[k + 1] * 1.79));
-      const expected = [(point[0] + (frame[0] + .0001) / norm * band) * size[0], (point[1] + frame[1] / norm * band) * size[1],
+      const bin = Math.min(LOGO_FLOW_BANDS - 1, Math.floor(fract(stars.seeds[k] * 3.17 + stars.seeds[k + 1] * 5.31 + stars.loops[k + 1] * 1.79) * LOGO_FLOW_BANDS));
+      const lane = flowData.laneInfo.find(info => info.kind === logo.kind && info.start === start && info.row % LOGO_FLOW_BANDS === bin);
+      const phase = density(fract(Math.max(0, Math.min(1, (seed - start) / span)) + travel[stars.loops[k]] * Math.fround(referenceArc) / lane.length));
+      const point = sampleLane(lane.row, phase);
+      const expected = [point[0] * size[0], point[1] * size[1],
         Math.sin(phase * Math.PI * 1.35 + stars.shape[k + 2]) * stars.shape[k + 1] * Math.sin(phase * Math.PI) + stars.loops[k + 3] * .75 + (stars.seeds[k + 2] - .5) * .22];
       near(shapeCoordinates(stars, i, logo.kind, travel, size, local, scratch.shape), phase, `${logo.name} GPU contour phase`);
-      vectorNear(Array.from(local), expected, `${logo.name} GPU contour, inward band and depth contract`);
+      vectorNear(Array.from(local), expected, `${logo.name} GPU cumulative-arc lookup and depth contract`);
       for (const angle of [0, Math.PI / 2, .73]) {
         const params = { weights: [0, 0, 1, 0], shapeKind: logo.kind, time: 3.7, view: [19.2, 10.9], rail: .402,
           galaxyMatrix: identity, galaxyOrigin: [0, -1.09, 0], shapeMatrix: new THREE.Matrix4().makeRotationY(angle), shapeOrigin: [0, .4, 0], shapeSize: size, travel, entry: 1 };
@@ -202,7 +230,7 @@ for (const quality of [2, 4]) {
   }
 }
 const rowStars = buildParticleField(4).stars, rowScratch = createPositionScratch(), rowLocal = new Float64Array(3), rowWorld = new Float64Array(3);
-const travelAt = time => Float32Array.from({ length: 6 }, (_, layer) => fract(time * shapeFlowSpeed(layer)));
+const travelAt = time => Float32Array.from({ length: 6 }, (_, layer) => time * shapeFlowSpeed(layer));
 const glyphCounts = [0, 0, 0], brightCounts = [0, 0, 0];
 for (let i = 0; i < rowStars.masses.length; i++) {
   const slot = logoSlot(rowStars, i); assert(slot >= 0 && slot < 3); glyphCounts[slot]++;
@@ -313,6 +341,37 @@ const worldFlowSpeed = measuredFlow.map(({ lane, points, medians }) => {
   medians.forEach((value, slot) => assert(Math.abs(alternateStep[lane].medians[slot] / value - 1) < .02, 'XY speed measurement must remain stable at a second small time step'));
   return { lane, points, deepseek: +medians[0].toFixed(5), gpt: +medians[1].toFixed(5), claude: +medians[2].toFixed(5) };
 });
+// Keep corners and seams: medians alone hid the former local velocity spikes.
+const peakSpeeds = [[], []], speedA = new Float64Array(3), speedB = new Float64Array(3), speedStep = .005;
+let peakChecks = 0, periodChecks = 0, seamChecks = 0;
+function checkStep(i, time, before, after) {
+  const slot = logoSlot(rowStars, i), { kind, aspect } = LOGO_SLOTS[slot], layer = rowStars.loops[i * 4];
+  shapeCoordinates(rowStars, i, kind, before, [5.8, 5.8 / aspect], speedA, rowScratch.shape);
+  shapeCoordinates(rowStars, i, kind, after, [5.8, 5.8 / aspect], speedB, rowScratch.shape);
+  const speed = Math.hypot(speedB[0] - speedA[0], speedB[1] - speedA[1]) / speedStep;
+  const bound = shapeFlowDistance() * 5.8 * shapeFlowSpeed(layer) * 1.22;
+  assert(speed <= bound * 1.02, `${LOGO_SLOTS[slot].name} local spike at index ${i}, time ${time}: ${speed} > ${bound}`);
+  return speed * 400 / 5.8;
+}
+for (let tick = 0; tick <= 600; tick++) {
+  const time = tick / 10, before = travelAt(time), after = travelAt(time + speedStep);
+  for (let i = 0; i < rowStars.masses.length; i++) {
+    const slot = logoSlot(rowStars, i); if (slot === 1) continue;
+    peakSpeeds[slot === 0 ? 0 : 1].push(checkStep(i, time, before, after)); peakChecks++;
+  }
+}
+for (let layer = 0; layer < 6; layer++) {
+  const time = 1 / shapeFlowSpeed(layer), before = travelAt(time - speedStep), after = travelAt(time);
+  for (let i = 0; i < rowStars.masses.length; i++) if (logoSlot(rowStars, i) !== 1) { checkStep(i, time - speedStep, before, after); periodChecks++; }
+}
+for (const lane of flowData.laneInfo) for (const epsilon of [1e-5, .001]) {
+  const a = sampleLane(lane.row, 1 - epsilon), b = sampleLane(lane.row, epsilon), aspect = LOGO_SLOTS.find(slot => slot.kind === lane.kind).aspect;
+  assert(Math.hypot(a[0] - b[0], (a[1] - b[1]) / aspect) <= 2 * epsilon * lane.length * 1.02, 'closed contour seam must not jump'); seamChecks++;
+}
+const peakFlowSpeed = peakSpeeds.map((values, i) => {
+  values.sort((a, b) => a - b);
+  return { name: ['deepseek', 'claude'][i], samples: values.length, p99PixelsPerSecond: +values[Math.floor(values.length * .99)].toFixed(3), maxPixelsPerSecond: +values.at(-1).toFixed(3) };
+});
 let logoScrollChecks = 0;
 for (const height of [653, 854]) {
   for (const top of [height, height * .4, 0, -height * .4, -height]) {
@@ -350,6 +409,9 @@ const logoOrder = ['featured', 'particle-logos', 'contact'].map(id => html.index
 assert(logoOrder.every((position, i) => position >= 0 && (!i || position > logoOrder[i - 1])), 'the shared row must follow featured work and precede contact');
 assert(galaxy.includes('function canMotion(){return !paused&&!reduced.matches&&!lost&&!document.hidden;}'), 'paused and reduced motion must gate the shared animation clock');
 assert(galaxy.includes('dt*shapeFlowSpeed(layer)*flow'), 'all glyphs must use the original GPT clock');
+assert(galaxy.includes('shapeTravel[layer]+=dt*shapeFlowSpeed(layer)*flow'), 'shared travel must accumulate without an early phase reset');
+assert(galaxy.includes('vColor=mix(aColor,vec3(1.),aOffset.z*.16)'), 'all glyphs must keep the original stellar palette');
+assert(!galaxy.includes('uLogoColors') && !galaxy.includes('sizeScale=mix(sizeScale,1.,logo)'), 'side glyphs must not override shared star color or size');
 assert(galaxy.includes('const rx=pair?0:') && galaxy.includes('ry=pair?0:'), 'the row must not inherit the old automatic entrance rotation');
 assert(!galaxy.includes('uVisibility'), 'letter animation must not hide the particle field');
 assert(!galaxy.match(/opticalLights\[n\]\.set\([^;]*assembly/), 'star glow must stay lit before assembly');
@@ -364,7 +426,7 @@ assert(!css.includes(String.fromCharCode(92) + 'n'), 'CSS contains a literal new
 assert(css.includes('.pause-button{'), 'the project dialog pause button must retain its styling');
 const maxOrder = Math.max(...orders), timing = introState(0, maxOrder);
 const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=nebula-trio-1', 'particle-logos.js?v=nebula-trio-1']) {
+for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=nebula-flow-2', 'particle-logos.js?v=nebula-flow-2']) {
   const root = { dataset: {} }, title = { dataset: {}, getAnimations: () => [{ cancel: () => { title.cancelled = true; } }] };
   let onError;
   runInNewContext(bootstrap, { matchMedia: () => ({ matches: reduced }), document: { documentElement: root, getElementById: () => title }, addEventListener: (type, handler) => { if (type === 'error') onError = handler; } });
@@ -391,4 +453,4 @@ for (let n = 0; n <= 170; n++) {
   assert(timeline.assembly >= previousAssembly && timeline.assembly <= 1, 'assembly must be monotonic');
   previousAssembly = timeline.assembly;
 }
-console.log(JSON.stringify({ status: 'passed', sourceCounts: '2048+274 / 4096+546', sourceCoreFixtures: sourceCore.length, depthAndSideViewComparisons: comparisons, minDepth, maxDepth, intro: { letters: orders.length, titleEnd: timing.titleEnd, gatherStart: timing.gatherStart, end: timing.end }, logos: { samples: logoSampleChecks, contours: contourCounts, worldAndClipComparisons: logoWorldChecks, scrollAndReducedChecks: logoScrollChecks, rowWorldChecks, flowHoleChecks, glyphCounts, brightCounts, rowGaps, worldFlowSpeed } }));
+console.log(JSON.stringify({ status: 'passed', sourceCounts: '2048+274 / 4096+546', sourceCoreFixtures: sourceCore.length, depthAndSideViewComparisons: comparisons, minDepth, maxDepth, intro: { letters: orders.length, titleEnd: timing.titleEnd, gatherStart: timing.gatherStart, end: timing.end }, logos: { samples: logoSampleChecks, contours: contourCounts, laneArcChecks, worldAndClipComparisons: logoWorldChecks, scrollAndReducedChecks: logoScrollChecks, rowWorldChecks, flowHoleChecks, glyphCounts, brightCounts, rowGaps, worldFlowSpeed, peakChecks, periodChecks, seamChecks, peakFlowSpeed } }));

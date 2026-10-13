@@ -29,6 +29,8 @@ export const LOGO_GEOMETRY = Object.freeze([
 ]);
 const cache = new Map();
 const flowCache = new Map();
+export const LOGO_FLOW_BANDS=8;
+export const LOGO_FLOW_POINTS=2048;
 function geometry(kind) {
   const definition = LOGO_GEOMETRY.find(item => item.kind === kind);
   if (!definition) throw new Error('Unknown particle logo');
@@ -90,7 +92,7 @@ export function buildLogoFlowData(count=1024){
         }
         if(logoContains(kind,x+nx*inset,y+ny*inset)){x+=nx*inset;y+=ny*inset;}
         let band=0;for(let step=1;step<=40;step++){const span=step*.004;if(!logoContains(kind,x+nx*span,y+ny*span))break;band=span;}
-        const feature=kind===2?(contour===0?1:contour===1?.65:contour===2?.28:.45):.8;
+        const feature=kind===2?(contour===0?1:contour===1?.65:contour===2?.28:.45):1;
         const j=((kind-2)*count+offset+n)*4;samples.set([x,y,start,end],j);frames.set([nx,ny,band*.88,feature],j);
       }
       offset+=number;
@@ -136,7 +138,69 @@ export function buildLogoFlowData(count=1024){
     }
   }
   if(!samples.every(Number.isFinite)||!frames.every(Number.isFinite))throw new Error('Non-finite logo flow');
-  const result={samples,frames};flowCache.set(count,result);return result;
+  const result={samples,frames,...buildTransportLanes(samples,frames,count)};flowCache.set(count,result);return result;
+}
+function buildTransportLanes(samples,frames,count){
+  const laneInfo=[],paths=[];
+  const legal=(kind,a,b,steps=24)=>{for(let n=0;n<=steps;n++){const f=n/steps;if(!logoContains(kind,a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f))return false;}return true;};
+  for(const {kind,viewBox} of LOGO_GEOMETRY){
+    const aspect=viewBox[2]/viewBox[3],offset=(kind-2)*count*4;
+    let begin=0,contour=0;
+    while(begin<count){
+      let end=begin;while(end+1<count&&samples[offset+(end+1)*4+2]===samples[offset+begin*4+2])end++;
+      const feature=frames[offset+begin*4+3],start=samples[offset+begin*4+2],finish=samples[offset+begin*4+3];
+      for(let lane=0;lane<LOGO_FLOW_BANDS;lane++){
+        const across=.04+.96*(lane+.5)/LOGO_FLOW_BANDS,raw=[];
+        const pointAt=(index,f)=>{const j=offset+index*4,k=offset+Math.min(index+1,end)*4,gx=samples[j]+(samples[k]-samples[j])*f,gy=samples[j+1]+(samples[k+1]-samples[j+1])*f;
+          const nx=frames[j]+(frames[k]-frames[j])*f+.0001,ny=frames[j+1]+(frames[k+1]-frames[j+1])*f,length=Math.hypot(nx,ny)||1,band=(frames[j+2]+(frames[k+2]-frames[j+2])*f)*across;
+          let scale=1;while(scale>1e-6&&!logoContains(kind,gx+nx/length*band*scale,gy+ny/length*band*scale))scale*=.5;
+          return[gx+nx/length*band*scale,gy+ny/length*band*scale];};
+        raw.push(pointAt(begin,0));
+        for(let index=begin;index<end;index++)for(let n=1;n<=8;n++)raw.push(pointAt(index,n/8));
+        const last=raw.at(-1),first=raw[0];
+        if(!legal(kind,last,first)){raw.push([samples[offset+end*4],samples[offset+end*4+1]],[samples[offset+begin*4],samples[offset+begin*4+1]]);}
+        raw.push(first.slice());
+        const distances=new Float64Array(raw.length);for(let n=1;n<raw.length;n++)distances[n]=distances[n-1]+Math.hypot(raw[n][0]-raw[n-1][0],(raw[n][1]-raw[n-1][1])/aspect);
+        const points=[];let segment=1;
+        for(let n=0;n<LOGO_FLOW_POINTS;n++){const at=n/(LOGO_FLOW_POINTS-1)*distances.at(-1);while(segment<raw.length-1&&distances[segment]<at)segment++;
+          const span=distances[segment]-distances[segment-1],f=span?(at-distances[segment-1])/span:0,a=raw[segment-1],b=raw[segment];points.push([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]);}
+        // A resampled chord at a concave tip can leave the paint. Repair that
+        // small route once, then measure its actual arc rather than changing
+        // normals or widths while particles are moving.
+        const unique=LOGO_FLOW_POINTS-1;
+        for(let pass=0;pass<4;pass++)for(let n=0;n<unique;n++){
+          const next=(n+1)%unique;if(legal(kind,points[n],points[next]))continue;
+          const a=points[n],b=points[next];let fixed=false;
+          for(const radius of [.0005,.001,.002,.004,.008,.016]){
+            for(let turn=0;turn<64;turn++){const angle=turn*Math.PI*2/64,dx=Math.cos(angle)*radius,dy=Math.sin(angle)*radius,aa=[a[0]+dx,a[1]+dy],bb=[b[0]+dx,b[1]+dy];
+              if(!legal(kind,points[(n-1+unique)%unique],aa)||!legal(kind,aa,bb)||!legal(kind,bb,points[(next+1)%unique]))continue;
+              points[n]=aa;points[next]=bb;fixed=true;break;}
+            if(fixed)break;
+          }
+        }
+        points[unique]=points[0].slice();
+        const cumulative=new Float64Array(points.length);
+        for(let n=1;n<points.length;n++){if(!legal(kind,points[n-1],points[n],64))throw new Error('Unsafe logo flow route '+kind+'/'+contour+'/'+lane+'/'+n);cumulative[n]=cumulative[n-1]+Math.hypot(points[n][0]-points[n-1][0],(points[n][1]-points[n-1][1])/aspect);}
+        const length=cumulative.at(-1),row=laneInfo.length;
+        laneInfo.push({kind,contour,across,row,length:Math.fround(length),feature,start,end:finish});paths.push({points,cumulative,length});
+      }
+      begin=end+1;contour++;
+    }
+  }
+  const lanes=new Float32Array(laneInfo.length*LOGO_FLOW_POINTS*4);
+  for(let row=0;row<paths.length;row++){const {points,cumulative,length}=paths[row];for(let n=0;n<points.length;n++)lanes.set([points[n][0],points[n][1],cumulative[n]/length,length],(row*LOGO_FLOW_POINTS+n)*4);}
+  return{lanes,laneInfo,laneCount:laneInfo.length,lanePoints:LOGO_FLOW_POINTS};
+}
+export function logoFlowLane(kind,seed,across){
+  const {samples,laneInfo}=buildLogoFlowData(),bin=Math.max(0,Math.min(LOGO_FLOW_BANDS-1,Math.floor((across-.04)/.96*LOGO_FLOW_BANDS))),index=Math.min(1023,Math.floor(Math.max(0,seed)*1024)),start=samples[((kind-2)*1024+index)*4+2];
+  const first=laneInfo.find(info=>info.kind===kind&&info.start===start);
+  return laneInfo[first.row+bin];
+}
+export function logoFlowSample(row,phase,out){
+  const {lanes}=buildLogoFlowData();let a=0,b=LOGO_FLOW_POINTS-1;
+  for(let n=0;n<11;n++){const mid=Math.floor((a+b)/2);if(lanes[(row*LOGO_FLOW_POINTS+mid)*4+2]<=phase)a=mid;else b=mid;}
+  const j=(row*LOGO_FLOW_POINTS+a)*4,k=(row*LOGO_FLOW_POINTS+b)*4,span=lanes[k+2]-lanes[j+2],f=span?(phase-lanes[j+2])/span:0;
+  out[0]=lanes[j]+(lanes[k]-lanes[j])*f;out[1]=lanes[j+1]+(lanes[k+1]-lanes[j+1])*f;return out;
 }
 function flattenPath(path) {
   const tokens=path.match(/[a-z]|[-+]?(?:\d*\.?\d+)(?:e[-+]?\d+)?/gi);
