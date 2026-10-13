@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { LOGO_GEOMETRY, buildLogoFlowData,logoFlowLane,logoFlowSample,LOGO_FLOW_POINTS } from './particle-logos.js?v=nebula-flow-2';
+import { LOGO_GEOMETRY, buildLogoFlowData,logoFlowLane,logoFlowSample,LOGO_FLOW_POINTS } from './particle-logos.js?v=deepseek-outline-1';
 
 export const SCULPTURE_KINDS=Object.freeze({cursor:0,blossom:1,deepseek:2,claude:3,logos:2});
 export const LOGO_SLOTS=Object.freeze([{name:'deepseek',kind:2,aspect:26.634/19.6},{name:'gpt',kind:1,aspect:1726/1538},{name:'claude',kind:3,aspect:1}]);
@@ -237,15 +237,18 @@ function createField(canvas, initialPause) {
         endpoint=mix(1.,endpoint,uWeights.x);envelope=mix(1.,envelope,uWeights.x);
         if(shape>0.){endpoint=mix(endpoint,smoothstep(0.,.055,shapeP)*(1.-smoothstep(.945,1.,shapeP)),shape);envelope=mix(envelope,mix(1.,.14+.86*pow(max(sin(shapeP*3.14159265359),0.),.68),.45),shape);}
         float logo=step(1.5,glyphKind)*shape*(1.-uBackground);
+        float whale=logo*(1.-step(2.5,glyphKind));
+        endpoint=mix(endpoint,1.,whale);
         float brightKeep=max(aShape.w,step(.5,fract(sin(aLoop.y*193.7+aStyle.w*417.2)*43758.5453)));
         float bright=smoothstep(1.35,1.65,aLight.x),suppressed=shape*bright*(1.-brightKeep);
         float intensity=1.35*(uWeights.x+uWeights.y*.18+shape)*(aStyle.z>1.5?1.22:1.);
         float brightness=aLight.x*mix(1.,depthCue,shape)*mix(1.,.42,suppressed);
+        brightness*=mix(1.,1.7,whale*(1.-bright));
         float sizeScale=mix(uWeights.x+(uWeights.y+shape)*.45,1.,shape*bright*brightKeep);
         if(uBackground>.5){endpoint=1.;envelope=1.;sizeScale=mix(sqrt(.2),.45,1.-uTwinkleRate);intensity=1.35*(.18+.82*uTwinkleRate);brightness=aLight.x;}
         float twinkle=.86+.14*sin(aStyle.w+uTime*.62*aLight.y*uTwinkleRate);
         vDiameter=(.35+aStyle.x*envelope*endpoint*3.8)*sizeScale*(.97+twinkle*.03)*mix(1.,depthCue,shape)*uPixelRatio;
-        vDiameter=mix(vDiameter,min(vDiameter,max(1.,uLogoIconPixels*.055)*logoFeature*uPixelRatio),logo);
+        vDiameter=mix(vDiameter,min(vDiameter,max(1.,uLogoIconPixels*mix(.055,.030,whale))*logoFeature*uPixelRatio),logo);
         if(uLogoPair>.5&&glyphKind<1.5)vDiameter=min(vDiameter,uLogoIconPixels*.055*uPixelRatio);
         gl_PointSize=clamp(max(vDiameter,4.),4.,uPointLimit);
         vColor=mix(aColor,vec3(1.),aOffset.z*.16);vOpacity=aStyle.y*endpoint*mix(1.,opacityCue,shape)*(.92+twinkle*.08);
@@ -380,7 +383,7 @@ function createField(canvas, initialPause) {
       opticalPoint.set(sample[0],sample[1],sample[2]).project(camera);
       opticalPoint.x+=data.offsets[i*3];opticalPoint.y+=data.offsets[i*3+1];
       const edge=1-cubic((Math.max(Math.abs(opticalPoint.x),Math.abs(opticalPoint.y))-.88)/.2);
-      const glyph=params.logoPair?LOGO_SLOTS[logoSlot(data,i)].kind:params.shapeKind,halo=glyph>1?scratch.shape.before[3]:params.logoPair?Math.min(1,uniforms.uLogoIconPixels.value/400):1;
+      const glyph=params.logoPair?LOGO_SLOTS[logoSlot(data,i)].kind:params.shapeKind,halo=glyph>1?scratch.shape.before[3]*(glyph===2?.65:1):params.logoPair?Math.min(1,uniforms.uLogoIconPixels.value/400):1;
       opticalLights[n].set((opticalPoint.x+1)*.5,(opticalPoint.y+1)*.5,edge*(g+halo*shape+.1*weights.y));
     }
     glow.setLights(opticalLights);

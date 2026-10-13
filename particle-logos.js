@@ -93,7 +93,7 @@ export function buildLogoFlowData(count=1024){
         if(logoContains(kind,x+nx*inset,y+ny*inset)){x+=nx*inset;y+=ny*inset;}
         let band=0;for(let step=1;step<=40;step++){const span=step*.004;if(!logoContains(kind,x+nx*span,y+ny*span))break;band=span;}
         const feature=kind===2?(contour===0?1:contour===1?.65:contour===2?.28:.45):1;
-        const j=((kind-2)*count+offset+n)*4;samples.set([x,y,start,end],j);frames.set([nx,ny,band*.88,feature],j);
+        const j=((kind-2)*count+offset+n)*4;samples.set([x,y,start,end],j);frames.set([nx,ny,band*(kind===2?.32:.88),feature],j);
       }
       offset+=number;
     }

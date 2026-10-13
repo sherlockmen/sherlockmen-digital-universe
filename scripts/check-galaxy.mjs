@@ -173,6 +173,7 @@ const sampleLane = (row, progress) => {
   return [0, 1].map(axis => flowData.lanes[j + axis] + (flowData.lanes[k + axis] - flowData.lanes[j + axis]) * fraction);
 };
 let laneArcChecks = 0, referenceArc = 0;
+const whaleOutlineDistances = [];
 for (let i = 1; i < 1024; i++) { const j = (1024 + i) * 4, k = j - 4; if (shapes[j + 2] === shapes[k + 2]) referenceArc += Math.hypot(shapes[j] - shapes[k], (shapes[j + 1] - shapes[k + 1]) / LOGO_SLOTS[1].aspect); }
 near(shapeFlowDistance(), referenceArc, 'source GPT distance governs every lane');
 for (const lane of flowData.laneInfo) {
@@ -183,6 +184,7 @@ for (const lane of flowData.laneInfo) {
   for (let i = 0; i < LOGO_FLOW_POINTS; i++) {
     const j = offset + i * 4, [x, y, progress, length] = flowData.lanes.slice(j, j + 4);
     assert([x, y, progress, length].every(Number.isFinite) && logoContains(lane.kind, x, y), 'a real flow lane entered negative space');
+    if (lane.kind === 2 && lane.contour === 0 && i % 8 === 0) whaleOutlineDistances.push(logoClearance(2, x, y));
     near(length, lane.length, 'CPU/GPU share the same stored lane length');
     if (i) {
       const k = j - 4, distance = Math.hypot(x - flowData.lanes[k], (y - flowData.lanes[k + 1]) / aspect);
@@ -193,6 +195,8 @@ for (const lane of flowData.laneInfo) {
     laneArcChecks++;
   }
 }
+whaleOutlineDistances.sort((a, b) => a - b);
+assert(whaleOutlineDistances[Math.floor(whaleOutlineDistances.length * .95)] < .05, 'DeepSeek outer flow must stay within a narrow silhouette band');
 let logoWorldChecks = 0, flowHoleChecks = 0;
 const logoCamera = new THREE.OrthographicCamera(-9.6, 9.6, 5.45, -5.45, .1, 100);
 logoCamera.position.z = 12; logoCamera.updateMatrixWorld();
@@ -426,7 +430,7 @@ assert(!css.includes(String.fromCharCode(92) + 'n'), 'CSS contains a literal new
 assert(css.includes('.pause-button{'), 'the project dialog pause button must retain its styling');
 const maxOrder = Math.max(...orders), timing = introState(0, maxOrder);
 const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=nebula-flow-2', 'particle-logos.js?v=nebula-flow-2']) {
+for (const reduced of [false, true]) for (const filename of ['galaxy.js?v=deepseek-outline-1', 'particle-logos.js?v=deepseek-outline-1']) {
   const root = { dataset: {} }, title = { dataset: {}, getAnimations: () => [{ cancel: () => { title.cancelled = true; } }] };
   let onError;
   runInNewContext(bootstrap, { matchMedia: () => ({ matches: reduced }), document: { documentElement: root, getElementById: () => title }, addEventListener: (type, handler) => { if (type === 'error') onError = handler; } });
