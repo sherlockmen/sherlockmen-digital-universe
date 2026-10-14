@@ -41,124 +41,190 @@
             }
           ],
           "architecture": {
-            "title": "智能审核研究方案",
-            "note": "基于已有审核体系开展新架构研究；运行评估能力按阶段规划。",
-            "focus": "review-agent",
+            "title": "Agent Runtime 与领域插件",
+            "note": "图示为新架构研究：复用 Java 业务接口，基于 DeepSeek Harness 组织模型与工具；运行观测和离线评测按阶段规划。",
+            "focus": "harness",
+            "layers": [
+              {
+                "id": "access",
+                "label": "业务接入",
+                "caption": "JAVA / API"
+              },
+              {
+                "id": "runtime",
+                "label": "执行与推理",
+                "caption": "AGENT RUNTIME"
+              },
+              {
+                "id": "plugins",
+                "label": "领域扩展",
+                "caption": "TOOLS / STATE"
+              },
+              {
+                "id": "output",
+                "label": "结果与观测",
+                "caption": "OUTPUT / EVAL"
+              }
+            ],
             "nodes": [
               {
-                "id": "business-platform",
-                "label": "业务系统",
+                "id": "business",
+                "label": "Java 业务系统",
+                "layer": "access",
+                "type": "api",
                 "items": [
-                  "工单与相关资料",
-                  "业务查询能力"
-                ]
+                  "工单 / 附件 / 权限",
+                  "受控查询与结果接口"
+                ],
+                "state": "复用"
               },
               {
-                "id": "agent-runtime",
-                "label": "Agent 运行基础",
+                "id": "harness",
+                "label": "DeepSeek Harness",
+                "layer": "runtime",
+                "type": "runtime",
                 "items": [
-                  "执行过程组织",
-                  "模型与工具调用"
-                ]
+                  "执行循环 / 上下文管理",
+                  "模型调用与插件装载"
+                ],
+                "state": "研究"
               },
               {
-                "id": "review-guidance",
-                "label": "审核知识",
+                "id": "model",
+                "label": "DeepSeek 推理模型",
+                "layer": "runtime",
+                "type": "model",
                 "items": [
-                  "业务规则",
-                  "审核方法"
-                ]
+                  "材料理解 / 调查规划",
+                  "推理结果返回运行底座"
+                ],
+                "state": "研究"
               },
               {
-                "id": "evidence-tools",
-                "label": "材料核查能力",
+                "id": "tools",
+                "label": "证据工具插件",
+                "layer": "plugins",
+                "type": "tool",
                 "items": [
-                  "资料读取",
-                  "查询与计算"
-                ]
+                  "附件原文 / 业务查询",
+                  "日期与金额计算"
+                ],
+                "state": "研究"
               },
               {
-                "id": "review-agent",
-                "label": "智能审核（研究）",
+                "id": "state",
+                "label": "案件状态与文件索引",
+                "layer": "plugins",
+                "type": "data",
                 "items": [
-                  "诉求理解",
-                  "材料核查",
-                  "责任判断建议"
-                ]
+                  "共享事实 / 原文定位",
+                  "引用位置与待查事项"
+                ],
+                "state": "研究"
               },
               {
-                "id": "review-report",
-                "label": "审核建议",
+                "id": "policy",
+                "label": "Skill / Policy",
+                "layer": "plugins",
+                "type": "data",
                 "items": [
-                  "相关依据",
-                  "判断说明"
-                ]
+                  "专业核查方法 / 规则口径",
+                  "按版本装载领域知识"
+                ],
+                "state": "研究"
               },
               {
-                "id": "quality-evaluation",
-                "label": "运行评估（规划）",
+                "id": "guard",
+                "label": "程序化提交检查",
+                "layer": "output",
+                "type": "service",
                 "items": [
-                  "运行记录",
-                  "样本评估"
-                ]
+                  "计算与引用检查",
+                  "审核建议结构化输出"
+                ],
+                "state": "研究"
               },
               {
-                "id": "human-review",
-                "label": "人工复核",
+                "id": "review",
+                "label": "复核与结果管理",
+                "layer": "output",
+                "type": "ui",
                 "items": [
-                  "结果核对",
-                  "疑难处理"
-                ]
+                  "人工核对审核建议",
+                  "业务系统承载正式结果"
+                ],
+                "state": "复用"
+              },
+              {
+                "id": "eval",
+                "label": "Langfuse 与离线评测",
+                "layer": "output",
+                "type": "service",
+                "items": [
+                  "运行记录 / 样本标注",
+                  "批量实验与回归评估"
+                ],
+                "state": "规划"
               }
             ],
             "edges": [
               {
-                "from": "business-platform",
-                "to": "review-agent",
-                "label": "业务支撑",
-                "kind": "flow"
+                "to": "harness",
+                "label": "审核任务 / 案件上下文",
+                "kind": "flow",
+                "from": "business"
               },
               {
-                "from": "agent-runtime",
-                "to": "review-agent",
-                "label": "运行基础",
-                "kind": "foundation"
+                "to": "model",
+                "label": "推理请求 / 模型输出",
+                "kind": "call",
+                "from": "harness",
+                "bidirectional": true
               },
               {
-                "from": "review-guidance",
-                "to": "review-agent",
-                "label": "审核依据",
-                "kind": "foundation"
+                "to": "tools",
+                "label": "工具调用 / 证据返回",
+                "kind": "call",
+                "from": "harness",
+                "bidirectional": true
               },
               {
-                "from": "evidence-tools",
-                "to": "review-agent",
-                "label": "核查支持",
-                "kind": "integration"
+                "to": "business",
+                "label": "受控查询 / 业务记录",
+                "kind": "call",
+                "from": "tools",
+                "bidirectional": true
               },
               {
-                "from": "review-agent",
-                "to": "review-agent",
-                "label": "补充核查（研究）",
-                "kind": "feedback"
+                "to": "state",
+                "label": "索引读取 / 事实更新",
+                "kind": "call",
+                "from": "harness",
+                "bidirectional": true
               },
               {
-                "from": "review-agent",
-                "to": "review-report",
-                "label": "形成建议",
-                "kind": "flow"
+                "to": "harness",
+                "label": "专业 Skill 与 Policy 版本装载",
+                "kind": "config",
+                "from": "policy"
               },
               {
-                "from": "review-agent",
-                "to": "quality-evaluation",
-                "label": "评估规划",
-                "kind": "integration"
+                "to": "guard",
+                "label": "审核建议 / 证据引用",
+                "kind": "flow",
+                "from": "harness"
               },
               {
-                "from": "review-report",
-                "to": "human-review",
-                "label": "人工核对",
-                "kind": "flow"
+                "to": "review",
+                "label": "校验后的结构化建议",
+                "kind": "flow",
+                "from": "guard"
+              },
+              {
+                "to": "eval",
+                "label": "执行记录 / 评测样本（规划）",
+                "kind": "event",
+                "from": "harness"
               }
             ]
           }
@@ -197,98 +263,172 @@
             }
           ],
           "architecture": {
-            "title": "发布前审核的功能关系",
-            "note": "以通用能力说明材料如何进入审核并形成复核参考。",
-            "focus": "pre-review",
+            "title": "pi 编排、模型与规则检索",
+            "note": "基于 pi 组织审核任务，按材料类型调用模型、解析及核验能力；图示为逻辑组件，具体版本与部署拓扑未展开。",
+            "focus": "pi",
+            "layers": [
+              {
+                "id": "access",
+                "label": "接口接入",
+                "caption": "REST API"
+              },
+              {
+                "id": "runtime",
+                "label": "执行与推理",
+                "caption": "AGENT / MODEL"
+              },
+              {
+                "id": "tools",
+                "label": "解析与核验",
+                "caption": "TOOLS / RAG"
+              },
+              {
+                "id": "output",
+                "label": "结果与复核",
+                "caption": "OUTPUT / UI"
+              }
+            ],
             "nodes": [
               {
-                "id": "submission",
-                "label": "送审素材",
+                "id": "api",
+                "label": "审核接入 API",
+                "layer": "access",
+                "type": "api",
                 "items": [
-                  "通知 / 协议 / 页面"
+                  "文字 / 图片 / 文档 / 录音",
+                  "资料提交与业务对接"
                 ]
               },
               {
-                "id": "business-data",
-                "label": "业务参考信息",
+                "id": "pi",
+                "label": "pi Agent Runtime",
+                "layer": "runtime",
+                "type": "runtime",
                 "items": [
-                  "费用 / 条件 / 业务记录"
+                  "审核任务与场景编排",
+                  "调度模型、解析和核验"
                 ]
               },
               {
-                "id": "review-knowledge",
-                "label": "审核依据",
+                "id": "model",
+                "label": "语言与视觉模型",
+                "layer": "runtime",
+                "type": "model",
                 "items": [
-                  "外部要求 / 场景规范"
+                  "语义理解 / 视觉理解",
+                  "大小模型按任务调度"
                 ]
               },
               {
-                "id": "parsing",
-                "label": "材料整理与理解",
+                "id": "parse",
+                "label": "材料解析工具",
+                "layer": "tools",
+                "type": "tool",
                 "items": [
-                  "内容提取 / 类型识别"
+                  "OCR / ASR / NLP",
+                  "附件信息提取与分类"
                 ]
               },
               {
-                "id": "pre-review",
-                "label": "发布前内容核验",
+                "id": "rag",
+                "label": "RAG 与规则核验",
+                "layer": "tools",
+                "type": "service",
                 "items": [
-                  "必要信息 / 表达清晰度",
-                  "多份材料对照"
+                  "检索审核依据",
+                  "规则匹配与一致性检查"
+                ]
+              },
+              {
+                "id": "knowledge",
+                "label": "审核知识与业务资料",
+                "layer": "tools",
+                "type": "data",
+                "items": [
+                  "外部规范 / 场景规则",
+                  "业务参考数据"
+                ]
+              },
+              {
+                "id": "report",
+                "label": "结构化报告生成",
+                "layer": "output",
+                "type": "service",
+                "items": [
+                  "结论 / 检查项 / 依据",
+                  "修改建议与材料引用"
                 ]
               },
               {
                 "id": "result",
-                "label": "检查结论与说明",
+                "label": "审核结果 API",
+                "layer": "output",
+                "type": "api",
                 "items": [
-                  "问题位置 / 依据",
-                  "修订参考"
+                  "向业务流程反馈结果"
                 ]
               },
               {
-                "id": "business-review",
-                "label": "业务人员复核",
+                "id": "review",
+                "label": "人工复核界面",
+                "layer": "output",
+                "type": "ui",
                 "items": [
-                  "核对材料 / 判断调整方向"
+                  "查看问题与原始材料"
                 ]
               }
             ],
             "edges": [
               {
-                "from": "submission",
-                "to": "parsing",
-                "label": "提取可核查内容",
-                "kind": "flow"
+                "to": "pi",
+                "label": "送审资料 / 审核任务",
+                "kind": "flow",
+                "from": "api"
               },
               {
-                "from": "parsing",
-                "to": "pre-review",
-                "label": "按场景检查",
-                "kind": "flow"
+                "to": "model",
+                "label": "模型请求 / 理解与推理结果",
+                "kind": "call",
+                "from": "pi",
+                "bidirectional": true
               },
               {
-                "from": "business-data",
-                "to": "pre-review",
-                "label": "对照业务信息",
-                "kind": "integration"
+                "to": "parse",
+                "label": "工具调用 / 解析结果",
+                "kind": "call",
+                "from": "pi",
+                "bidirectional": true
               },
               {
-                "from": "review-knowledge",
-                "to": "pre-review",
-                "label": "匹配检查条件",
-                "kind": "foundation"
+                "to": "rag",
+                "label": "检索与核验请求 / 依据返回",
+                "kind": "call",
+                "from": "pi",
+                "bidirectional": true
               },
               {
-                "from": "pre-review",
+                "to": "rag",
+                "label": "规则与参考数据读取",
+                "kind": "config",
+                "from": "knowledge"
+              },
+              {
+                "to": "report",
+                "label": "检查结果 / 依据与引用",
+                "kind": "flow",
+                "from": "pi"
+              },
+              {
                 "to": "result",
-                "label": "整理发现与依据",
-                "kind": "flow"
+                "label": "结构化结果输出",
+                "kind": "flow",
+                "from": "report"
               },
               {
-                "from": "result",
-                "to": "business-review",
-                "label": "提供复核参考",
-                "kind": "flow"
+                "to": "review",
+                "label": "报告与原始材料关联",
+                "kind": "flow",
+                "from": "report"
               }
             ]
           }
@@ -314,26 +454,86 @@
             }
           ],
           "architecture": {
-            "title": "桌面自动化能力",
-            "focus": "rpa-robot",
-            "nodes": [
+            "title": "流程执行器与桌面控制",
+            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "focus": "executor",
+            "layers": [
               {
-                "id": "rpa-robot",
-                "label": "自动化机器人",
-                "detail": "按流程执行重复任务"
+                "id": "config",
+                "label": "流程配置",
+                "caption": "STEPS / PARAMS"
               },
               {
-                "id": "computer-actions",
-                "label": "电脑操作",
-                "detail": "控制电脑、执行点击"
+                "id": "runtime",
+                "label": "执行与控制",
+                "caption": "RUNTIME / TOOL"
+              },
+              {
+                "id": "target",
+                "label": "目标应用",
+                "caption": "DESKTOP"
+              }
+            ],
+            "nodes": [
+              {
+                "id": "steps",
+                "label": "流程定义",
+                "layer": "config",
+                "type": "data",
+                "items": [
+                  "重复任务的操作步骤",
+                  "电脑操作参数"
+                ]
+              },
+              {
+                "id": "executor",
+                "label": "流程执行器",
+                "layer": "runtime",
+                "type": "runtime",
+                "items": [
+                  "按步骤驱动任务",
+                  "生成电脑操作指令"
+                ]
+              },
+              {
+                "id": "control",
+                "label": "桌面控制适配",
+                "layer": "runtime",
+                "type": "tool",
+                "items": [
+                  "点击等输入事件",
+                  "电脑操作能力封装"
+                ]
+              },
+              {
+                "id": "app",
+                "label": "目标桌面应用",
+                "layer": "target",
+                "type": "external",
+                "items": [
+                  "接收操作事件",
+                  "执行对应应用行为"
+                ]
               }
             ],
             "edges": [
               {
-                "from": "rpa-robot",
-                "to": "computer-actions",
-                "label": "执行任务",
-                "kind": "flow"
+                "to": "executor",
+                "label": "步骤与操作参数",
+                "kind": "flow",
+                "from": "steps"
+              },
+              {
+                "to": "control",
+                "label": "电脑控制调用",
+                "kind": "call",
+                "from": "executor"
+              },
+              {
+                "to": "app",
+                "label": "点击等操作事件",
+                "kind": "flow",
+                "from": "control"
               }
             ]
           }
@@ -368,109 +568,178 @@
             }
           ],
           "architecture": {
-            "title": "视频营销分析的能力示意",
-            "note": "依据方案与演示提炼功能关系，展示范围不代表正式上线范围。",
-            "focus": "video-review",
+            "title": "多模态分析技术方案",
+            "note": "编排、模型与专业能力按平台方案展示；片段证据和报告依据演示抽象，视频解析算法及具体技术选型待确认。",
+            "focus": "orchestrator",
+            "layers": [
+              {
+                "id": "input",
+                "label": "素材接入",
+                "caption": "VIDEO / DATA"
+              },
+              {
+                "id": "runtime",
+                "label": "编排与推理",
+                "caption": "AGENT / MODEL"
+              },
+              {
+                "id": "tools",
+                "label": "解析与专业能力",
+                "caption": "TOOLS / RULES"
+              },
+              {
+                "id": "output",
+                "label": "证据与报告",
+                "caption": "EVIDENCE / OUTPUT"
+              }
+            ],
             "nodes": [
               {
-                "id": "video-material",
-                "label": "直播视频",
+                "id": "video",
+                "label": "视频与商品资料",
+                "layer": "input",
+                "type": "data",
                 "items": [
-                  "画面 / 口播"
-                ]
+                  "画面 / 口播 / 商品信息"
+                ],
+                "state": "演示"
               },
               {
-                "id": "product-material",
-                "label": "商品与宣传资料",
+                "id": "orchestrator",
+                "label": "Agent 任务编排",
+                "layer": "runtime",
+                "type": "runtime",
                 "items": [
-                  "详情 / 营销说明"
-                ]
+                  "计划生成 / 专业能力路由",
+                  "汇集并行核查结果"
+                ],
+                "state": "方案"
               },
               {
-                "id": "review-basis",
-                "label": "核查标准",
+                "id": "model",
+                "label": "多模态推理接口",
+                "layer": "runtime",
+                "type": "model",
                 "items": [
-                  "适用要求 / 检查条件"
-                ]
+                  "语义与多来源内容理解"
+                ],
+                "state": "方案"
               },
               {
-                "id": "content-understanding",
-                "label": "多来源内容理解",
+                "id": "parse",
+                "label": "媒体内容解析",
+                "layer": "tools",
+                "type": "tool",
                 "items": [
-                  "视频内容与资料对应"
-                ]
+                  "画面、口播与资料提取",
+                  "构建待核查内容"
+                ],
+                "state": "方案"
               },
               {
-                "id": "video-review",
-                "label": "营销表达核验",
+                "id": "skills",
+                "label": "专业审核 Skills",
+                "layer": "tools",
+                "type": "tool",
                 "items": [
-                  "信息对照 / 疑点识别"
-                ]
+                  "规则 / 语义 / 一致性核验",
+                  "按任务选择专业能力"
+                ],
+                "state": "方案"
               },
               {
-                "id": "evidence-location",
-                "label": "问题片段定位",
+                "id": "rules",
+                "label": "审核规则与知识",
+                "layer": "tools",
+                "type": "data",
                 "items": [
-                  "时间位置 / 相关证据"
-                ]
+                  "规则依据 / 专业方法"
+                ],
+                "state": "方案"
               },
               {
-                "id": "video-report",
-                "label": "分析结果说明",
+                "id": "evidence",
+                "label": "片段证据关联",
+                "layer": "output",
+                "type": "data",
                 "items": [
-                  "疑点 / 依据 / 调整建议"
-                ]
+                  "片段时间 / 口播文字",
+                  "商品资料与核查依据"
+                ],
+                "state": "演示"
               },
               {
-                "id": "reviewer",
-                "label": "审核人员核对",
+                "id": "report",
+                "label": "分析报告生成",
+                "layer": "output",
+                "type": "service",
                 "items": [
-                  "回看片段 / 研判线索"
+                  "问题说明 / 相关依据",
+                  "片段位置与调整建议"
+                ],
+                "state": "演示"
+              },
+              {
+                "id": "review",
+                "label": "证据查看界面",
+                "layer": "output",
+                "type": "ui",
+                "items": [
+                  "核对片段与报告说明"
                 ]
               }
             ],
             "edges": [
               {
-                "from": "video-material",
-                "to": "content-understanding",
-                "label": "理解视频内容",
-                "kind": "flow"
+                "to": "orchestrator",
+                "label": "视频 / 商品 / 宣传资料（方案）",
+                "kind": "flow",
+                "from": "video"
               },
               {
-                "from": "product-material",
-                "to": "content-understanding",
-                "label": "对应商品信息",
-                "kind": "flow"
+                "to": "model",
+                "label": "推理请求 / 结果返回（方案）",
+                "kind": "call",
+                "from": "orchestrator",
+                "bidirectional": true
               },
               {
-                "from": "content-understanding",
-                "to": "video-review",
-                "label": "比对不同来源",
-                "kind": "flow"
+                "to": "parse",
+                "label": "解析调用 / 内容返回（方案）",
+                "kind": "call",
+                "from": "orchestrator",
+                "bidirectional": true
               },
               {
-                "from": "review-basis",
-                "to": "video-review",
-                "label": "适用检查要求",
-                "kind": "foundation"
+                "to": "skills",
+                "label": "专业能力路由 / 核验结果（方案）",
+                "kind": "call",
+                "from": "orchestrator",
+                "bidirectional": true
               },
               {
-                "from": "video-review",
-                "to": "evidence-location",
-                "label": "关联问题与证据",
-                "kind": "flow"
+                "to": "skills",
+                "label": "规则与核查方法装载（方案）",
+                "kind": "config",
+                "from": "rules"
               },
               {
-                "from": "evidence-location",
-                "to": "video-report",
-                "label": "形成可回看的说明",
-                "kind": "flow"
+                "to": "evidence",
+                "label": "核查结果与来源关联（方案）",
+                "kind": "flow",
+                "from": "orchestrator"
               },
               {
-                "from": "video-report",
-                "to": "reviewer",
-                "label": "辅助复核",
-                "kind": "flow"
+                "to": "report",
+                "label": "片段位置 / 多来源证据（演示）",
+                "kind": "flow",
+                "from": "evidence"
+              },
+              {
+                "to": "review",
+                "label": "报告与片段展示",
+                "kind": "flow",
+                "from": "report"
               }
             ]
           }
@@ -509,45 +778,117 @@
             }
           ],
           "architecture": {
-            "title": "在线客服能力",
-            "focus": "online-service",
+            "title": "会话服务与共享接口",
+            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "focus": "session",
+            "layers": [
+              {
+                "id": "access",
+                "label": "交互接入",
+                "caption": "WEB UI"
+              },
+              {
+                "id": "service",
+                "label": "服务组件",
+                "caption": "SESSION / QUERY"
+              },
+              {
+                "id": "shared",
+                "label": "共享能力",
+                "caption": "API / DATA"
+              }
+            ],
             "nodes": [
               {
-                "id": "online-service",
-                "label": "在线服务"
+                "id": "ui",
+                "label": "在线接待界面",
+                "layer": "access",
+                "type": "ui",
+                "items": [
+                  "客户咨询 / 坐席回答"
+                ]
               },
               {
-                "id": "intelligent-knowledge",
-                "label": "回答支持",
-                "detail": "按问题查找对应话术"
+                "id": "session",
+                "label": "在线会话服务",
+                "layer": "service",
+                "type": "service",
+                "items": [
+                  "承接问题与回答",
+                  "连接话术查询和服务下单"
+                ]
               },
               {
-                "id": "shared-ticket",
-                "label": "共用工单服务"
+                "id": "lookup",
+                "label": "智能话术查询",
+                "layer": "service",
+                "type": "service",
+                "items": [
+                  "根据问题匹配回答话术"
+                ]
               },
               {
-                "id": "shared-knowledge",
-                "label": "共用话术知识"
+                "id": "ticket",
+                "label": "共享工单接口",
+                "layer": "shared",
+                "type": "api",
+                "items": [
+                  "服务下单"
+                ]
+              },
+              {
+                "id": "knowledge",
+                "label": "共享知识服务",
+                "layer": "shared",
+                "type": "api",
+                "items": [
+                  "客服话术查询"
+                ]
+              },
+              {
+                "id": "store",
+                "label": "话术知识库",
+                "layer": "shared",
+                "type": "data",
+                "items": [
+                  "问题与回答内容"
+                ]
               }
             ],
             "edges": [
               {
-                "from": "online-service",
-                "to": "intelligent-knowledge",
-                "label": "话术支持",
-                "kind": "contains"
+                "to": "session",
+                "label": "咨询消息 / 回答内容",
+                "kind": "call",
+                "from": "ui",
+                "bidirectional": true
               },
               {
-                "from": "online-service",
-                "to": "shared-ticket",
-                "label": "服务接入",
-                "kind": "integration"
+                "to": "lookup",
+                "label": "问题输入 / 话术建议",
+                "kind": "call",
+                "from": "session",
+                "bidirectional": true
               },
               {
-                "from": "online-service",
-                "to": "shared-knowledge",
-                "label": "知识接入",
-                "kind": "integration"
+                "to": "ticket",
+                "label": "创建服务工单",
+                "kind": "call",
+                "from": "session"
+              },
+              {
+                "to": "knowledge",
+                "label": "话术查询 / 匹配结果",
+                "kind": "call",
+                "from": "lookup",
+                "bidirectional": true
+              },
+              {
+                "to": "store",
+                "label": "话术数据读取",
+                "kind": "call",
+                "from": "knowledge",
+                "bidirectional": true
               }
             ]
           }
@@ -582,65 +923,195 @@
             }
           ],
           "architecture": {
-            "title": "语音客服能力",
-            "focus": "voice-center",
+            "title": "FreeSWITCH 呼叫与语音链路",
+            "note": "明确展示已确认的 FreeSWITCH、IVR、ASR、意图识别与 TTS；通信协议和部署选型待补充。",
+            "focus": "switch",
+            "layers": [
+              {
+                "id": "access",
+                "label": "接入与坐席",
+                "caption": "CALL / UI"
+              },
+              {
+                "id": "call",
+                "label": "呼叫控制",
+                "caption": "FREESWITCH"
+              },
+              {
+                "id": "voice",
+                "label": "语音处理",
+                "caption": "ASR / INTENT / TTS"
+              },
+              {
+                "id": "shared",
+                "label": "共享服务",
+                "caption": "TICKET / KNOWLEDGE"
+              }
+            ],
             "nodes": [
               {
-                "id": "voice-center",
-                "label": "呼叫中心"
-              },
-              {
-                "id": "call-services",
-                "label": "电话服务",
+                "id": "phone",
+                "label": "电话接入",
+                "layer": "access",
+                "type": "external",
                 "items": [
-                  "来电接待",
-                  "坐席外呼",
-                  "智能外呼"
+                  "客户来电 / 外呼连接"
                 ]
               },
               {
-                "id": "intelligent-voice",
-                "label": "语音交互",
+                "id": "seat",
+                "label": "坐席工作台",
+                "layer": "access",
+                "type": "ui",
                 "items": [
-                  "语音应答",
-                  "意图识别",
-                  "语音识别",
-                  "语音合成"
+                  "人工接听 / 坐席外呼"
                 ]
               },
               {
-                "id": "shared-ticket",
-                "label": "共用工单服务"
+                "id": "ivr",
+                "label": "IVR 交互控制",
+                "layer": "call",
+                "type": "service",
+                "items": [
+                  "语音导航 / 服务转接"
+                ]
               },
               {
-                "id": "shared-knowledge",
-                "label": "共用话术知识"
+                "id": "switch",
+                "label": "FreeSWITCH",
+                "layer": "call",
+                "type": "runtime",
+                "items": [
+                  "呼叫连接与控制",
+                  "语音媒体交互"
+                ]
+              },
+              {
+                "id": "outbound",
+                "label": "外呼任务控制",
+                "layer": "call",
+                "type": "service",
+                "items": [
+                  "坐席外呼 / 智能外呼"
+                ]
+              },
+              {
+                "id": "asr",
+                "label": "ASR 语音识别",
+                "layer": "voice",
+                "type": "model",
+                "items": [
+                  "音频转文本"
+                ]
+              },
+              {
+                "id": "intent",
+                "label": "意图识别",
+                "layer": "voice",
+                "type": "service",
+                "items": [
+                  "识别交互意图"
+                ]
+              },
+              {
+                "id": "tts",
+                "label": "TTS 语音合成",
+                "layer": "voice",
+                "type": "model",
+                "items": [
+                  "文本转语音"
+                ]
+              },
+              {
+                "id": "ticket",
+                "label": "共享工单接口",
+                "layer": "shared",
+                "type": "api",
+                "items": [
+                  "坐席服务下单"
+                ]
+              },
+              {
+                "id": "knowledge",
+                "label": "共享知识服务",
+                "layer": "shared",
+                "type": "api",
+                "items": [
+                  "话术与回答查询"
+                ]
               }
             ],
             "edges": [
               {
-                "from": "voice-center",
-                "to": "call-services",
-                "label": "呼叫能力",
-                "kind": "contains"
+                "to": "switch",
+                "label": "呼叫信令与语音媒体",
+                "kind": "call",
+                "from": "phone",
+                "bidirectional": true
               },
               {
-                "from": "voice-center",
-                "to": "intelligent-voice",
-                "label": "交互能力",
-                "kind": "contains"
+                "to": "switch",
+                "label": "坐席呼叫控制",
+                "kind": "call",
+                "from": "seat",
+                "bidirectional": true
               },
               {
-                "from": "voice-center",
-                "to": "shared-ticket",
-                "label": "服务接入",
-                "kind": "integration"
+                "to": "ivr",
+                "label": "呼叫状态 / 交互控制",
+                "kind": "call",
+                "from": "switch",
+                "bidirectional": true
               },
               {
-                "from": "voice-center",
-                "to": "shared-knowledge",
-                "label": "知识接入",
-                "kind": "integration"
+                "to": "switch",
+                "label": "外呼执行 / 呼叫状态",
+                "kind": "call",
+                "from": "outbound",
+                "bidirectional": true
+              },
+              {
+                "to": "asr",
+                "label": "待识别音频",
+                "kind": "flow",
+                "from": "ivr"
+              },
+              {
+                "to": "intent",
+                "label": "识别文本",
+                "kind": "flow",
+                "from": "asr"
+              },
+              {
+                "from": "intent",
+                "to": "ivr",
+                "label": "意图识别结果",
+                "kind": "flow"
+              },
+              {
+                "from": "ivr",
+                "to": "tts",
+                "label": "待播报文本",
+                "kind": "flow"
+              },
+              {
+                "to": "switch",
+                "label": "合成语音返回",
+                "kind": "flow",
+                "from": "tts"
+              },
+              {
+                "to": "ticket",
+                "label": "创建服务工单",
+                "kind": "call",
+                "from": "seat"
+              },
+              {
+                "to": "knowledge",
+                "label": "坐席话术查询 / 回答参考",
+                "kind": "call",
+                "from": "seat",
+                "bidirectional": true
               }
             ]
           }
@@ -670,46 +1141,101 @@
             }
           ],
           "architecture": {
-            "title": "客服业务支持",
-            "focus": "ticket-knowledge-services",
+            "title": "工单接口与知识存储",
+            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "focus": "ticket",
+            "layers": [
+              {
+                "id": "access",
+                "label": "渠道集成",
+                "caption": "MULTI CHANNEL"
+              },
+              {
+                "id": "service",
+                "label": "应用接口",
+                "caption": "TICKET / QUERY API"
+              },
+              {
+                "id": "data",
+                "label": "业务数据",
+                "caption": "RECORDS / KNOWLEDGE"
+              }
+            ],
             "nodes": [
               {
-                "id": "ticket-knowledge-services",
-                "label": "客服业务支持",
-                "detail": "多个服务入口共用"
+                "id": "channels",
+                "label": "客服渠道调用方",
+                "layer": "access",
+                "type": "external",
+                "items": [
+                  "在线 / 语音 / 客户入口",
+                  "坐席受理操作"
+                ]
               },
               {
-                "id": "service-order",
-                "label": "坐席受理",
-                "detail": "服务下单"
+                "id": "ticket",
+                "label": "工单创建接口",
+                "layer": "service",
+                "type": "api",
+                "items": [
+                  "服务受理信息",
+                  "工单创建处理"
+                ]
               },
               {
-                "id": "ticket-system",
-                "label": "工单服务"
+                "id": "query",
+                "label": "知识查询接口",
+                "layer": "service",
+                "type": "api",
+                "items": [
+                  "问题输入 / 话术返回"
+                ]
               },
               {
-                "id": "knowledge-base",
-                "label": "话术知识服务"
+                "id": "records",
+                "label": "工单记录",
+                "layer": "data",
+                "type": "data",
+                "items": [
+                  "服务下单数据"
+                ]
+              },
+              {
+                "id": "knowledge",
+                "label": "话术知识库",
+                "layer": "data",
+                "type": "data",
+                "items": [
+                  "客服回答内容"
+                ]
               }
             ],
             "edges": [
               {
-                "from": "ticket-knowledge-services",
-                "to": "ticket-system",
-                "label": "工单支持",
-                "kind": "contains"
+                "to": "ticket",
+                "label": "服务下单请求",
+                "kind": "call",
+                "from": "channels"
               },
               {
-                "from": "ticket-knowledge-services",
-                "to": "knowledge-base",
-                "label": "回答支持",
-                "kind": "contains"
+                "to": "query",
+                "label": "话术查询 / 回答内容",
+                "kind": "call",
+                "from": "channels",
+                "bidirectional": true
               },
               {
-                "from": "service-order",
-                "to": "ticket-system",
-                "label": "创建工单",
-                "kind": "flow"
+                "to": "records",
+                "label": "工单数据写入",
+                "kind": "flow",
+                "from": "ticket"
+              },
+              {
+                "to": "knowledge",
+                "label": "话术数据读取",
+                "kind": "call",
+                "from": "query",
+                "bidirectional": true
               }
             ]
           }
@@ -740,59 +1266,132 @@
             }
           ],
           "architecture": {
-            "title": "客户入口能力",
-            "focus": "consumer-entry",
+            "title": "客户端交互与服务集成",
+            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "focus": "client",
+            "layers": [
+              {
+                "id": "ui",
+                "label": "客户端呈现",
+                "caption": "UI / AVATAR"
+              },
+              {
+                "id": "service",
+                "label": "交互服务",
+                "caption": "RECOMMEND / ASR"
+              },
+              {
+                "id": "shared",
+                "label": "服务集成",
+                "caption": "SHARED API"
+              }
+            ],
             "nodes": [
               {
-                "id": "consumer-entry",
-                "label": "客户服务入口"
-              },
-              {
-                "id": "online-service",
-                "label": "在线客服"
-              },
-              {
-                "id": "entry-capabilities",
-                "label": "入口交互",
+                "id": "client",
+                "label": "客户服务界面",
+                "layer": "ui",
+                "type": "ui",
                 "items": [
-                  "问题推荐",
-                  "语音转写",
-                  "数字人"
+                  "文字 / 语音输入",
+                  "在线客服入口"
                 ]
               },
               {
-                "id": "shared-ticket",
-                "label": "共用工单服务"
+                "id": "avatar",
+                "label": "数字人呈现",
+                "layer": "ui",
+                "type": "ui",
+                "items": [
+                  "交互内容可视化呈现"
+                ]
               },
               {
-                "id": "shared-knowledge",
-                "label": "共用话术知识"
+                "id": "recommend",
+                "label": "问题推荐服务",
+                "layer": "service",
+                "type": "service",
+                "items": [
+                  "猜你想问 / 咨询方向"
+                ]
+              },
+              {
+                "id": "asr",
+                "label": "语音转写服务",
+                "layer": "service",
+                "type": "model",
+                "items": [
+                  "语音输入转文本"
+                ]
+              },
+              {
+                "id": "session",
+                "label": "在线会话服务",
+                "layer": "service",
+                "type": "service",
+                "items": [
+                  "承接在线咨询内容"
+                ]
+              },
+              {
+                "id": "ticket",
+                "label": "共享工单接口",
+                "layer": "shared",
+                "type": "api",
+                "items": [
+                  "服务受理支持"
+                ]
+              },
+              {
+                "id": "knowledge",
+                "label": "共享知识服务",
+                "layer": "shared",
+                "type": "api",
+                "items": [
+                  "问题与话术查询"
+                ]
               }
             ],
             "edges": [
               {
-                "from": "consumer-entry",
-                "to": "online-service",
-                "label": "进入服务",
-                "kind": "flow"
+                "to": "recommend",
+                "label": "推荐请求 / 问题列表",
+                "kind": "call",
+                "from": "client",
+                "bidirectional": true
               },
               {
-                "from": "consumer-entry",
-                "to": "entry-capabilities",
-                "label": "交互能力",
-                "kind": "contains"
+                "to": "asr",
+                "label": "语音数据 / 转写文本",
+                "kind": "call",
+                "from": "client",
+                "bidirectional": true
               },
               {
-                "from": "consumer-entry",
-                "to": "shared-ticket",
-                "label": "服务接入",
-                "kind": "integration"
+                "to": "session",
+                "label": "咨询消息 / 回答内容",
+                "kind": "call",
+                "from": "client",
+                "bidirectional": true
               },
               {
-                "from": "consumer-entry",
-                "to": "shared-knowledge",
-                "label": "知识接入",
-                "kind": "integration"
+                "to": "avatar",
+                "label": "数字人接入",
+                "kind": "call",
+                "from": "client"
+              },
+              {
+                "to": "ticket",
+                "label": "服务受理接口调用",
+                "kind": "call",
+                "from": "session"
+              },
+              {
+                "to": "knowledge",
+                "label": "问题查询 / 回答参考",
+                "kind": "call",
+                "from": "session",
+                "bidirectional": true
               }
             ]
           }
@@ -831,54 +1430,102 @@
             }
           ],
           "architecture": {
-            "title": "业务认证能力",
-            "focus": "authentication-center",
+            "title": "认证服务与外部接口适配",
+            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "focus": "auth",
+            "layers": [
+              {
+                "id": "access",
+                "label": "业务接入",
+                "caption": "BUSINESS / API"
+              },
+              {
+                "id": "service",
+                "label": "认证处理",
+                "caption": "SERVICE / ADAPTER"
+              },
+              {
+                "id": "external",
+                "label": "外部能力",
+                "caption": "EXTERNAL SYSTEM"
+              }
+            ],
             "nodes": [
               {
-                "id": "authentication-center",
-                "label": "业务认证平台"
+                "id": "business",
+                "label": "业务调用方",
+                "layer": "access",
+                "type": "external",
+                "items": [
+                  "提交业务认证资料"
+                ]
               },
               {
-                "id": "enterprise-authentication",
-                "label": "企业认证"
+                "id": "api",
+                "label": "认证接入接口",
+                "layer": "access",
+                "type": "api",
+                "items": [
+                  "认证请求与结果返回"
+                ]
               },
               {
-                "id": "lending-authentication",
-                "label": "借贷认证"
+                "id": "auth",
+                "label": "业务认证服务",
+                "layer": "service",
+                "type": "service",
+                "items": [
+                  "企业 / 借贷 / 商户认证",
+                  "认证处理与结果组织"
+                ]
               },
               {
-                "id": "merchant-authentication",
-                "label": "商户认证"
+                "id": "adapter",
+                "label": "外部系统适配",
+                "layer": "service",
+                "type": "tool",
+                "items": [
+                  "外部业务系统对接"
+                ]
               },
               {
-                "id": "external-service",
-                "label": "外部业务系统"
+                "id": "external",
+                "label": "外部业务系统",
+                "layer": "external",
+                "type": "external",
+                "items": [
+                  "相关业务信息交互"
+                ]
               }
             ],
             "edges": [
               {
-                "from": "authentication-center",
-                "to": "enterprise-authentication",
-                "label": "认证能力",
-                "kind": "contains"
+                "to": "api",
+                "label": "认证资料 / 认证结果",
+                "kind": "call",
+                "from": "business",
+                "bidirectional": true
               },
               {
-                "from": "authentication-center",
-                "to": "lending-authentication",
-                "label": "认证能力",
-                "kind": "contains"
+                "to": "auth",
+                "label": "认证处理调用 / 返回",
+                "kind": "call",
+                "from": "api",
+                "bidirectional": true
               },
               {
-                "from": "authentication-center",
-                "to": "merchant-authentication",
-                "label": "认证能力",
-                "kind": "contains"
+                "to": "adapter",
+                "label": "业务信息交互 / 返回",
+                "kind": "call",
+                "from": "auth",
+                "bidirectional": true
               },
               {
-                "from": "authentication-center",
-                "to": "external-service",
-                "label": "业务接入",
-                "kind": "integration"
+                "to": "external",
+                "label": "外部系统调用 / 业务信息",
+                "kind": "call",
+                "from": "adapter",
+                "bidirectional": true
               }
             ]
           }
@@ -904,26 +1551,68 @@
             }
           ],
           "architecture": {
-            "title": "投诉提交入口",
-            "focus": "complaints-platform",
-            "nodes": [
+            "title": "投诉入口、提交服务与记录",
+            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "focus": "submission",
+            "layers": [
               {
-                "id": "employee",
-                "label": "员工",
-                "detail": "反映欠薪、欠款问题"
+                "id": "ui",
+                "label": "入口交互",
+                "caption": "FORM UI"
               },
               {
-                "id": "complaints-platform",
-                "label": "投诉服务平台",
-                "detail": "提交投诉"
+                "id": "service",
+                "label": "提交处理",
+                "caption": "APPLICATION"
+              },
+              {
+                "id": "data",
+                "label": "业务记录",
+                "caption": "COMPLAINT DATA"
+              }
+            ],
+            "nodes": [
+              {
+                "id": "form",
+                "label": "投诉提交界面",
+                "layer": "ui",
+                "type": "ui",
+                "items": [
+                  "欠薪 / 欠款问题填报"
+                ]
+              },
+              {
+                "id": "submission",
+                "label": "投诉提交服务",
+                "layer": "service",
+                "type": "service",
+                "items": [
+                  "接收投诉内容",
+                  "形成提交记录"
+                ]
+              },
+              {
+                "id": "records",
+                "label": "投诉记录",
+                "layer": "data",
+                "type": "data",
+                "items": [
+                  "投诉内容与提交信息"
+                ]
               }
             ],
             "edges": [
               {
-                "from": "employee",
-                "to": "complaints-platform",
-                "label": "反映问题",
-                "kind": "flow"
+                "to": "submission",
+                "label": "表单内容提交",
+                "kind": "call",
+                "from": "form"
+              },
+              {
+                "to": "records",
+                "label": "投诉记录写入",
+                "kind": "flow",
+                "from": "submission"
               }
             ]
           }
@@ -963,101 +1652,157 @@
             }
           ],
           "architecture": {
-            "title": "数据展示与分析规划",
-            "note": "数据采用非实时定时同步；多视角展示与问题下钻为建设方案。",
-            "focus": "cockpit",
+            "title": "批量入湖与指标计算",
+            "note": "按周期同步，采用非实时数据链路；图示概括源端统计、入湖、加工和指标计算，具体数据平台产品未展开。新版下钻展示仍属设计方案。",
+            "focus": "compute",
+            "layers": [
+              {
+                "id": "sources",
+                "label": "源端数据",
+                "caption": "SYSTEM / STATISTICS"
+              },
+              {
+                "id": "ingestion",
+                "label": "接入与存储",
+                "caption": "BATCH / DATA LAKE"
+              },
+              {
+                "id": "compute",
+                "label": "数据开发",
+                "caption": "TRANSFORM / METRIC"
+              },
+              {
+                "id": "output",
+                "label": "指标与可视化",
+                "caption": "DATASET / DISPLAY"
+              }
+            ],
             "nodes": [
               {
-                "id": "business-systems",
-                "label": "多来源业务系统",
+                "id": "sources",
+                "label": "多业务源系统",
+                "layer": "sources",
+                "type": "external",
                 "items": [
-                  "客户服务相关数据"
+                  "服务记录 / 诉求明细"
                 ]
               },
               {
-                "id": "data-lake",
-                "label": "数据汇聚",
+                "id": "statistics",
+                "label": "源端统计处理",
+                "layer": "sources",
+                "type": "service",
                 "items": [
-                  "数据湖接入",
-                  "非实时定时同步"
+                  "明细汇总为统计数据"
                 ]
               },
               {
-                "id": "metric-calculation",
-                "label": "数据整理与计算",
+                "id": "batch",
+                "label": "定时采集与上传",
+                "layer": "ingestion",
+                "type": "service",
                 "items": [
-                  "数据口径整理",
-                  "汇总与指标计算"
+                  "按指标周期同步",
+                  "批量数据入湖"
                 ]
               },
               {
-                "id": "cockpit",
-                "label": "服务态势展示",
+                "id": "lake",
+                "label": "数据湖表",
+                "layer": "ingestion",
+                "type": "data",
                 "items": [
-                  "服务量",
-                  "服务结构与占比"
+                  "明细表 / 统计表"
                 ]
               },
               {
-                "id": "enterprise-view",
-                "label": "整体服务视角（规划）",
+                "id": "transform",
+                "label": "数据加工",
+                "layer": "compute",
+                "type": "service",
                 "items": [
-                  "服务情况与变化"
+                  "单表统计 / 多表运算",
+                  "跨来源数据汇总"
                 ]
               },
               {
-                "id": "customer-view",
-                "label": "客户问题视角（规划）",
+                "id": "compute",
+                "label": "指标计算",
+                "layer": "compute",
+                "type": "service",
                 "items": [
-                  "问题分布与重点诉求",
-                  "客户声音"
+                  "多维聚合 / 占比计算",
+                  "日数据与月度统计"
                 ]
               },
               {
-                "id": "professional-view",
-                "label": "业务服务视角（规划）",
+                "id": "dataset",
+                "label": "指标结果集",
+                "layer": "output",
+                "type": "data",
                 "items": [
-                  "业务服务表现",
-                  "服务改进进展"
+                  "周期服务量与结构指标"
+                ]
+              },
+              {
+                "id": "dashboard",
+                "label": "驾驶舱可视化",
+                "layer": "output",
+                "type": "ui",
+                "items": [
+                  "服务量与结构图表",
+                  "新版下钻：设计方案"
                 ]
               }
             ],
             "edges": [
               {
-                "from": "business-systems",
-                "to": "data-lake",
-                "label": "定时同步",
-                "kind": "flow"
+                "to": "statistics",
+                "label": "服务明细",
+                "kind": "flow",
+                "from": "sources"
               },
               {
-                "from": "data-lake",
-                "to": "metric-calculation",
-                "label": "汇聚数据",
-                "kind": "flow"
+                "to": "batch",
+                "label": "统计级数据",
+                "kind": "flow",
+                "from": "statistics"
               },
               {
-                "from": "metric-calculation",
-                "to": "cockpit",
-                "label": "展示指标",
-                "kind": "flow"
+                "to": "batch",
+                "label": "清单级数据",
+                "kind": "flow",
+                "from": "sources"
               },
               {
-                "from": "cockpit",
-                "to": "enterprise-view",
-                "label": "展示规划",
-                "kind": "contains"
+                "to": "lake",
+                "label": "周期批量入湖",
+                "kind": "flow",
+                "from": "batch"
               },
               {
-                "from": "cockpit",
-                "to": "customer-view",
-                "label": "展示规划",
-                "kind": "contains"
+                "to": "transform",
+                "label": "湖表读取",
+                "kind": "flow",
+                "from": "lake"
               },
               {
-                "from": "cockpit",
-                "to": "professional-view",
-                "label": "展示规划",
-                "kind": "contains"
+                "to": "compute",
+                "label": "加工结果",
+                "kind": "flow",
+                "from": "transform"
+              },
+              {
+                "to": "dataset",
+                "label": "指标计算结果",
+                "kind": "flow",
+                "from": "compute"
+              },
+              {
+                "to": "dashboard",
+                "label": "指标数据展示",
+                "kind": "flow",
+                "from": "dataset"
               }
             ]
           }

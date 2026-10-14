@@ -1,8 +1,8 @@
-import {renderArchitecture,relationLabel} from './portfolio-diagrams.mjs?v=public-5';
+import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-6';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=public-5',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-6',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -46,27 +46,35 @@ import {renderArchitecture,relationLabel} from './portfolio-diagrams.mjs?v=publi
       details.at(-1)?.append(anchor);
     });
     $('#portfolio-details').replaceChildren(...details);
-    $('#portfolio-diagram-title').textContent = project.architecture.title || '功能关系示意';
+    $('#portfolio-diagram-title').textContent = project.architecture.title || '技术架构';
     const diagramNote = $('#portfolio-diagram-note');
     diagramNote.textContent = project.architecture.note || '';
     diagramNote.hidden = !project.architecture.note;
     $('#portfolio-architecture').innerHTML = renderArchitecture(project);
     const nodes = new Map(project.architecture.nodes.map(node => [node.id,node]));
-    const connected = new Set(project.architecture.edges.flatMap(edge => [edge.from,edge.to]));
-    $('#portfolio-relations').replaceChildren(...project.architecture.edges.map(edge => {
+    const layerCards = project.architecture.layers.map((layer,index) => {
+      const section = create('section','architecture-layer');
+      section.append(create('h4','',`${String(index + 1).padStart(2,'0')} / ${layer.label}`),create('span','layer-caption',layer.caption));
+      const list = create('ul','architecture-components');
+      list.append(...project.architecture.nodes.filter(node => node.layer === layer.id).map(node => {
+        const card = create('li',`architecture-component${node.id === project.architecture.focus ? ' component-focus' : ''}`);
+        card.append(create('span','component-type',[componentType(node),node.state].filter(Boolean).join(' / ')),create('strong','',node.label),create('span','component-detail',node.items.join(' · ')));
+        return card;
+      }));
+      section.append(list); return section;
+    });
+    const connections = create('section','architecture-connections');
+    connections.append(create('h4','','接口与数据流'));
+    const connectionList = create('ol','architecture-connection-list');
+    connectionList.append(...project.architecture.edges.map((edge,index) => {
       const item = create('li',`architecture-relation relation-${edge.kind}`);
-      item.append(create('span','relation-source',nodes.get(edge.from).label),create('span','relation-connector',`${relationLabel(edge)} ${edge.kind === 'flow' ? '↓' : edge.kind === 'feedback' ? '↺' : '·'}`),create('span','relation-target',nodes.get(edge.to).label));
-      const node = nodes.get(edge.to);
-      const detail = node.items?.join(' · ') || node.detail;
-      if (detail) item.append(create('span','relation-detail',detail));
-      return item;
-    }),...project.architecture.nodes.filter(node => !connected.has(node.id)).map(node => {
-      const item = create('li','architecture-relation relation-independent');
-      item.append(create('span','relation-source',node.label),create('span','relation-connector',node.detail));
+      item.append(create('span','relation-source',`${String(index + 1).padStart(2,'0')} / ${nodes.get(edge.from).label}`),create('span','relation-connector',`${edge.bidirectional ? '↔' : '↓'} ${relationLabel(edge)}`),create('span','relation-target',nodes.get(edge.to).label));
       return item;
     }));
+    connections.append(connectionList);
+    $('#portfolio-relations').replaceChildren(...layerCards,connections);
     $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg`,import.meta.url).href;
-    $('#portfolio-diagram-download').download = `${project.title}功能关系图.svg`;
+    $('#portfolio-diagram-download').download = `${project.title}技术架构图.svg`;
     dialog.scrollTop = 0;
     if (dialog.open) $('#portfolio-title').focus({preventScroll:true});
   }

@@ -1,5 +1,6 @@
 const escapeXML = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
-const labels = {flow:'处理方向',contains:'功能关联',foundation:'参考支撑',integration:'能力连接',feedback:'线索回查'};
+const labels = {flow:'数据流',call:'接口 / 工具调用',config:'配置装载',event:'运行记录',feedback:'执行循环'};
+const types = {ui:'UI',api:'API',service:'SERVICE',runtime:'RUNTIME',model:'MODEL',tool:'TOOL',data:'DATA',external:'EXTERNAL'};
 const wrapText = (text,width,size) => {
   const lines = []; let line = '', used = 0;
   for (const token of String(text).match(/[A-Za-z0-9_]+|[\s\S]/g) || []) {
@@ -15,71 +16,107 @@ const wrapText = (text,width,size) => {
   if (line.trim()) lines.push(line.trim());
   return lines;
 };
+const textLines = (lines,x,y,size,color,step = size * 1.45,anchor = 'start') => `<text x="${x}" y="${y}" fill="${color}" font-size="${size}" text-anchor="${anchor}">${lines.map((line,index) => `<tspan x="${x}" dy="${index ? step : 0}">${escapeXML(line)}</tspan>`).join('')}</text>`;
 
 export function describeArchitecture(architecture) {
   const names = Object.fromEntries(architecture.nodes.map(node => [node.id,node.label]));
-  const nodes = architecture.nodes.map(node => [node.label,...(node.items || (node.detail ? [node.detail] : []))].join('：'));
-  const edges = architecture.edges.map(edge => `${names[edge.from]} · ${edge.label || labels[edge.kind]} · ${names[edge.to]}`);
-  return [...nodes,...edges].join('；');
+  const layers = architecture.layers.map(layer => `${layer.label}：${architecture.nodes.filter(node => node.layer === layer.id).map(node => [node.label,node.state,...(node.items || [])].filter(Boolean).join('，')).join('；')}`);
+  const edges = architecture.edges.map((edge,index) => `${String(index + 1).padStart(2,'0')} ${names[edge.from]} ${edge.bidirectional ? '↔' : '→'} ${names[edge.to]}：${relationLabel(edge)}`);
+  return [...layers,...edges].join('；');
 }
 
 export function renderArchitecture(project) {
-  const {nodes,edges} = project.architecture;
-  const ranks = Object.fromEntries(nodes.map(node => [node.id,0]));
-  for (let pass = 0; pass < nodes.length; pass++) {
-    let changed = false;
-    edges.filter(edge => edge.kind !== 'feedback').forEach(edge => {
-      const next = Math.min(nodes.length - 1,ranks[edge.from] + 1);
-      if (ranks[edge.to] < next) {ranks[edge.to] = next; changed = true;}
-    });
-    if (!changed) break;
-  }
-  const positions = {};
-  let row = 0;
-  const width = 780, boxHeight = 134, gapY = 90, rowHeight = boxHeight + gapY;
-  [...new Set(Object.values(ranks))].sort((a,b) => a-b).forEach(rank => {
-    const group = nodes.filter(node => ranks[node.id] === rank);
-    for (let offset = 0; offset < group.length; offset += 4) {
-      const lane = group.slice(offset,offset + 4);
-      const gap = 24, boxWidth = Math.min(220,(width - 48 - (lane.length - 1) * gap) / lane.length);
-      const start = (width - lane.length * boxWidth - (lane.length - 1) * gap) / 2;
-      lane.forEach((node,index) => {positions[node.id] = {x:start + index * (boxWidth + gap),y:24 + row * rowHeight,width:boxWidth};});
-      row++;
+  const {nodes,edges,layers} = project.architecture;
+  const width = 1080, boxHeight = 132, gapY = 80, left = 144, right = 154, gapX = 32;
+  const positions = {}, bands = [];
+  let cursor = 28;
+  layers.forEach(layer => {
+    const group = nodes.filter(node => node.layer === layer.id);
+    const top = cursor;
+    for (let offset = 0; offset < group.length; offset += 3) {
+      const lane = group.slice(offset,offset + 3);
+      const boxWidth = Math.min(290,(width - left - right - (lane.length - 1) * gapX) / lane.length);
+      const start = left + (width - left - right - lane.length * boxWidth - (lane.length - 1) * gapX) / 2;
+      lane.forEach((node,index) => {positions[node.id] = {x:start + index * (boxWidth + gapX),y:cursor,width:boxWidth};});
+      cursor += boxHeight + gapY;
     }
+    bands.push({...layer,y:top,height:cursor - top - gapY});
   });
-  const height = (row - 1) * rowHeight + boxHeight + 48;
+  const graphBottom = cursor - gapY;
   const markerId = `arrow-${project.id}`;
-  const lineMarkup = edges.map(edge => {
+  const bandMarkup = bands.map((layer,index) => `<g data-layer="${escapeXML(layer.id)}"><rect x="${left - 14}" y="${layer.y - 12}" width="${width - left - right + 28}" height="${layer.height + 24}" rx="6" fill="#0b141d" stroke="#253541"/>${textLines([String(index + 1).padStart(2,'0')],24,layer.y + 20,11,'#6f92aa')}${textLines(wrapText(layer.label,96,15),24,layer.y + 46,15,'#d0e2ef')}${textLines(wrapText(layer.caption || '',96,10),24,layer.y + 94,10,'#7994a8')}</g>`).join('');
+  let sideRoute = 0;
+  const lineMarkup = edges.map((edge,index) => {
     const from = positions[edge.from], to = positions[edge.to];
-    if (edge.kind === 'feedback') {
-      const x = from.x + from.width, y1 = from.y + boxHeight * .75, y2 = from.y + boxHeight * .25, bend = x + 84;
-      const lines = wrapText(edge.label || labels.feedback,144,12);
-      return `<path d="M${x} ${y1} C${bend} ${y1},${bend} ${y2},${x} ${y2}" fill="none" stroke="#bedbf2" stroke-width="1.5" stroke-dasharray="4 6" marker-end="url(#${markerId})"/><text x="${bend + 60}" y="${from.y + boxHeight / 2 - (lines.length - 1) * 9}" fill="#a9bac6" font-size="12" text-anchor="middle">${lines.map((line,index) => `<tspan x="${bend + 60}" dy="${index ? 18 : 0}">${escapeXML(line)}</tspan>`).join('')}</text>`;
+    const sx = from.x + from.width / 2, tx = to.x + to.width / 2;
+    const port = ((index % 3) - 1) * 18;
+    let path, labelX, labelY;
+    if (edge.from === edge.to) {
+      const x = from.x + from.width, y = from.y;
+      path = `M${x - 24} ${y} V${y - 30} H${x + 16} V${y + 46} H${x}`;
+      labelX = x + 16; labelY = y + 12;
+    } else if (from.y === to.y) {
+      const forward = to.x > from.x;
+      const x1 = forward ? from.x + from.width : from.x, x2 = forward ? to.x : to.x + to.width;
+      const y = from.y + boxHeight / 2;
+      if (Math.abs(x2 - x1) <= gapX + 1) {
+        path = `M${x1} ${y} H${x2}`; labelX = (x1 + x2) / 2; labelY = y - 19;
+      } else {
+        const routeY = from.y - 34;
+        path = `M${sx} ${from.y} V${routeY} H${tx} V${to.y}`;
+        labelX = (sx + tx) / 2; labelY = routeY;
+      }
+    } else {
+      const forward = to.y > from.y;
+      const x1 = sx + port, x2 = tx + port;
+      const y1 = forward ? from.y + boxHeight : from.y, y2 = forward ? to.y : to.y + boxHeight;
+      const adjacent = Math.abs(from.y - to.y) === boxHeight + gapY;
+      if (adjacent) {
+        const middle = (y1 + y2) / 2 + port / 2;
+        path = `M${x1} ${y1} V${middle} H${x2} V${y2}`;
+        labelX = (x1 + x2) / 2; labelY = middle;
+      } else {
+        const routeX = width - right + 36 + sideRoute++ * 28;
+        const entryY = y1 + (forward ? 36 : -36), exitY = y2 + (forward ? -36 : 36);
+        path = `M${x1} ${y1} V${entryY} H${routeX} V${exitY} H${x2} V${y2}`;
+        labelX = routeX; labelY = (entryY + exitY) / 2;
+      }
     }
-    const x1 = from.x + from.width / 2, y1 = from.y + boxHeight, x2 = to.x + to.width / 2, y2 = to.y;
-    const middle = (y1 + y2) / 2;
-    const flow = edge.kind === 'flow';
-    const skipsRow = to.y - from.y > rowHeight;
-    const routeX = x1 <= width / 2 ? 12 : width - 12;
-    const entryY = y1 + gapY / 2, exitY = y2 - gapY / 2;
-    const path = skipsRow
-      ? `M${x1} ${y1} V${entryY} H${routeX} V${exitY} H${x2} V${y2}`
-      : `M${x1} ${y1} C${x1} ${middle},${x2} ${middle},${x2} ${y2}`;
-    const labelX = skipsRow ? (routeX + x2) / 2 : (x1 + x2) / 2;
-    const labelY = skipsRow ? exitY - 10 : middle - 10;
-    return `<path d="${path}" fill="none" stroke="${flow ? '#bedbf2' : '#657f91'}" stroke-width="1.5" ${flow ? `marker-end="url(#${markerId})"` : 'stroke-dasharray="4 6"'}/><text x="${labelX}" y="${labelY}" fill="#a9bac6" font-size="12" text-anchor="middle" stroke="#0a1015" stroke-width="5" paint-order="stroke">${escapeXML(edge.label || labels[edge.kind])}</text>`;
+    const color = edge.kind === 'flow' ? '#afcee3' : '#6f91aa';
+    const number = String(index + 1).padStart(2,'0');
+    return `<g data-edge="${number}"><path d="${path}" fill="none" stroke="${color}" stroke-width="1.4" ${edge.kind === 'flow' ? '' : 'stroke-dasharray="5 4"'} ${edge.bidirectional ? `marker-start="url(#${markerId})"` : ''} marker-end="url(#${markerId})"/><circle cx="${labelX}" cy="${labelY}" r="12" fill="#0a1015" stroke="${color}"/>${textLines([number],labelX,labelY + 3.5,10,'#c1d9ea',14,'middle')}</g>`;
   }).join('');
   const nodeMarkup = nodes.map(node => {
     const {x,y,width:boxWidth} = positions[node.id];
-    const lines = wrapText(node.label,boxWidth - 32,17);
+    const titleLines = wrapText(node.label,boxWidth - 28,17);
+    const detailLines = (node.items || []).flatMap(detail => wrapText(detail,boxWidth - 28,12));
     const core = node.id === project.architecture.focus;
-    const details = node.items || (node.detail ? [node.detail] : []);
-    const detailLines = details.flatMap(detail => wrapText(detail,boxWidth - 28,12));
-    const top = detailLines.length ? 30 : 72 - (lines.length - 1) * 10;
-    const detailTop = 36 + lines.length * 23;
-    return `<g><rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="4" fill="${core ? '#122332' : '#0c161f'}" stroke="${core ? '#bedbf2' : '#3a5060'}"/><text x="${x + boxWidth / 2}" y="${y + top}" fill="#edf4f8" font-size="17" text-anchor="middle">${lines.map((line,index) => `<tspan x="${x + boxWidth / 2}" dy="${index ? 23 : 0}">${escapeXML(line)}</tspan>`).join('')}</text>${detailLines.length ? `<text x="${x + boxWidth / 2}" y="${y + detailTop}" fill="#99aebd" font-size="12" text-anchor="middle">${detailLines.map((line,index) => `<tspan x="${x + boxWidth / 2}" dy="${index ? 18 : 0}">${escapeXML(line)}</tspan>`).join('')}</text>` : ''}</g>`;
+    const state = node.state ? textLines([node.state],x + boxWidth - 14,y + 22,10,'#cdbca1',14,'end') : '';
+    const dataGlyph = node.type === 'data' ? `<path d="M${x + 14} ${y + 19} q5 -5 10 0 v9 q-5 5 -10 0 z m0 -5 q5 5 10 0" fill="none" stroke="#85a9c2"/>` : '';
+    const badgeX = x + (node.type === 'data' ? 31 : 14);
+    return `<g data-node="${escapeXML(node.id)}"><rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="5" fill="${core ? '#152b3a' : '#101e29'}" stroke="${core ? '#a6d0eb' : '#405c70'}" ${node.state === '规划' ? 'stroke-dasharray="5 4"' : ''}/>${dataGlyph}${textLines([types[node.type] || 'COMPONENT'],badgeX,y + 22,10,'#85a9c2')}${state}${textLines(titleLines,x + 14,y + 53,17,'#edf4f8',23)}${textLines(detailLines,x + 14,y + 64 + titleLines.length * 23,12,'#a4bacb',18)}</g>`;
   }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title-${project.id} desc-${project.id}" style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a1015"><title id="title-${project.id}">${escapeXML(project.title)} · ${escapeXML(project.architecture.title || '功能关系示意')}</title><desc id="desc-${project.id}">${escapeXML([project.architecture.note,describeArchitecture(project.architecture)].filter(Boolean).join('；'))}</desc><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#bedbf2"/></marker></defs>${lineMarkup}${nodeMarkup}</svg>`;
+  let legendY = graphBottom + 74;
+  const legendHeading = textLines(['技术连接 / 调用与数据流'],24,legendY,16,'#d0e2ef');
+  legendY += 36;
+  let legendMarkup = '';
+  for (let offset = 0; offset < edges.length; offset += 2) {
+    let rowHeight = 0;
+    edges.slice(offset,offset + 2).forEach((edge,index) => {
+      const number = String(offset + index + 1).padStart(2,'0');
+      const x = 24 + index * 468;
+      const from = nodes.find(node => node.id === edge.from), to = nodes.find(node => node.id === edge.to);
+      const nameLines = wrapText(`${from.label} ${edge.bidirectional ? '↔' : '→'} ${to.label}`,404,13);
+      const detailLines = wrapText(relationLabel(edge),404,12);
+      const detailY = legendY + nameLines.length * 19 + 3;
+      rowHeight = Math.max(rowHeight,nameLines.length * 19 + detailLines.length * 18 + 25);
+      legendMarkup += `${textLines([number],x,legendY,10,'#85a9c2')}${textLines(nameLines,x + 30,legendY,13,'#d0e2ef',19)}${textLines(detailLines,x + 30,detailY,12,'#8da9bd',18)}`;
+    });
+    legendY += rowHeight;
+  }
+  const height = legendY + 12;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title-${project.id} desc-${project.id}" style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a1015"><title id="title-${project.id}">${escapeXML(project.title)} · ${escapeXML(project.architecture.title || '技术架构')}</title><desc id="desc-${project.id}">${escapeXML([project.architecture.note,describeArchitecture(project.architecture)].filter(Boolean).join('；'))}</desc><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#85a9c2"/></marker></defs>${bandMarkup}${lineMarkup}${nodeMarkup}${legendHeading}${legendMarkup}</svg>`;
 }
 
 export function relationLabel(edge) {return edge.label || labels[edge.kind];}
+export function componentType(node) {return types[node.type] || 'COMPONENT';}
