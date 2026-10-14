@@ -1,8 +1,8 @@
-import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=showcase-8';
+import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-9';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=showcase-8',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-9',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -22,6 +22,25 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
   };
   const diagram = dialog.querySelector('.portfolio-diagram');
   const architectureCanvas = $('#portfolio-architecture');
+  const intro = dialog.querySelector('.case-intro');
+  const detailsContainer = $('#portfolio-details');
+  const overview = create('section','portfolio-overview');
+  overview.setAttribute('aria-label','项目概述与实现');
+  intro.before(overview);
+  overview.append(intro,detailsContainer);
+  const implementation = create('section','portfolio-implementation');
+  implementation.setAttribute('aria-label','技术组件与实现要点');
+  const architectureJump = create('button','portfolio-architecture-jump');
+  architectureJump.type = 'button';
+  architectureJump.setAttribute('aria-controls','portfolio-architecture portfolio-relations');
+  architectureJump.append(create('span','','查看技术架构'),create('span','architecture-jump-arrow','↓'));
+  architectureJump.lastElementChild.setAttribute('aria-hidden','true');
+  intro.append(implementation,architectureJump);
+  $('#portfolio-diagram-title').tabIndex = -1;
+  architectureJump.addEventListener('click',event => {
+    diagram.scrollIntoView({behavior:reduced.matches || event.detail === 0 ? 'instant' : 'smooth',block:'start'});
+    $('#portfolio-diagram-title').focus({preventScroll:true});
+  });
   const motionControls = create('div','diagram-motion-controls');
   const motionCopy = create('span','diagram-motion-copy','光点演示调用与数据流向 · 非实时数据');
   const motionToggle = create('button','diagram-motion-toggle');
@@ -69,8 +88,17 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     });
     syncMotion();
   },{root:dialog,threshold:.01});
+  // The packet traverses the whole track during 82% of its keyframe cycle.
+  const relationResizeObserver = new ResizeObserver(entries => {
+    entries.forEach(({target,contentRect}) => {
+      if (contentRect.height > 0) {
+        target.closest('.architecture-relation').style.setProperty('--motion-duration',`${(contentRect.height / (.82 * 40)).toFixed(3)}s`);
+      }
+    });
+  });
   function bindMotion() {
     motionObserver.disconnect();
+    relationResizeObserver.disconnect();
     visibleItems.clear();
     diagramInView = false;
     svgInView = false;
@@ -81,6 +109,7 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     motionObserver.observe(diagram);
     motionObserver.observe(architectureCanvas);
     motionItems.forEach(item => motionObserver.observe(item));
+    diagram.querySelectorAll('.relation-motion-track').forEach(track => relationResizeObserver.observe(track));
   }
   motionToggle.addEventListener('click',() => {userPaused = !userPaused; syncMotion();});
   reduced.addEventListener('change',syncMotion);
@@ -96,24 +125,61 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
   function showProject(index) {
     selected = (index + projects.length) % projects.length;
     const project = projects[selected];
+    dialog.dataset.project = project.id;
     $('#portfolio-title').textContent = project.title;
     $('#portfolio-description').textContent = project.summary;
-    $('#portfolio-eyebrow').textContent = `PROJECT / ${String(selected + 1).padStart(2,'0')}`;
+    $('#portfolio-eyebrow').textContent = `PROJECT / ${String(selected + 1).padStart(2,'0')} · ENGINEERING`;
     $('#portfolio-group').textContent = project.group;
     $('#portfolio-role').textContent = project.role;
     $('#portfolio-counter').textContent = `${String(selected + 1).padStart(2,'0')} / ${String(projects.length).padStart(2,'0')}`;
-    $('#portfolio-tags').replaceChildren(...project.tags.map(tag => create('span','',tag)));
-    const details = project.sections.map(section => {
-      const item = create('div','portfolio-detail');
-      item.append(create('h3','',section.label),create('p','',section.text));
+    const stack = project.implementation?.stack || [];
+    const highlights = project.implementation?.highlights || [];
+    const tags = $('#portfolio-tags');
+    tags.replaceChildren(...project.tags.map(tag => create('span','',tag)));
+    tags.hidden = stack.length > 0;
+    const implementationParts = [];
+    if (stack.length) {
+      const components = create('div','portfolio-stack');
+      components.append(create('h3','','技术组件'));
+      const list = create('ul','portfolio-stack-list');
+      list.append(...stack.map(name => create('li','',name)));
+      components.append(list);
+      implementationParts.push(components);
+    }
+    if (highlights.length) {
+      const index = create('div','portfolio-implementation-index');
+      index.append(create('h3','','实现要点'));
+      const list = create('dl','portfolio-highlights');
+      highlights.forEach(highlight => {
+        const item = create('div','portfolio-highlight');
+        item.append(create('dt','',highlight.label),create('dd','',highlight.text));
+        list.append(item);
+      });
+      index.append(list);
+      implementationParts.push(index);
+    }
+    implementation.replaceChildren(...implementationParts);
+    implementation.hidden = implementationParts.length === 0;
+    const detailsHeading = create('div','portfolio-details-heading');
+    detailsHeading.append(create('p','mono','IMPLEMENTATION NOTES'),create('h3','','项目与实现'));
+    const details = project.sections.map((section,index) => {
+      const item = create('section','portfolio-detail');
+      const copy = create('div','portfolio-detail-copy');
+      const heading = create('h3','',section.label);
+      heading.id = `portfolio-detail-${project.id}-${index}`;
+      item.setAttribute('aria-labelledby',heading.id);
+      copy.append(heading,create('p','',section.text));
+      item.append(create('span','portfolio-detail-index mono',String(index + 1).padStart(2,'0')),copy);
       return item;
     });
+    const referenceLinks = create('nav','portfolio-reference-links');
+    referenceLinks.setAttribute('aria-label','相关技术资料');
     (project.links || []).forEach(link => {
       const anchor = create('a','',`${link.label} ↗`);
       anchor.href = link.url; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer';
-      details.at(-1)?.append(anchor);
+      referenceLinks.append(anchor);
     });
-    $('#portfolio-details').replaceChildren(...details);
+    detailsContainer.replaceChildren(detailsHeading,...details,...(referenceLinks.childElementCount ? [referenceLinks] : []));
     $('#portfolio-diagram-title').textContent = project.architecture.title || '技术架构';
     const diagramNote = $('#portfolio-diagram-note');
     diagramNote.textContent = project.architecture.note || '';
@@ -128,7 +194,8 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
       list.append(...project.architecture.nodes.filter(node => node.layer === layer.id).map(node => {
         const card = create('li',`architecture-component${node.id === project.architecture.focus ? ' component-focus' : ''}`);
         card.style.setProperty('--motion-delay',`-${(project.architecture.nodes.indexOf(node) * .27).toFixed(2)}s`);
-        card.append(create('span','component-type',[componentType(node),node.state].filter(Boolean).join(' / ')),create('strong','',node.label),create('span','component-detail',node.items.join(' · ')));
+        const state = ['研究','复用'].includes(node.state) ? '' : node.state;
+        card.append(create('span','component-type',[componentType(node),state].filter(Boolean).join(' / ')),create('strong','',node.label),create('span','component-detail',node.items.join(' · ')));
         return card;
       }));
       section.append(list); return section;
@@ -139,7 +206,6 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     connectionList.append(...project.architecture.edges.map((edge,index) => {
       const item = create('li',`architecture-relation relation-${edge.kind}${edge.bidirectional ? ' relation-bidirectional' : ''}`);
       item.style.setProperty('--motion-delay',`-${(index * .43).toFixed(2)}s`);
-      item.style.setProperty('--motion-duration',`${edge.kind === 'flow' ? 3.2 : 4.1}s`);
       const track = create('span','relation-motion-track');
       track.setAttribute('aria-hidden','true');
       track.append(create('span','relation-motion-packet packet-forward'));
@@ -150,7 +216,7 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     }));
     connections.append(connectionList);
     $('#portfolio-relations').replaceChildren(...layerCards,connections);
-    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg?v=showcase-8`,import.meta.url).href;
+    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg?v=technical-9`,import.meta.url).href;
     $('#portfolio-diagram-download').download = `${project.title}技术架构图.svg`;
     dialog.scrollTop = 0;
     bindMotion();

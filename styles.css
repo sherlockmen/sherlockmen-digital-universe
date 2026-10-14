@@ -33,3 +33,14 @@ main>section{position:relative;z-index:1}.site-header.is-scrolled{background:lin
 
 
 .hero-word{white-space:nowrap}.intro-letter{display:inline-block}html[data-hero-intro=pending] .intro-letter{opacity:0}.hero h1[data-intro-phase=letters] .intro-letter{will-change:transform,opacity}
+
+/* Technical biography: identity, engineering path and current focus. */
+.about .about-grid{grid-template-columns:minmax(0,1fr);gap:32px;margin-top:48px}
+.about .about-identity .about-subtitle{font-family:monospace;font-size:10px;letter-spacing:.12em}
+.about .about-identity .about-lead{font-size:32px;line-height:1.35;letter-spacing:-.035em;font-weight:400;margin-top:22px;text-wrap:balance}
+.about-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:28px;padding-top:22px;border-top:1px solid #bedbf22b}
+.about-facts>div{min-width:0}.about-facts dt{font-size:12px;color:#9bb0bf}.about-facts dd{margin:9px 0 0;font-size:15px;color:#e4edf3;line-height:1.55}
+.about .about-copy>p{max-width:60ch;font-size:16px;line-height:1.8;text-wrap:pretty}
+.about-focus{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:36px;padding-top:28px;border-top:1px solid #bedbf22b}
+.about-focus>div{min-width:0}.about-focus dt{font-size:17px;line-height:1.6;color:#e4edf3}.about-focus .mono{display:block;font-size:9px;color:#8fa6b8;letter-spacing:.08em;margin-bottom:12px}.about-focus dd{font-size:16px;line-height:1.75;color:#a8b4bd;margin:12px 0 0;text-wrap:pretty}
+@media(max-width:680px){.about .about-identity .about-lead{font-size:29px}.about-facts{grid-template-columns:1fr;gap:16px}.about-facts>div{display:grid;grid-template-columns:90px minmax(0,1fr);gap:16px;align-items:baseline}.about-facts dd{margin:0;font-size:16px}.about-focus{grid-template-columns:1fr;gap:26px}.about-focus>div+div{border-top:1px solid #bedbf21a;padding-top:24px}.about-focus .mono{margin-bottom:8px}.about-focus dd{margin-top:8px}}

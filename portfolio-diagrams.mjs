@@ -33,93 +33,130 @@ const routeLength = path => {
 };
 const renderPackets = (path,edge,index) => {
   const flow = edge.kind === 'flow';
-  const duration = (Math.max(1.9,Math.min(6.4,routeLength(path) / 125)) + .65).toFixed(2);
+  const distance = routeLength(path);
+  const speed = 100;
+  const duration = (distance / speed).toFixed(6);
   const color = flow ? '#d3f1ff' : '#efc896';
-  const shape = flow ? `<circle r="3.3" fill="${color}"/>` : `<path d="M0 -4 L4 0 L0 4 L-4 0 Z" fill="${color}"/>`;
+  const shape = flow ? `<circle r="3" fill="${color}"/>` : `<path d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" fill="${color}"/>`;
   return Array.from({length:edge.bidirectional ? 2 : 1},(_,direction) => {
-    const delay = ((index * .43 + direction * 1.1) % Number(duration)).toFixed(2);
+    const delay = (Number(duration) * ((index * .381966 + direction * .5) % 1)).toFixed(6);
     const timing = `dur="${duration}s" begin="-${delay}s" repeatCount="indefinite"`;
-    return `<g class="architecture-packet packet-${flow ? 'flow' : 'support'}" data-direction="${direction ? 'reverse' : 'forward'}" aria-hidden="true" opacity="0"><circle r="9" fill="${color}" opacity=".12"/><circle r="5.5" fill="${color}" opacity=".18"/>${shape}<animateMotion path="${path}" keyPoints="${direction ? '1;0;0' : '0;1;1'}" keyTimes="0;.82;1" calcMode="linear" ${timing}/><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.035;.76;.82;1" calcMode="linear" ${timing}/></g>`;
+    return `<g class="architecture-packet packet-${flow ? 'flow' : 'support'}" data-direction="${direction ? 'reverse' : 'forward'}" data-distance="${distance}" data-speed="${speed}" aria-hidden="true" opacity="0"><circle r="7" fill="${color}" opacity=".1"/><circle r="4.5" fill="${color}" opacity=".16"/>${shape}<animateMotion path="${path}" keyPoints="${direction ? '1;0' : '0;1'}" keyTimes="0;1" calcMode="linear" ${timing}/><animate attributeName="opacity" values="0;${flow ? '1;1' : '.72;.72'};0" keyTimes="0;.03;.97;1" calcMode="linear" ${timing}/></g>`;
   }).join('');
 };
 
 export function describeArchitecture(architecture) {
   const names = Object.fromEntries(architecture.nodes.map(node => [node.id,node.label]));
-  const layers = architecture.layers.map(layer => `${layer.label}：${architecture.nodes.filter(node => node.layer === layer.id).map(node => [node.label,node.state,...(node.items || [])].filter(Boolean).join('，')).join('；')}`);
+  const layers = architecture.layers.map(layer => `${layer.label}：${architecture.nodes.filter(node => node.layer === layer.id).map(node => [node.label,...(node.items || [])].filter(Boolean).join('，')).join('；')}`);
   const edges = architecture.edges.map((edge,index) => `${String(index + 1).padStart(2,'0')} ${names[edge.from]} ${edge.bidirectional ? '↔' : '→'} ${names[edge.to]}：${relationLabel(edge)}`);
   return [...layers,...edges].join('；');
 }
 
 export function renderArchitecture(project) {
   const {nodes,edges,layers} = project.architecture;
-  const width = 1080, boxHeight = 132, gapY = 80, left = 144, right = 154, gapX = 32;
-  const positions = {}, bands = [];
-  let cursor = 28;
+  const width = 1080, boxHeight = 132, left = 144, right = 154, gapX = 32;
+  const positions = {}, rows = [], bands = [];
   layers.forEach(layer => {
     const group = nodes.filter(node => node.layer === layer.id);
-    const top = cursor;
     for (let offset = 0; offset < group.length; offset += 3) {
       const lane = group.slice(offset,offset + 3);
       const boxWidth = Math.min(290,(width - left - right - (lane.length - 1) * gapX) / lane.length);
       const start = left + (width - left - right - lane.length * boxWidth - (lane.length - 1) * gapX) / 2;
-      lane.forEach((node,index) => {positions[node.id] = {x:start + index * (boxWidth + gapX),y:cursor,width:boxWidth};});
-      cursor += boxHeight + gapY;
+      lane.forEach((node,index) => {positions[node.id] = {x:start + index * (boxWidth + gapX),width:boxWidth,row:rows.length};});
+      rows.push({nodes:lane,layer,first:offset === 0});
     }
-    bands.push({...layer,y:top,height:cursor - top - gapY});
   });
-  const graphBottom = cursor - gapY;
-  const markerId = `arrow-${project.id}`;
-  const bandMarkup = bands.map((layer,index) => `<g data-layer="${escapeXML(layer.id)}"><rect x="${left - 14}" y="${layer.y - 12}" width="${width - left - right + 28}" height="${layer.height + 24}" rx="6" fill="#0b141d" stroke="#253541"/>${textLines([String(index + 1).padStart(2,'0')],24,layer.y + 20,11,'#6f92aa')}${textLines(wrapText(layer.label,96,15),24,layer.y + 46,15,'#d0e2ef')}${textLines(wrapText(layer.caption || '',96,10),24,layer.y + 94,10,'#7994a8')}</g>`).join('');
-  let sideRoute = 0;
-  const lineMarkup = edges.map((edge,index) => {
+
+  // Every connection gets a horizontal track in the relevant row gap. Long
+  // connections use separate outer lanes, leaving the cards and layer headers
+  // clear. Reserve the space before positioning cards, rather than squeezing
+  // all routes into a fixed-height gap.
+  const gaps = Array.from({length:rows.length + 1},() => []);
+  const ports = new Map();
+  const sideCounts = {left:0,right:0};
+  const routes = edges.map((edge,index) => {
     const from = positions[edge.from], to = positions[edge.to];
-    const sx = from.x + from.width / 2, tx = to.x + to.width / 2;
-    const port = ((index % 3) - 1) * 18;
-    let path, labelX, labelY;
-    if (edge.from === edge.to) {
-      const x = from.x + from.width, y = from.y;
-      path = `M${x - 24} ${y} V${y - 30} H${x + 16} V${y + 46} H${x}`;
-      labelX = x + 16; labelY = y + 12;
-    } else if (from.y === to.y) {
-      const forward = to.x > from.x;
-      const x1 = forward ? from.x + from.width : from.x, x2 = forward ? to.x : to.x + to.width;
-      const y = from.y + boxHeight / 2;
-      if (Math.abs(x2 - x1) <= gapX + 1) {
-        path = `M${x1} ${y} H${x2}`; labelX = (x1 + x2) / 2; labelY = y - 19;
-      } else {
-        const routeY = from.y - 34;
-        path = `M${sx} ${from.y} V${routeY} H${tx} V${to.y}`;
-        labelX = (sx + tx) / 2; labelY = routeY;
-      }
-    } else {
-      const forward = to.y > from.y;
-      const x1 = sx + port, x2 = tx + port;
-      const y1 = forward ? from.y + boxHeight : from.y, y2 = forward ? to.y : to.y + boxHeight;
-      const adjacent = Math.abs(from.y - to.y) === boxHeight + gapY;
-      if (adjacent) {
-        const middle = (y1 + y2) / 2 + port / 2;
-        path = `M${x1} ${y1} V${middle} H${x2} V${y2}`;
-        labelX = (x1 + x2) / 2; labelY = middle;
-      } else {
-        const routeX = width - right + 36 + sideRoute++ * 28;
-        const entryY = y1 + (forward ? 36 : -36), exitY = y2 + (forward ? -36 : 36);
-        path = `M${x1} ${y1} V${entryY} H${routeX} V${exitY} H${x2} V${y2}`;
-        labelX = routeX; labelY = (entryY + exitY) / 2;
-      }
+    const same = from.row === to.row, forward = to.row > from.row;
+    const adjacent = Math.abs(to.row - from.row) === 1;
+    const route = {edge,index,same,adjacent,forward,fromFace:same || !forward ? 'top' : 'bottom',toFace:same || forward ? 'top' : 'bottom'};
+    for (const [end,node,peer] of [['from',from,to],['to',to,from]]) {
+      const key = `${edge[end]}:${route[`${end}Face`]}`;
+      if (!ports.has(key)) ports.set(key,[]);
+      ports.get(key).push({route,end,x:peer.x + peer.width / 2});
     }
-    const color = edge.kind === 'flow' ? '#afcee3' : '#6f91aa';
+    if (!same && !adjacent) {
+      const center = (from.x + from.width / 2 + to.x + to.width / 2) / 2;
+      const leftCost = center - (left - 38) + sideCounts.left * 180;
+      const rightCost = width - right + 38 - center + sideCounts.right * 180;
+      route.side = leftCost <= rightCost ? 'left' : 'right';
+      route.lane = sideCounts[route.side]++;
+    }
+    return route;
+  });
+  for (const entries of ports.values()) {
+    entries.sort((a,b) => a.x - b.x || a.route.index - b.route.index);
+    entries.forEach((entry,index) => {
+      const node = positions[entry.route.edge[entry.end]];
+      entry.route[`${entry.end}X`] = node.x + 22 + (node.width - 44) * (index + 1) / (entries.length + 1);
+    });
+  }
+  const reserveTrack = (route,key,gap) => {
+    route[key] = {gap,index:gaps[gap].length};
+    gaps[gap].push(route);
+  };
+  [...routes].sort((a,b) => Number(b.edge.kind === 'flow') - Number(a.edge.kind === 'flow') || a.index - b.index).forEach(route => {
+    const from = positions[route.edge.from], to = positions[route.edge.to];
+    if (route.same) reserveTrack(route,'track',from.row);
+    else if (route.adjacent) reserveTrack(route,'track',Math.max(from.row,to.row));
+    else {
+      reserveTrack(route,'exit',route.forward ? from.row + 1 : from.row);
+      reserveTrack(route,'entry',route.forward ? to.row : to.row + 1);
+    }
+  });
+  let cursor = 0;
+  rows.forEach((row,index) => {
+    const headerSpace = row.first ? 48 : 0;
+    const gapHeight = Math.max(84 + headerSpace,56 + Math.max(0,gaps[index].length - 1) * 26 + headerSpace);
+    gaps[index].forEach((_,track) => {gaps[index][track] = cursor + 28 + track * 26;});
+    cursor += gapHeight;
+    row.nodes.forEach(node => {positions[node.id].y = cursor;});
+    const band = bands.find(item => item.id === row.layer.id);
+    if (band) band.height = cursor + boxHeight - band.y;
+    else bands.push({...row.layer,y:cursor - 56,height:boxHeight + 56});
+    cursor += boxHeight;
+  });
+  const graphBottom = cursor;
+  const markerId = `arrow-${project.id}`;
+  const bandMarkup = bands.map((layer,index) => `<g data-layer="${escapeXML(layer.id)}"><rect x="${left - 14}" y="${layer.y}" width="${width - left - right + 28}" height="${layer.height + 12}" rx="6" fill="#0b141d" stroke="#253541"/>${textLines([`${String(index + 1).padStart(2,'0')} / ${layer.label}`],left,layer.y + 30,15,'#d0e2ef')}${textLines([layer.caption || ''],width - right,layer.y + 29,10,'#7994a8',14,'end')}</g>`).join('');
+  const trackY = track => gaps[track.gap][track.index];
+  const lineMarkup = routes.map(route => {
+    const {edge,index,fromX:x1,toX:x2} = route;
+    const from = positions[edge.from], to = positions[edge.to];
+    const y1 = from.y + (route.fromFace === 'bottom' ? boxHeight : 0);
+    const y2 = to.y + (route.toFace === 'bottom' ? boxHeight : 0);
+    let path, labelX, labelY;
+    if (route.same || route.adjacent) {
+      labelY = trackY(route.track);
+      path = `M${x1} ${y1} V${labelY} H${x2} V${y2}`;
+      labelX = (x1 + x2) / 2;
+    } else {
+      const routeX = route.side === 'left' ? left - 38 - route.lane * 24 : width - right + 38 + route.lane * 24;
+      const exitY = trackY(route.exit), entryY = trackY(route.entry);
+      path = `M${x1} ${y1} V${exitY} H${routeX} V${entryY} H${x2} V${y2}`;
+      labelX = (x1 + routeX) / 2; labelY = exitY;
+    }
+    const color = edge.kind === 'flow' ? '#afcee3' : '#5c7b92';
     const number = String(index + 1).padStart(2,'0');
-    return `<g data-edge="${number}" data-kind="${escapeXML(edge.kind)}"><path class="architecture-route" d="${path}" fill="none" stroke="${color}" stroke-width="1.4" ${edge.kind === 'flow' ? '' : 'stroke-dasharray="5 4"'} ${edge.bidirectional ? `marker-start="url(#${markerId})"` : ''} marker-end="url(#${markerId})"/>${renderPackets(path,edge,index)}<circle cx="${labelX}" cy="${labelY}" r="12" fill="#0a1015" stroke="${color}"/>${textLines([number],labelX,labelY + 3.5,10,'#c1d9ea',14,'middle')}</g>`;
+    return `<g data-edge="${number}" data-kind="${escapeXML(edge.kind)}"><path class="architecture-route" d="${path}" fill="none" stroke="${color}" stroke-width="${edge.kind === 'flow' ? '1.5' : '1.1'}" ${edge.kind === 'flow' ? '' : 'stroke-dasharray="4 7"'} ${edge.bidirectional ? `marker-start="url(#${markerId})"` : ''} marker-end="url(#${markerId})"/>${renderPackets(path,edge,index)}<circle cx="${labelX}" cy="${labelY}" r="10" fill="#0a1015" stroke="${color}"/>${textLines([number],labelX,labelY + 3.5,10,'#c1d9ea',14,'middle')}</g>`;
   }).join('');
   const nodeMarkup = nodes.map(node => {
     const {x,y,width:boxWidth} = positions[node.id];
     const titleLines = wrapText(node.label,boxWidth - 28,17);
     const detailLines = (node.items || []).flatMap(detail => wrapText(detail,boxWidth - 28,12));
     const core = node.id === project.architecture.focus;
-    const state = node.state ? textLines([node.state],x + boxWidth - 14,y + 22,10,'#cdbca1',14,'end') : '';
     const dataGlyph = node.type === 'data' ? `<path d="M${x + 14} ${y + 19} q5 -5 10 0 v9 q-5 5 -10 0 z m0 -5 q5 5 10 0" fill="none" stroke="#85a9c2"/>` : '';
     const badgeX = x + (node.type === 'data' ? 31 : 14);
-    return `<g data-node="${escapeXML(node.id)}"><rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="5" fill="${core ? '#152b3a' : '#101e29'}" stroke="${core ? '#a6d0eb' : '#405c70'}" ${node.state === '规划' ? 'stroke-dasharray="5 4"' : ''}/>${dataGlyph}${textLines([types[node.type] || 'COMPONENT'],badgeX,y + 22,10,'#85a9c2')}${state}${textLines(titleLines,x + 14,y + 53,17,'#edf4f8',23)}${textLines(detailLines,x + 14,y + 64 + titleLines.length * 23,12,'#a4bacb',18)}</g>`;
+    return `<g data-node="${escapeXML(node.id)}"><rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="5" fill="${core ? '#152b3a' : '#101e29'}" stroke="${core ? '#a6d0eb' : '#405c70'}"/>${dataGlyph}${textLines([types[node.type] || 'COMPONENT'],badgeX,y + 22,10,'#85a9c2')}${textLines(titleLines,x + 14,y + 53,17,'#edf4f8',23)}${textLines(detailLines,x + 14,y + 64 + titleLines.length * 23,12,'#a4bacb',18)}</g>`;
   }).join('');
   let legendY = graphBottom + 74;
   const motionNote = textLines(['流动示意 · 非实时数据 / 圆点：数据传递 · 菱形：接口调用与配置'],24,graphBottom + 38,11,'#8da9bd');
