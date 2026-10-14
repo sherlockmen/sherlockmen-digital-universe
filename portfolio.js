@@ -1,8 +1,8 @@
-import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-9';
+import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-10';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-9',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-10',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -41,18 +41,6 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     diagram.scrollIntoView({behavior:reduced.matches || event.detail === 0 ? 'instant' : 'smooth',block:'start'});
     $('#portfolio-diagram-title').focus({preventScroll:true});
   });
-  const motionControls = create('div','diagram-motion-controls');
-  const motionCopy = create('span','diagram-motion-copy','光点演示调用与数据流向 · 非实时数据');
-  const motionToggle = create('button','diagram-motion-toggle');
-  motionToggle.type = 'button';
-  motionToggle.setAttribute('aria-label','数据流动动画');
-  motionToggle.setAttribute('aria-controls','portfolio-architecture portfolio-relations');
-  const motionStatus = create('span','diagram-motion-status');
-  const motionActions = create('div','diagram-motion-actions');
-  motionActions.append(motionStatus,motionToggle);
-  motionControls.append(motionCopy,motionActions);
-  diagram.querySelector('.diagram-heading').after(motionControls);
-  let userPaused = false;
   let pageSuspended = false;
   let diagramInView = false;
   let svgInView = false;
@@ -61,7 +49,7 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
   let motionItems = [];
   const visibleItems = new Set();
   function syncMotion() {
-    const running = dialog.open && diagramInView && !document.hidden && !pageSuspended && !reduced.matches && !userPaused;
+    const running = dialog.open && diagramInView && !document.hidden && !pageSuspended && !reduced.matches;
     diagram.dataset.motion = running ? 'running' : 'paused';
     const runSVG = running && svgInView;
     if (activeSVG && svgRunning !== runSVG) {
@@ -71,10 +59,7 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
       svgRunning = runSVG;
     }
     motionItems.forEach(item => {item.dataset.motion = running && visibleItems.has(item) ? 'running' : 'paused';});
-    motionToggle.disabled = reduced.matches;
-    motionToggle.setAttribute('aria-pressed',String(!userPaused && !reduced.matches));
-    motionToggle.textContent = reduced.matches ? '静态展示' : userPaused ? '▶ 播放流动' : 'Ⅱ 暂停流动';
-    motionStatus.textContent = reduced.matches ? '已减少动态效果' : userPaused ? '已暂停' : running ? '流动示意中' : '进入图示后自动播放';
+
   }
   const motionObserver = new IntersectionObserver(entries => {
     entries.forEach(entry => {
@@ -111,7 +96,6 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     motionItems.forEach(item => motionObserver.observe(item));
     diagram.querySelectorAll('.relation-motion-track').forEach(track => relationResizeObserver.observe(track));
   }
-  motionToggle.addEventListener('click',() => {userPaused = !userPaused; syncMotion();});
   reduced.addEventListener('change',syncMotion);
   document.addEventListener('visibilitychange',syncMotion);
   window.addEventListener('pagehide',() => {pageSuspended = true; syncMotion();});
@@ -216,8 +200,6 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     }));
     connections.append(connectionList);
     $('#portfolio-relations').replaceChildren(...layerCards,connections);
-    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg?v=technical-9`,import.meta.url).href;
-    $('#portfolio-diagram-download').download = `${project.title}技术架构图.svg`;
     dialog.scrollTop = 0;
     bindMotion();
     if (dialog.open) $('#portfolio-title').focus({preventScroll:true});

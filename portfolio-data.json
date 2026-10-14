@@ -257,34 +257,34 @@
           "id": "pre-review-agent",
           "title": "事前多模态审核 Agent",
           "role": "项目主要负责人",
-          "summary": "以 pi 编排多模态材料解析、依据检索和规则核验，把送审内容转为带引用的结构化审核结果。",
+          "summary": "将审核要求编成 Skill，由 pi 装载并执行，结合多模态解析与模型调用，把送审内容转为带材料引用的结构化审核结果。",
           "tags": [
             "pi",
+            "Skill 装载",
             "多模态解析",
-            "RAG",
             "规则核验"
           ],
           "sections": [
             {
               "label": "送审接入与任务编排",
-              "text": "Java / Spring 接收文字、图片、文档、录音及业务参考资料。pi 按材料类型与审核场景组织任务，分别调度模型理解、材料解析和规则核验组件。"
+              "text": "Java / Spring 接收文字、图片、文档、录音和业务参考资料。pi 根据材料类型与审核场景组织任务，装载对应 Skill，并调度模型和材料解析工具完成检查。"
             },
             {
-              "label": "多模态内容提取",
-              "text": "OCR、ASR 和 NLP 工具提取附件中的文字、语音与可核查内容；语言和视觉模型提供语义理解。解析结果为后续检查提供统一的内容输入。"
+              "label": "审核 Skill 与执行",
+              "text": "将监管要求和审核方法编写为 Skill，包含场景检查步骤与审核口径。pi 装载并执行 Skill，检查必要要素、费用与条件说明及材料之间的一致性。"
             },
             {
-              "label": "依据检索与内容核验",
-              "text": "RAG 检索审核依据，规则组件检查必要要素、费用与条件说明及材料间的一致性。业务参考资料参与对照核验，检索结果与检查结论分别保留来源。"
+              "label": "多模态解析与资料对照",
+              "text": "OCR、ASR 和 NLP 工具提取附件内容，语言与视觉模型提供理解能力。业务参考资料作为对照输入，与解析内容共同支持 Skill 中的检查步骤。"
             },
             {
-              "label": "报告生成与人工复核",
-              "text": "将问题、检查项、相关依据和原始材料引用组织为结构化报告，并提供修改参考。结果 API 向业务流程返回报告，React 界面支持对照材料复核。"
+              "label": "结构化报告与复核",
+              "text": "将检查结论、问题说明、审核依据和材料引用组织为结构化报告，并给出修改参考。结果 API 向业务流程返回报告，React 界面支持对照原始材料复核。"
             }
           ],
           "architecture": {
-            "title": "pi 编排、模型与规则检索",
-            "note": "pi 组织模型、解析工具与规则服务调用；内容提取、依据检索和报告输出按接口分工，结果关联原始材料供人工复核。",
+            "title": "pi Skill 装载、材料解析与审核执行",
+            "note": "审核要求编写为 Skill 后由 pi 装载执行；模型与解析工具提供内容理解，业务资料参与对照，检查结果关联原始材料并输出报告。",
             "focus": "pi",
             "layers": [
               {
@@ -294,17 +294,17 @@
               },
               {
                 "id": "runtime",
-                "label": "执行与推理",
-                "caption": "AGENT / MODEL"
+                "label": "Skill 执行与推理",
+                "caption": "PI / MODEL"
               },
               {
                 "id": "tools",
-                "label": "解析与核验",
-                "caption": "TOOLS / RAG"
+                "label": "Skill 与解析工具",
+                "caption": "SKILL / TOOLS"
               },
               {
                 "id": "output",
-                "label": "结果与复核",
+                "label": "报告与复核",
                 "caption": "OUTPUT / UI"
               }
             ],
@@ -326,8 +326,8 @@
                 "layer": "runtime",
                 "type": "runtime",
                 "items": [
-                  "审核任务与场景编排",
-                  "调度模型、解析和核验"
+                  "审核 Skill 装载与执行",
+                  "模型与解析工具调度"
                 ]
               },
               {
@@ -337,7 +337,7 @@
                 "type": "model",
                 "items": [
                   "语义理解 / 视觉理解",
-                  "大小模型按任务调度"
+                  "按审核任务调度"
                 ]
               },
               {
@@ -351,23 +351,22 @@
                 ]
               },
               {
-                "id": "rag",
-                "label": "RAG 与规则核验",
-                "layer": "tools",
-                "type": "service",
-                "items": [
-                  "检索审核依据",
-                  "规则匹配与一致性检查"
-                ]
-              },
-              {
-                "id": "knowledge",
-                "label": "审核知识与业务资料",
+                "id": "skills",
+                "label": "审核 Skill",
                 "layer": "tools",
                 "type": "data",
                 "items": [
-                  "外部规范 / 场景规则",
-                  "业务参考数据"
+                  "监管要求与审核方法",
+                  "场景检查步骤 / 审核口径"
+                ]
+              },
+              {
+                "id": "reference",
+                "label": "业务参考资料",
+                "layer": "tools",
+                "type": "data",
+                "items": [
+                  "业务背景 / 对照资料"
                 ]
               },
               {
@@ -377,7 +376,7 @@
                 "type": "service",
                 "items": [
                   "结论 / 检查项 / 依据",
-                  "修改建议与材料引用"
+                  "修改建议 / 材料引用"
                 ]
               },
               {
@@ -387,7 +386,7 @@
                 "type": "api",
                 "items": [
                   "Java / Spring",
-                  "向业务流程反馈结果"
+                  "向业务流程反馈报告"
                 ]
               },
               {
@@ -397,61 +396,61 @@
                 "type": "ui",
                 "items": [
                   "TypeScript / React",
-                  "查看问题与原始材料"
+                  "问题与原始材料对照"
                 ]
               }
             ],
             "edges": [
               {
+                "from": "api",
                 "to": "pi",
                 "label": "送审资料 / 审核任务",
-                "kind": "flow",
-                "from": "api"
+                "kind": "flow"
               },
               {
+                "from": "skills",
+                "to": "pi",
+                "label": "审核 Skill 装载",
+                "kind": "config"
+              },
+              {
+                "from": "pi",
                 "to": "model",
-                "label": "模型请求 / 理解与推理结果",
+                "label": "模型调用 / 理解结果",
                 "kind": "call",
-                "from": "pi",
                 "bidirectional": true
               },
               {
+                "from": "pi",
                 "to": "parse",
-                "label": "工具调用 / 解析结果",
+                "label": "解析工具调用 / 内容返回",
                 "kind": "call",
-                "from": "pi",
                 "bidirectional": true
               },
               {
-                "to": "rag",
-                "label": "检索与核验请求 / 依据返回",
-                "kind": "call",
                 "from": "pi",
+                "to": "reference",
+                "label": "参考资料读取 / 对照信息",
+                "kind": "call",
                 "bidirectional": true
               },
               {
-                "to": "rag",
-                "label": "规则与参考数据读取",
-                "kind": "config",
-                "from": "knowledge"
-              },
-              {
+                "from": "pi",
                 "to": "report",
-                "label": "检查结果 / 依据与引用",
-                "kind": "flow",
-                "from": "pi"
+                "label": "Skill 检查结果 / 材料引用",
+                "kind": "flow"
               },
               {
+                "from": "report",
                 "to": "result",
-                "label": "结构化结果输出",
-                "kind": "flow",
-                "from": "report"
+                "label": "结构化报告",
+                "kind": "flow"
               },
               {
+                "from": "report",
                 "to": "review",
                 "label": "报告与原始材料关联",
-                "kind": "flow",
-                "from": "report"
+                "kind": "flow"
               }
             ]
           },
@@ -462,22 +461,22 @@
               "Java",
               "Spring",
               "pi",
+              "Skill",
               "OCR",
-              "ASR",
-              "RAG"
+              "ASR"
             ],
             "highlights": [
               {
-                "label": "材料接入",
-                "text": "送审 API → pi 任务编排 → 模型与解析工具，按材料类型组织输入。"
+                "label": "装载与执行",
+                "text": "审核要求 → Skill → pi 装载执行，按场景组织检查步骤。"
               },
               {
-                "label": "检索与核验",
-                "text": "审核知识 → RAG 检索 → 规则与一致性检查，关联依据来源。"
+                "label": "解析与对照",
+                "text": "模型与解析工具处理材料，业务参考资料进入审核任务作对照。"
               },
               {
                 "label": "报告与复核",
-                "text": "检查结果 → 结构化报告 → 结果 API 与 React 复核界面。"
+                "text": "Skill 检查结果 → 结构化报告 → 结果 API 与 React 复核界面。"
               }
             ]
           }
@@ -1563,48 +1562,57 @@
         },
         {
           "id": "customer-service-ticket-knowledge",
-          "title": "客服工单与知识 API",
+          "title": "工单工作流与知识检索",
           "role": "项目主要负责人",
-          "summary": "将工单受理、协同流转与话术查询组织为共用 Java / Spring 接口，供在线、语音及客户入口分别调用。",
+          "summary": "以 Java / Spring 接口组织工单状态、流转和分派，通过 Elasticsearch 检索共用话术知识，供多渠道服务调用。",
           "tags": [
             "Java / Spring",
-            "共用 API",
-            "工单状态",
-            "话术查询"
+            "工作流",
+            "任务分派",
+            "Elasticsearch"
           ],
           "sections": [
             {
-              "label": "工单业务接口",
-              "text": "Java / Spring 承接坐席服务受理，创建工单并支持协同流转和处理进度查询。工单记录保存服务受理与处理信息，供渠道侧跟踪业务状态。"
+              "label": "工单接口与工作流",
+              "text": "Java / Spring 接收服务受理信息，工作流组件组织工单状态、处理流转和任务分派。渠道通过工单接口提交受理动作并查询处理进度。"
             },
             {
-              "label": "知识查询接口",
-              "text": "知识服务接收问题查询，读取话术知识并返回回答内容。客服话术作为独立知识数据维护，和工单业务记录分别承担回答支持与业务处理职责。"
+              "label": "状态与处理记录",
+              "text": "工作流读取和更新工单记录，保存服务受理、状态变化及处理信息。状态管理、流转控制和分派共同构成服务处理过程，业务接口向渠道返回工单状态。"
             },
             {
-              "label": "多渠道调用边界",
-              "text": "在线、语音和客户入口共用工单与知识接口，按服务受理和问题回答分别调用。接口层组织业务能力，数据层保留工单记录与知识内容的独立边界。"
+              "label": "知识索引与查询",
+              "text": "知识服务通过 Elasticsearch 检索客服话术，知识内容形成检索索引。查询接口接收问题并返回匹配话术，知识维护与检索调用分别承担内容组织和回答支持。"
+            },
+            {
+              "label": "多渠道共用边界",
+              "text": "在线、语音和客户入口共用工单与知识接口。工单工作流处理业务状态，Elasticsearch 支撑知识检索，两类能力保持并列接口与数据职责。"
             }
           ],
           "architecture": {
-            "title": "工单接口与知识存储",
-            "note": "Java / Spring 提供并列的工单和知识接口；渠道按业务动作调用，工单记录与话术知识分别承担状态保存和回答支持。",
-            "focus": "ticket",
+            "title": "工单工作流、状态记录与 Elasticsearch",
+            "note": "工单接口连接状态、流转与分派组件，知识接口通过 Elasticsearch 查询话术索引；工单记录与知识内容分别承担业务处理和回答支持。",
+            "focus": "workflow",
             "layers": [
               {
                 "id": "access",
-                "label": "渠道集成",
+                "label": "渠道调用",
                 "caption": "MULTI CHANNEL"
               },
               {
                 "id": "service",
-                "label": "应用接口",
+                "label": "业务接口",
                 "caption": "JAVA / SPRING API"
               },
               {
+                "id": "execution",
+                "label": "工作流与检索",
+                "caption": "WORKFLOW / ELASTICSEARCH"
+              },
+              {
                 "id": "data",
-                "label": "业务数据",
-                "caption": "RECORDS / KNOWLEDGE"
+                "label": "记录与知识内容",
+                "caption": "RECORDS / CONTENT"
               }
             ],
             "nodes": [
@@ -1615,7 +1623,7 @@
                 "type": "external",
                 "items": [
                   "在线 / 语音 / 客户入口",
-                  "坐席受理操作"
+                  "坐席受理 / 问题查询"
                 ]
               },
               {
@@ -1625,8 +1633,7 @@
                 "type": "api",
                 "items": [
                   "Java / Spring",
-                  "服务下单 / 协同流转",
-                  "处理进度查询"
+                  "服务下单 / 处理进度"
                 ]
               },
               {
@@ -1640,71 +1647,107 @@
                 ]
               },
               {
+                "id": "workflow",
+                "label": "工单工作流",
+                "layer": "execution",
+                "type": "service",
+                "items": [
+                  "工单状态 / 流转控制",
+                  "任务分派 / 处理跟踪"
+                ]
+              },
+              {
+                "id": "search",
+                "label": "Elasticsearch",
+                "layer": "execution",
+                "type": "runtime",
+                "items": [
+                  "知识索引 / 话术检索",
+                  "查询匹配结果"
+                ]
+              },
+              {
                 "id": "records",
-                "label": "工单记录",
+                "label": "工单处理记录",
                 "layer": "data",
                 "type": "data",
                 "items": [
-                  "服务受理 / 处理记录"
+                  "服务受理 / 工单状态",
+                  "流转与处理记录"
                 ]
               },
               {
                 "id": "knowledge",
-                "label": "话术知识库",
+                "label": "话术知识内容",
                 "layer": "data",
                 "type": "data",
                 "items": [
-                  "客服回答内容"
+                  "客服问题 / 回答话术"
                 ]
               }
             ],
             "edges": [
               {
+                "from": "channels",
                 "to": "ticket",
-                "label": "服务下单 / 处理跟踪",
+                "label": "受理动作 / 处理状态",
                 "kind": "call",
-                "from": "channels",
                 "bidirectional": true
               },
               {
+                "from": "channels",
                 "to": "query",
-                "label": "话术查询 / 回答内容",
+                "label": "问题查询 / 匹配话术",
                 "kind": "call",
-                "from": "channels",
                 "bidirectional": true
               },
               {
+                "from": "ticket",
+                "to": "workflow",
+                "label": "工作流操作 / 状态结果",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "workflow",
                 "to": "records",
-                "label": "工单数据写入",
-                "kind": "flow",
-                "from": "ticket"
+                "label": "状态与处理记录读写",
+                "kind": "call",
+                "bidirectional": true
               },
               {
-                "to": "knowledge",
-                "label": "话术数据读取",
-                "kind": "call",
                 "from": "query",
+                "to": "search",
+                "label": "检索请求 / 话术结果",
+                "kind": "call",
                 "bidirectional": true
+              },
+              {
+                "from": "knowledge",
+                "to": "search",
+                "label": "知识内容索引",
+                "kind": "flow"
               }
             ]
           },
           "implementation": {
             "stack": [
               "Java",
-              "Spring"
+              "Spring",
+              "Elasticsearch"
             ],
             "highlights": [
               {
-                "label": "工单接口",
-                "text": "渠道受理信息 → 工单业务 API → 受理记录与处理状态。"
+                "label": "工作流执行",
+                "text": "受理动作 → 工单接口 → 状态、流转与分派 → 工单处理记录。"
               },
               {
-                "label": "知识接口",
-                "text": "问题查询 → 知识 API → 话术内容，查询结果返回调用渠道。"
+                "label": "知识检索",
+                "text": "知识内容形成 Elasticsearch 索引，问题查询返回匹配话术。"
               },
               {
-                "label": "共享边界",
-                "text": "工单和知识是并列接口，分别承接服务处理与问题回答支持。"
+                "label": "渠道协同",
+                "text": "在线、语音和客户入口分别调用工作流接口与知识检索接口。"
               }
             ]
           }
@@ -2171,67 +2214,117 @@
           "id": "wage-payment-complaints",
           "title": "欠薪欠款投诉应用",
           "role": "项目主要负责人",
-          "summary": "以 React 表单、Java / Spring 提交服务和投诉记录组成应用链路，承接员工欠薪欠款问题的在线提交。",
+          "summary": "以 React 填报与请求适配连接 Java / Spring 提交 API，分层组织投诉处理、记录组装和数据访问，承接在线投诉提交。",
           "tags": [
             "React 表单",
-            "Java / Spring",
             "提交 API",
-            "业务记录"
+            "应用分层",
+            "数据访问"
           ],
           "sections": [
             {
-              "label": "表单与交互",
-              "text": "TypeScript / React 提供欠薪、欠款问题的填报界面，将投诉内容和提交信息组织为送往应用服务的表单数据。"
+              "label": "界面与请求适配",
+              "text": "TypeScript / React 组织欠薪、欠款问题的填报交互，请求适配组件将投诉内容和提交信息发送到接入 API，并把提交响应返回界面。"
             },
             {
-              "label": "提交与业务记录",
-              "text": "Java / Spring 接收投诉提交，将内容组织为业务记录。界面、应用服务和记录数据按职责分层，展示范围聚焦投诉提交链路。"
+              "label": "接入与应用处理",
+              "text": "Java / Spring 接入 API 接收和解析提交请求，将投诉内容交给应用服务。应用服务围绕提交动作组织处理，接口层与应用逻辑分别承担请求接入和业务操作。"
             },
             {
-              "label": "系统边界",
-              "text": "员工通过应用提交诉求；前端负责输入与提交交互，服务端负责接收和记录。架构围绕提交接口与记录数据展示应用组件的职责。"
+              "label": "记录组装与数据访问",
+              "text": "将投诉内容与提交信息组装为业务记录，经数据访问接口完成记录保存。记录组装、保存调用与投诉数据按职责拆分，存储层保持产品无关的接口边界。"
+            },
+            {
+              "label": "提交结果与组件协同",
+              "text": "应用处理和保存结果通过 API 返回请求适配组件，界面获得本次提交响应。架构以通用分层组件细化提交与记录形成，覆盖前端、接入、应用与数据层。"
             }
           ],
           "architecture": {
-            "title": "投诉入口、提交服务与记录",
-            "note": "React 表单调用 Java / Spring 提交服务，服务端组织投诉记录；图示覆盖提交和记录形成的应用边界。",
+            "title": "投诉提交的界面、应用与数据访问分层",
+            "note": "以通用分层组件表达提交请求和响应：界面与请求适配连接 API，应用服务组织记录组装与保存，数据访问保持产品无关的逻辑边界。",
             "focus": "submission",
             "layers": [
               {
                 "id": "ui",
-                "label": "入口交互",
+                "label": "界面与请求",
                 "caption": "REACT / TYPESCRIPT"
               },
               {
-                "id": "service",
-                "label": "提交处理",
-                "caption": "JAVA / SPRING"
+                "id": "access",
+                "label": "API 接入",
+                "caption": "JAVA / SPRING API"
+              },
+              {
+                "id": "application",
+                "label": "应用处理",
+                "caption": "APPLICATION / MAPPING"
               },
               {
                 "id": "data",
-                "label": "业务记录",
-                "caption": "COMPLAINT DATA"
+                "label": "数据访问与记录",
+                "caption": "ACCESS / RECORDS"
               }
             ],
             "nodes": [
               {
                 "id": "form",
-                "label": "投诉提交界面",
+                "label": "投诉填报界面",
                 "layer": "ui",
                 "type": "ui",
                 "items": [
                   "TypeScript / React",
-                  "欠薪 / 欠款问题填报"
+                  "欠薪 / 欠款内容输入",
+                  "提交响应展示"
+                ]
+              },
+              {
+                "id": "client",
+                "label": "提交请求适配",
+                "layer": "ui",
+                "type": "tool",
+                "items": [
+                  "TypeScript",
+                  "表单请求 / 响应处理"
+                ]
+              },
+              {
+                "id": "api",
+                "label": "投诉接入 API",
+                "layer": "access",
+                "type": "api",
+                "items": [
+                  "Java / Spring",
+                  "请求接收 / 内容解析"
                 ]
               },
               {
                 "id": "submission",
-                "label": "投诉提交服务",
-                "layer": "service",
+                "label": "投诉提交应用服务",
+                "layer": "application",
                 "type": "service",
                 "items": [
                   "Java / Spring",
-                  "接收投诉 / 形成提交记录"
+                  "提交处理 / 保存调用"
+                ]
+              },
+              {
+                "id": "mapping",
+                "label": "投诉记录组装",
+                "layer": "application",
+                "type": "tool",
+                "items": [
+                  "投诉内容 / 提交信息",
+                  "业务记录组织"
+                ]
+              },
+              {
+                "id": "repository",
+                "label": "投诉数据访问接口",
+                "layer": "data",
+                "type": "api",
+                "items": [
+                  "Java / Spring",
+                  "记录保存 / 保存结果"
                 ]
               },
               {
@@ -2246,16 +2339,45 @@
             ],
             "edges": [
               {
-                "to": "submission",
-                "label": "表单内容提交",
+                "from": "form",
+                "to": "client",
+                "label": "表单提交 / 提交响应",
                 "kind": "call",
-                "from": "form"
+                "bidirectional": true
               },
               {
+                "from": "client",
+                "to": "api",
+                "label": "提交请求 / API 响应",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "api",
+                "to": "submission",
+                "label": "投诉内容 / 处理结果",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "submission",
+                "to": "mapping",
+                "label": "记录组装 / 记录对象",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "submission",
+                "to": "repository",
+                "label": "记录保存 / 保存结果",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "repository",
                 "to": "records",
                 "label": "投诉记录写入",
-                "kind": "flow",
-                "from": "submission"
+                "kind": "flow"
               }
             ]
           },
@@ -2268,16 +2390,16 @@
             ],
             "highlights": [
               {
-                "label": "界面层",
-                "text": "React 填报界面组织欠薪欠款问题与提交信息。"
+                "label": "前端与接入",
+                "text": "React 填报 → TypeScript 请求适配 → Java / Spring 接入 API。"
               },
               {
-                "label": "服务层",
-                "text": "表单请求进入 Java / Spring 提交服务，接收投诉内容。"
+                "label": "应用与记录",
+                "text": "提交内容 → 应用服务 → 记录组装 → 数据访问接口。"
               },
               {
-                "label": "数据层",
-                "text": "提交服务形成投诉记录，界面、业务接收与数据职责分层。"
+                "label": "响应与边界",
+                "text": "保存结果沿 API 返回界面；数据层仅展示逻辑记录与访问职责。"
               }
             ]
           }

@@ -96,14 +96,9 @@
     window.SherlockGalaxy?.setPaused(paused);
     window.SherlockScene?.setPaused(paused);
     window.SherlockCollections?.setPaused(paused);
-    [$('#pause-scene')].forEach((button) => {
-      button.disabled = reduced.matches; button.setAttribute('aria-pressed',String(paused));
-      button.setAttribute('aria-label',reduced.matches ? '遵循系统减少动态效果设置' : paused ? '播放动态效果' : '暂停动态效果');
-      button.textContent = paused ? '▷' : 'Ⅱ';
-    });
+
   }
   window.addEventListener('collections-ready', updatePause);
-  $('#pause-scene').addEventListener('click', () => { paused=!paused;updatePause(); });
   $('#reset-scene').addEventListener('click', () => window.SherlockScene?.reset());
   document.addEventListener('keydown', (event) => {
     const sceneFocus = event.target.matches?.('#galaxy-canvas,#hero-canvas') || event.target.closest?.('[data-particle-scene]');
