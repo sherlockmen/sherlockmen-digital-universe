@@ -73,7 +73,7 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     }));
     connections.append(connectionList);
     $('#portfolio-relations').replaceChildren(...layerCards,connections);
-    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg`,import.meta.url).href;
+    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg?v=technical-6`,import.meta.url).href;
     $('#portfolio-diagram-download').download = `${project.title}技术架构图.svg`;
     dialog.scrollTop = 0;
     if (dialog.open) $('#portfolio-title').focus({preventScroll:true});
