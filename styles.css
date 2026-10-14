@@ -35,7 +35,7 @@ main>section{position:relative;z-index:1}.site-header.is-scrolled{background:lin
 .hero-word{white-space:nowrap}.intro-letter{display:inline-block}html[data-hero-intro=pending] .intro-letter{opacity:0}.hero h1[data-intro-phase=letters] .intro-letter{will-change:transform,opacity}
 
 /* Technical biography: identity, engineering path and current focus. */
-.about .about-grid{grid-template-columns:minmax(0,1fr);gap:32px;margin-top:48px}
+.about .about-grid{grid-template-columns:minmax(0,1fr);gap:32px;margin-top:36px}
 .about .about-identity .about-subtitle{font-family:monospace;font-size:10px;letter-spacing:.12em}
 .about .about-identity .about-lead{font-size:32px;line-height:1.35;letter-spacing:-.035em;font-weight:400;margin-top:22px;text-wrap:balance}
 .about-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:28px;padding-top:22px;border-top:1px solid #bedbf22b}
@@ -49,10 +49,18 @@ main>section{position:relative;z-index:1}.site-header.is-scrolled{background:lin
 .desktop-nav .nav-github,.mobile-nav .nav-github{display:inline-flex;align-items:center;gap:8px}
 .nav-github svg{flex:none}
 .desktop-nav .nav-github{border:0;border-radius:0;padding-inline:0}
-.about-links{display:flex;flex-wrap:wrap;gap:18px 36px;margin-top:8px}
+.about-links{display:flex;flex-wrap:wrap;gap:18px 36px;margin-top:26px}
 .about-links a{display:inline-flex;align-items:center;gap:12px;min-height:44px;font-size:14px;color:#bedbf2;transition:color 180ms ease}
 .about-links .mono{font-size:9px;letter-spacing:.08em;color:#8fa6b8}
 .about-links a:hover{color:#fff}
 .about-links a:focus-visible{outline:2px solid #bedbf2;outline-offset:5px}
 .about-links a>span:last-child{font-size:16px}
 @media(max-width:680px){.about-links{flex-direction:column;gap:4px;margin-top:0}.about-links a{font-size:14px}.about .about-identity .about-subtitle{max-width:35ch;line-height:1.8}}
+
+/* Compact stack rows keep model engineering distinct from application frameworks. */
+.about-stack{display:grid;gap:0;margin-top:32px;padding-top:12px;border-top:1px solid #bedbf22b}
+.about-stack>div{display:grid;grid-template-columns:182px minmax(0,1fr);align-items:baseline;gap:24px;padding-block:15px}
+.about-stack>div+div{border-top:1px solid #bedbf21a}
+.about-stack dt{font-size:9px;line-height:1.8;letter-spacing:.08em;color:#bedbf2;font-weight:600}
+.about-stack dd{min-width:0;margin:0;font-size:15px;line-height:1.8;color:#a8b4bd;text-wrap:pretty}
+@media(max-width:680px){.about-stack{margin-top:28px}.about-stack>div{grid-template-columns:minmax(0,1fr);gap:8px;padding-block:18px}.about-stack dd{font-size:16px}.about .about-grid{margin-top:28px}}

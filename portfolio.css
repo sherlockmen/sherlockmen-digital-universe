@@ -54,6 +54,11 @@
 .portfolio-diagram h3{font-size:25px;font-weight:400;line-height:1.5;margin:16px 0 12px;text-wrap:balance}
 .portfolio-diagram p{font-size:16px;line-height:1.8;color:var(--muted);max-width:none;text-wrap:pretty}
 .architecture-canvas{margin:24px -8px 12px}.architecture-canvas svg{display:block;width:100%;height:auto}
+.portfolio-model-engineering{min-width:0}
+.portfolio-model-engineering[hidden]{display:none}
+.portfolio-model-engineering .portfolio-section-heading{margin-bottom:20px}
+.model-engineering-stack{margin:20px 0}
+.portfolio-diagram .model-engineering-note{font-size:14px;line-height:1.8;color:#89aac1}
 .architecture-relations{display:none;list-style:none;padding:0;margin:24px 0}
 .diagram-legend{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:12px;color:var(--muted);padding-top:20px;border-top:1px solid var(--line)}.diagram-legend span{display:flex;align-items:center;gap:9px}.diagram-legend i{display:block;width:24px;border-top:1px solid var(--accent)}.diagram-legend .support-line{border-top:1px dashed #657f91}
 .architecture-layer h4,.architecture-connections h4{font-size:16px;font-weight:400;line-height:1.6;margin:0;color:var(--accent)}

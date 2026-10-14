@@ -3145,5 +3145,174 @@
         }
       ]
     }
-  ]
+  ],
+  "modelEngineering": {
+    "id": "model-engineering-infra",
+    "title": "个人模型工程实践",
+    "appliesTo": [
+      "order-review-agent",
+      "pre-review-agent",
+      "video-compliance-review"
+    ],
+    "summary": "在项目之外，我也持续实践模型工程与运行基础设施：使用 PyTorch 与 PEFT，按任务选择 LoRA / QLoRA 进行参数高效微调，通过 AWQ / GPTQ 进行模型量化，并结合 vLLM、Docker 完成推理服务部署。关注模型效果、显存占用与服务延迟，打通从模型产物到应用调用的运行链路。",
+    "stack": [
+      "PyTorch",
+      "PEFT",
+      "LoRA",
+      "QLoRA",
+      "AWQ",
+      "GPTQ",
+      "vLLM",
+      "Docker"
+    ],
+    "architecture": {
+      "title": "模型工程与推理部署",
+      "note": "个人技术实践的通用链路 · 微调与量化按需组合，原始权重也可直接评测部署；项目所用模型与调用方式详见各自技术架构。",
+      "focus": "serving",
+      "layers": [
+        {
+          "id": "source",
+          "label": "模型输入",
+          "caption": "MODEL SOURCE"
+        },
+        {
+          "id": "optimization",
+          "label": "按需优化",
+          "caption": "OPTIONAL OPTIMIZATION"
+        },
+        {
+          "id": "validation",
+          "label": "产物与评测",
+          "caption": "ARTIFACTS / EVALUATION"
+        },
+        {
+          "id": "deployment",
+          "label": "推理部署",
+          "caption": "SERVING / RUNTIME"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "base",
+          "label": "Base Model",
+          "layer": "source",
+          "type": "model",
+          "items": [
+            "Open Weights / Model Config"
+          ]
+        },
+        {
+          "id": "training",
+          "label": "Model Fine-tuning",
+          "layer": "optimization",
+          "type": "service",
+          "items": [
+            "PyTorch / PEFT",
+            "LoRA | QLoRA",
+            "Task Dataset / Checkpoint"
+          ]
+        },
+        {
+          "id": "quantization",
+          "label": "Model Quantization",
+          "layer": "optimization",
+          "type": "service",
+          "items": [
+            "AWQ | GPTQ",
+            "Calibration / Quantization Config"
+          ]
+        },
+        {
+          "id": "artifacts",
+          "label": "Model Artifacts",
+          "layer": "validation",
+          "type": "data",
+          "items": [
+            "Weights / Adapters",
+            "Model Version / Config"
+          ]
+        },
+        {
+          "id": "evaluation",
+          "label": "Model Evaluation",
+          "layer": "validation",
+          "type": "service",
+          "items": [
+            "Task Quality / Regression",
+            "Latency / Memory"
+          ]
+        },
+        {
+          "id": "serving",
+          "label": "vLLM Serving",
+          "layer": "deployment",
+          "type": "service",
+          "items": [
+            "vLLM / Inference API",
+            "Model Loading / Serving"
+          ]
+        },
+        {
+          "id": "container",
+          "label": "Docker Runtime",
+          "layer": "deployment",
+          "type": "service",
+          "items": [
+            "Docker / Container Image",
+            "Runtime Config / Model Mount"
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "base",
+          "to": "training",
+          "kind": "call",
+          "label": "按需微调：LoRA / QLoRA"
+        },
+        {
+          "from": "base",
+          "to": "quantization",
+          "kind": "call",
+          "label": "按需量化：AWQ / GPTQ"
+        },
+        {
+          "from": "base",
+          "to": "artifacts",
+          "kind": "flow",
+          "label": "原始模型权重"
+        },
+        {
+          "from": "training",
+          "to": "artifacts",
+          "kind": "flow",
+          "label": "Adapter / Checkpoint"
+        },
+        {
+          "from": "quantization",
+          "to": "artifacts",
+          "kind": "flow",
+          "label": "量化权重与配置"
+        },
+        {
+          "from": "artifacts",
+          "to": "evaluation",
+          "kind": "flow",
+          "label": "版本评测与回归检查"
+        },
+        {
+          "from": "evaluation",
+          "to": "serving",
+          "kind": "flow",
+          "label": "选择部署版本"
+        },
+        {
+          "from": "container",
+          "to": "serving",
+          "kind": "config",
+          "label": "运行环境与模型挂载"
+        }
+      ]
+    }
+  }
 }
