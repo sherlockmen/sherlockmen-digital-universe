@@ -1,9 +1,9 @@
-import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-15-layout1';
-import {createDialogStarfield} from './dialog-background.js?v=technical-15';
+import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-16';
+import {createDialogStarfield} from './dialog-background.js?v=technical-16';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-15',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-16',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -35,7 +35,7 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-15';
   overview.append(implementation);
   const modelEngineering = create('section','portfolio-diagram portfolio-model-engineering');
   modelEngineering.hidden = true;
-  modelEngineering.setAttribute('aria-label','个人模型工程实践');
+  modelEngineering.setAttribute('aria-label','项目推荐技术方案');
   diagram.after(modelEngineering);
   let pageSuspended = false;
   const activeSVGs = new Map();
@@ -207,14 +207,14 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-15';
     architectureCanvas.innerHTML = renderArchitecture(project);
     $('#portfolio-relations').replaceChildren(...createArchitectureRelations(project));
     modelEngineering.replaceChildren();
-    const infra = data.modelEngineering;
-    modelEngineering.hidden = !infra?.appliesTo.includes(project.id);
+    const infra = project.modelEngineering;
+    modelEngineering.hidden = !infra;
     if (!modelEngineering.hidden) {
       const heading = create('div','portfolio-section-heading');
-      heading.append(create('p','mono','MODEL ENGINEERING / INFRA'),create('h3','',infra.title));
+      heading.append(create('p','mono','PROJECT-SPECIFIC / RECOMMENDED STACK'),create('h3','',infra.title));
       const stack = create('ul','portfolio-stack-list model-engineering-stack');
       stack.setAttribute('role','list');
-      stack.setAttribute('aria-label','Model Engineering Tech Stack');
+      stack.setAttribute('aria-label','Recommended Tech Stack');
       stack.append(...infra.stack.map(name => create('li','',name)));
       const canvas = create('div','architecture-canvas');
       canvas.innerHTML = renderArchitecture(infra);

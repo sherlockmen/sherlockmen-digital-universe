@@ -275,6 +275,215 @@
                 "text": "后续规划以 Langfuse 执行记录和标注样本支撑离线评测、任务回放与差异分析，将错误定位到材料获取、Skill 核查、模型判断或结果校验环节，并探索关联事前审核、事中服务数据与事后定责信息，为持续调整提供依据。"
               }
             ]
+          },
+          "modelEngineering": {
+            "id": "order-review-reliability",
+            "eyebrow": "EVIDENCE RELIABILITY / EVALUATION",
+            "title": "推荐技术方案 · 证据链可靠性与评测",
+            "summary": "复杂投诉审单的关键，是多轮调查始终使用同一组事实，并能追溯责任建议所引用的材料。推荐围绕 DeepSeek Harness 增加模型请求预算、受控工具执行、案件状态持久化和引用校验；以人工复核样本构建回放集，比较 Skill、提示词及工具版本的差异。模型调用沿用 deepseek-v4-pro 接口，工程投入优先放在执行可靠性与评测闭环。",
+            "stack": [
+              "DeepSeek Harness",
+              "deepseek-v4-pro",
+              "Docker",
+              "PostgreSQL",
+              "JSON Schema",
+              "Langfuse",
+              "Dataset Replay",
+              "Tool Contract Testing"
+            ],
+            "architecture": {
+              "title": "审单执行可靠性与回放评测",
+              "note": "推荐方案：以已确认的 Harness 与模型接口为基础，补充工具隔离、案件状态和样本评测；新增组件供项目演进选型参考。",
+              "focus": "harness",
+              "layers": [
+                {
+                  "id": "input",
+                  "label": "案件与执行约束",
+                  "caption": "TASK / CONTEXT"
+                },
+                {
+                  "id": "execution",
+                  "label": "Agent 与受控调用",
+                  "caption": "HARNESS / MODEL / TOOLS"
+                },
+                {
+                  "id": "verification",
+                  "label": "证据一致性与结果检查",
+                  "caption": "STATE / VALIDATION"
+                },
+                {
+                  "id": "evaluation",
+                  "label": "样本回放与版本评测",
+                  "caption": "REPLAY / LANGFUSE"
+                }
+              ],
+              "nodes": [
+                {
+                  "id": "task",
+                  "label": "Task Adapter",
+                  "layer": "input",
+                  "type": "api",
+                  "items": [
+                    "Java / Spring",
+                    "Task ID / Idempotency",
+                    "Attachment Metadata"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "context",
+                  "label": "Skill Registry",
+                  "layer": "input",
+                  "type": "data",
+                  "items": [
+                    "Skill / Policy Version",
+                    "Tool Contracts / Output Schema"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "harness",
+                  "label": "DeepSeek Harness",
+                  "layer": "execution",
+                  "type": "runtime",
+                  "items": [
+                    "Context Management",
+                    "Step Budget / Retry Policy"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "gateway",
+                  "label": "Model API Adapter",
+                  "layer": "execution",
+                  "type": "service",
+                  "items": [
+                    "deepseek-v4-pro",
+                    "Timeout / Concurrency Limit",
+                    "Token Budget / Usage"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "tools",
+                  "label": "Tool Execution Runtime",
+                  "layer": "execution",
+                  "type": "tool",
+                  "items": [
+                    "Docker / Resource Limits",
+                    "Evidence ID / Tool Result",
+                    "Contract Tests"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "state",
+                  "label": "Case State Store",
+                  "layer": "verification",
+                  "type": "data",
+                  "items": [
+                    "PostgreSQL",
+                    "Shared Facts / Pending Checks",
+                    "Document Citation Index"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "guard",
+                  "label": "Evidence Validator",
+                  "layer": "verification",
+                  "type": "service",
+                  "items": [
+                    "JSON Schema",
+                    "Citation / Calculation Check",
+                    "Missing Evidence Detection"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "dataset",
+                  "label": "Case Replay Dataset",
+                  "layer": "evaluation",
+                  "type": "data",
+                  "items": [
+                    "Reviewed Cases / Expected Facts",
+                    "Skill / Prompt / Tool Version"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "evaluation",
+                  "label": "Evaluation Pipeline",
+                  "layer": "evaluation",
+                  "type": "service",
+                  "items": [
+                    "Langfuse / Dataset Replay",
+                    "Judgment / Citation Accuracy",
+                    "Tool Errors / Cost / Latency"
+                  ],
+                  "state": "推荐"
+                }
+              ],
+              "edges": [
+                {
+                  "to": "harness",
+                  "kind": "flow",
+                  "label": "审核任务与材料引用",
+                  "from": "task"
+                },
+                {
+                  "to": "harness",
+                  "kind": "config",
+                  "label": "版本化 Skill 与工具契约",
+                  "from": "context"
+                },
+                {
+                  "to": "gateway",
+                  "kind": "call",
+                  "label": "模型请求 / 推理结果",
+                  "from": "harness",
+                  "bidirectional": true
+                },
+                {
+                  "to": "tools",
+                  "kind": "call",
+                  "label": "受控工具调用 / 证据返回",
+                  "from": "harness",
+                  "bidirectional": true
+                },
+                {
+                  "to": "state",
+                  "kind": "call",
+                  "label": "共享事实读取 / 步骤状态更新",
+                  "from": "harness",
+                  "bidirectional": true
+                },
+                {
+                  "to": "guard",
+                  "kind": "flow",
+                  "label": "责任建议与证据引用",
+                  "from": "harness"
+                },
+                {
+                  "to": "dataset",
+                  "kind": "flow",
+                  "label": "校验结果 / 复核样本",
+                  "from": "guard"
+                },
+                {
+                  "to": "evaluation",
+                  "kind": "flow",
+                  "label": "按版本回放并比较结果",
+                  "from": "dataset"
+                },
+                {
+                  "to": "evaluation",
+                  "kind": "event",
+                  "label": "执行步骤 / 工具异常 / 模型用量",
+                  "from": "harness"
+                }
+              ]
+            }
           }
         },
         {
@@ -561,6 +770,236 @@
                 "text": "后续建设围绕统一入口和风险口径，将审核结果接入业务流程中的预警、拦截与整改环节，并扩展工单关联、申诉辅助和风险趋势分析。技术重点是让审核发现形成可接续处理的结构化数据，同时保持材料版本、风险来源、处理状态与核查依据的对应关系。"
               }
             ]
+          },
+          "modelEngineering": {
+            "id": "pre-review-model-serving",
+            "eyebrow": "TASK ADAPTATION / PRIVATE INFERENCE",
+            "title": "推荐技术方案 · 领域适配与私有推理",
+            "summary": "事前审核更适合围绕规则一致性和批量审核成本优化模型：监管要求继续以 Skill 管理，整理要素提取、风险识别及报告格式的任务样本，推荐用 PyTorch / PEFT 按需选择 LoRA 或 QLoRA。部署侧以原始版本为基线，比较适配版本与可选 AWQ / GPTQ 量化版本的审核质量、显存和延迟，再通过 vLLM 向 LangChain 能力服务提供统一推理接口。",
+            "stack": [
+              "qwen3.8-27b",
+              "PyTorch",
+              "PEFT",
+              "LoRA",
+              "QLoRA",
+              "bitsandbytes",
+              "AWQ",
+              "GPTQ",
+              "vLLM",
+              "Docker",
+              "LangChain",
+              "pi",
+              "Langfuse"
+            ],
+            "architecture": {
+              "title": "审核模型的任务适配、评测与服务接入",
+              "note": "推荐方案：以兼容且可获得的模型权重为前提。微调按样本效果决定；量化先验证模型与硬件支持，再做质量回归。监管规则保持在 Skill 中独立版本管理。",
+              "focus": "serving",
+              "layers": [
+                {
+                  "id": "source",
+                  "label": "模型与任务样本",
+                  "caption": "MODEL / DATASET"
+                },
+                {
+                  "id": "optimization",
+                  "label": "任务适配与可选量化",
+                  "caption": "PEFT / POST-TRAINING"
+                },
+                {
+                  "id": "gate",
+                  "label": "审核质量与发布准入",
+                  "caption": "REGRESSION / RESOURCE"
+                },
+                {
+                  "id": "serving",
+                  "label": "私有推理部署",
+                  "caption": "VLLM / DOCKER"
+                },
+                {
+                  "id": "application",
+                  "label": "审核应用接入",
+                  "caption": "LANGCHAIN / PI / TRACE"
+                }
+              ],
+              "nodes": [
+                {
+                  "id": "base",
+                  "label": "Base Model",
+                  "layer": "source",
+                  "type": "model",
+                  "items": [
+                    "qwen3.8-27b",
+                    "Weights / Tokenizer / Config"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "dataset",
+                  "label": "Audit Task Dataset",
+                  "layer": "source",
+                  "type": "data",
+                  "items": [
+                    "Element Extraction / Risk Labels",
+                    "Structured Reports / Holdout Set"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "training",
+                  "label": "Task Fine-tuning",
+                  "layer": "optimization",
+                  "type": "service",
+                  "items": [
+                    "PyTorch / PEFT",
+                    "LoRA | QLoRA (bitsandbytes)",
+                    "Adapter / Checkpoint"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "quantization",
+                  "label": "Optional Quantization",
+                  "layer": "optimization",
+                  "type": "tool",
+                  "items": [
+                    "AWQ | GPTQ",
+                    "Calibration Dataset",
+                    "Compatible Weights / Kernels"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "gate",
+                  "label": "Model Release Gate",
+                  "layer": "gate",
+                  "type": "service",
+                  "items": [
+                    "Audit Quality / False Negatives",
+                    "Schema / Rule Regression",
+                    "GPU Memory / Latency / Throughput"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "serving",
+                  "label": "vLLM Model Serving",
+                  "layer": "serving",
+                  "type": "service",
+                  "items": [
+                    "Docker / Model Version",
+                    "Base | LoRA | Quantized Model",
+                    "Inference API / Batch Capacity"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "langchain",
+                  "label": "LangChain Adapter",
+                  "layer": "application",
+                  "type": "service",
+                  "items": [
+                    "Python / Model Client",
+                    "Structured Output / Tool Adapter"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "pi",
+                  "label": "pi Audit Runtime",
+                  "layer": "application",
+                  "type": "runtime",
+                  "items": [
+                    "TypeScript / Node.js",
+                    "Regulatory Skill Version",
+                    "Audit Task / Report"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "trace",
+                  "label": "Inference Observability",
+                  "layer": "application",
+                  "type": "service",
+                  "items": [
+                    "Langfuse",
+                    "Model Version / Audit Trace",
+                    "Tokens / Cost / Latency"
+                  ],
+                  "state": "推荐"
+                }
+              ],
+              "edges": [
+                {
+                  "to": "training",
+                  "kind": "flow",
+                  "label": "基础权重 / 按需领域适配",
+                  "from": "base"
+                },
+                {
+                  "to": "training",
+                  "kind": "flow",
+                  "label": "监督样本与独立验证集",
+                  "from": "dataset"
+                },
+                {
+                  "to": "quantization",
+                  "kind": "flow",
+                  "label": "按需量化原始权重",
+                  "from": "base"
+                },
+                {
+                  "to": "quantization",
+                  "kind": "flow",
+                  "label": "可选：兼容的合并模型权重",
+                  "from": "training"
+                },
+                {
+                  "to": "gate",
+                  "kind": "flow",
+                  "label": "原始模型基线",
+                  "from": "base"
+                },
+                {
+                  "to": "gate",
+                  "kind": "flow",
+                  "label": "Adapter / 适配版本评测",
+                  "from": "training"
+                },
+                {
+                  "to": "gate",
+                  "kind": "flow",
+                  "label": "量化版本质量与资源回归",
+                  "from": "quantization"
+                },
+                {
+                  "to": "serving",
+                  "kind": "flow",
+                  "label": "通过评测的模型版本",
+                  "from": "gate"
+                },
+                {
+                  "to": "langchain",
+                  "kind": "call",
+                  "label": "审核能力调用 / 结构化结果",
+                  "from": "pi",
+                  "bidirectional": true
+                },
+                {
+                  "to": "serving",
+                  "kind": "call",
+                  "label": "统一推理请求 / 模型输出",
+                  "from": "langchain",
+                  "bidirectional": true
+                },
+                {
+                  "to": "trace",
+                  "kind": "event",
+                  "label": "模型版本 / 推理指标 / 审核记录",
+                  "from": "langchain"
+                }
+              ]
+            }
           }
         },
         {
@@ -831,6 +1270,243 @@
                 "text": "视频审核结果需要帮助使用者找到具体内容并理解原因。证据汇总将问题关联到时段、画面、口播文字和核验依据，React 界面承接报告与原始片段回看；片段定位和证据交互按照当前演示方案呈现。"
               }
             ]
+          },
+          "modelEngineering": {
+            "id": "video-review-media-infra",
+            "eyebrow": "MEDIA PIPELINE / RESUMABLE INFERENCE",
+            "title": "推荐技术方案 · 媒体流水线与可恢复审核",
+            "summary": "直播审核的资源压力主要来自长视频处理和多模态调用，推荐把抽帧、音轨解析与审核推理拆成独立任务。FFmpeg 按时间窗口生成素材，Celery / Redis 分配工作与重试；画面、口播和商品资料共享时间索引，交给 LangGraph 选择核查路径。qwen3.6-397b 通过独立模型端点接入，按片段限制并发与调用预算；持久化 checkpoint 支持中断后继续审核。",
+            "stack": [
+              "Python",
+              "LangGraph",
+              "qwen3.6-397b",
+              "FFmpeg",
+              "Celery",
+              "Redis",
+              "PostgreSQL",
+              "HTTPX",
+              "Docker",
+              "Langfuse",
+              "ASR / OCR"
+            ],
+            "architecture": {
+              "title": "分片解析、状态恢复与多模态推理",
+              "note": "推荐方案：优先建设媒体处理和模型端点的分层调度。大型模型服务独立扩容，量化或微调需另做权重、硬件与多模态质量评估。",
+              "focus": "graph",
+              "layers": [
+                {
+                  "id": "input",
+                  "label": "素材接入与任务调度",
+                  "caption": "API / QUEUE"
+                },
+                {
+                  "id": "media",
+                  "label": "媒体解析与时间对齐",
+                  "caption": "FFMPEG / ASR / OCR"
+                },
+                {
+                  "id": "runtime",
+                  "label": "核查状态与模型容量",
+                  "caption": "LANGGRAPH / ENDPOINT"
+                },
+                {
+                  "id": "output",
+                  "label": "片段证据与运行观测",
+                  "caption": "EVIDENCE / LANGFUSE"
+                }
+              ],
+              "nodes": [
+                {
+                  "id": "api",
+                  "label": "Video Task API",
+                  "layer": "input",
+                  "type": "api",
+                  "items": [
+                    "Python / Material Reference",
+                    "Stream Window / Task ID"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "queue",
+                  "label": "Media Task Queue",
+                  "layer": "input",
+                  "type": "service",
+                  "items": [
+                    "Celery / Redis",
+                    "Worker Routing / Retry",
+                    "Idempotent Segment Tasks"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "ffmpeg",
+                  "label": "FFmpeg Worker",
+                  "layer": "media",
+                  "type": "tool",
+                  "items": [
+                    "Docker / FFmpeg",
+                    "Window Slicing / Frame Sampling",
+                    "Audio Track Extraction"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "parse",
+                  "label": "Speech / Text Worker",
+                  "layer": "media",
+                  "type": "tool",
+                  "items": [
+                    "ASR / OCR Adapter",
+                    "Timestamped Transcript",
+                    "Frame Text / Product Content"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "timeline",
+                  "label": "Temporal Evidence Index",
+                  "layer": "media",
+                  "type": "data",
+                  "items": [
+                    "Object Storage / Media URI",
+                    "Segment ID / Start / End",
+                    "Frame / Transcript Alignment"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "graph",
+                  "label": "LangGraph Audit Graph",
+                  "layer": "runtime",
+                  "type": "runtime",
+                  "items": [
+                    "StateGraph / Conditional Routing",
+                    "Segment State / Skill Checks",
+                    "Evidence Aggregation"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "checkpoint",
+                  "label": "Persistent Checkpointer",
+                  "layer": "runtime",
+                  "type": "data",
+                  "items": [
+                    "PostgreSQL / thread_id",
+                    "Checkpoint / Resume",
+                    "Processed Segment State"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "model",
+                  "label": "Multimodal Model Endpoint",
+                  "layer": "runtime",
+                  "type": "model",
+                  "items": [
+                    "qwen3.6-397b / HTTPX",
+                    "Concurrency / Request Budget",
+                    "Timeout / Endpoint Capacity"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "report",
+                  "label": "Temporal Evidence Report",
+                  "layer": "output",
+                  "type": "service",
+                  "items": [
+                    "Issue / Rule / Segment Citation",
+                    "Frames / Transcript / Product",
+                    "Reviewable Media Links"
+                  ],
+                  "state": "推荐"
+                },
+                {
+                  "id": "trace",
+                  "label": "Pipeline Observability",
+                  "layer": "output",
+                  "type": "service",
+                  "items": [
+                    "Langfuse",
+                    "Queue Wait / Node Latency",
+                    "Model Usage / Failed Segments"
+                  ],
+                  "state": "推荐"
+                }
+              ],
+              "edges": [
+                {
+                  "to": "queue",
+                  "kind": "flow",
+                  "label": "素材引用与分片任务",
+                  "from": "api"
+                },
+                {
+                  "to": "ffmpeg",
+                  "kind": "flow",
+                  "label": "按工作容量分配媒体任务",
+                  "from": "queue"
+                },
+                {
+                  "to": "parse",
+                  "kind": "flow",
+                  "label": "音轨 / 抽样帧 / 时间戳",
+                  "from": "ffmpeg"
+                },
+                {
+                  "to": "timeline",
+                  "kind": "flow",
+                  "label": "媒体片段与存储引用",
+                  "from": "ffmpeg"
+                },
+                {
+                  "to": "timeline",
+                  "kind": "flow",
+                  "label": "口播 / 画面文字 / 时间索引",
+                  "from": "parse"
+                },
+                {
+                  "to": "graph",
+                  "kind": "flow",
+                  "label": "对齐后的多模态核查上下文",
+                  "from": "timeline"
+                },
+                {
+                  "to": "checkpoint",
+                  "kind": "call",
+                  "label": "保存执行状态 / 断点恢复",
+                  "from": "graph",
+                  "bidirectional": true
+                },
+                {
+                  "to": "model",
+                  "kind": "call",
+                  "label": "片段推理请求 / 核查结果",
+                  "from": "graph",
+                  "bidirectional": true
+                },
+                {
+                  "to": "report",
+                  "kind": "flow",
+                  "label": "核查结论与片段证据",
+                  "from": "graph"
+                },
+                {
+                  "to": "trace",
+                  "kind": "event",
+                  "label": "图路径 / 模型调用 / 节点状态",
+                  "from": "graph"
+                },
+                {
+                  "to": "trace",
+                  "kind": "event",
+                  "label": "排队时长 / 重试与失败分片",
+                  "from": "queue"
+                }
+              ]
+            }
           }
         },
         {
@@ -3145,174 +3821,5 @@
         }
       ]
     }
-  ],
-  "modelEngineering": {
-    "id": "model-engineering-infra",
-    "title": "个人模型工程实践",
-    "appliesTo": [
-      "order-review-agent",
-      "pre-review-agent",
-      "video-compliance-review"
-    ],
-    "summary": "在项目之外，我也持续实践模型工程与运行基础设施：使用 PyTorch 与 PEFT，按任务选择 LoRA / QLoRA 进行参数高效微调，通过 AWQ / GPTQ 进行模型量化，并结合 vLLM、Docker 完成推理服务部署。关注模型效果、显存占用与服务延迟，打通从模型产物到应用调用的运行链路。",
-    "stack": [
-      "PyTorch",
-      "PEFT",
-      "LoRA",
-      "QLoRA",
-      "AWQ",
-      "GPTQ",
-      "vLLM",
-      "Docker"
-    ],
-    "architecture": {
-      "title": "模型工程与推理部署",
-      "note": "个人技术实践的通用链路 · 微调与量化按需组合，原始权重也可直接评测部署；项目所用模型与调用方式详见各自技术架构。",
-      "focus": "serving",
-      "layers": [
-        {
-          "id": "source",
-          "label": "模型输入",
-          "caption": "MODEL SOURCE"
-        },
-        {
-          "id": "optimization",
-          "label": "按需优化",
-          "caption": "OPTIONAL OPTIMIZATION"
-        },
-        {
-          "id": "validation",
-          "label": "产物与评测",
-          "caption": "ARTIFACTS / EVALUATION"
-        },
-        {
-          "id": "deployment",
-          "label": "推理部署",
-          "caption": "SERVING / RUNTIME"
-        }
-      ],
-      "nodes": [
-        {
-          "id": "base",
-          "label": "Base Model",
-          "layer": "source",
-          "type": "model",
-          "items": [
-            "Open Weights / Model Config"
-          ]
-        },
-        {
-          "id": "training",
-          "label": "Model Fine-tuning",
-          "layer": "optimization",
-          "type": "service",
-          "items": [
-            "PyTorch / PEFT",
-            "LoRA | QLoRA",
-            "Task Dataset / Checkpoint"
-          ]
-        },
-        {
-          "id": "quantization",
-          "label": "Model Quantization",
-          "layer": "optimization",
-          "type": "service",
-          "items": [
-            "AWQ | GPTQ",
-            "Calibration / Quantization Config"
-          ]
-        },
-        {
-          "id": "artifacts",
-          "label": "Model Artifacts",
-          "layer": "validation",
-          "type": "data",
-          "items": [
-            "Weights / Adapters",
-            "Model Version / Config"
-          ]
-        },
-        {
-          "id": "evaluation",
-          "label": "Model Evaluation",
-          "layer": "validation",
-          "type": "service",
-          "items": [
-            "Task Quality / Regression",
-            "Latency / Memory"
-          ]
-        },
-        {
-          "id": "serving",
-          "label": "vLLM Serving",
-          "layer": "deployment",
-          "type": "service",
-          "items": [
-            "vLLM / Inference API",
-            "Model Loading / Serving"
-          ]
-        },
-        {
-          "id": "container",
-          "label": "Docker Runtime",
-          "layer": "deployment",
-          "type": "service",
-          "items": [
-            "Docker / Container Image",
-            "Runtime Config / Model Mount"
-          ]
-        }
-      ],
-      "edges": [
-        {
-          "from": "base",
-          "to": "training",
-          "kind": "call",
-          "label": "按需微调：LoRA / QLoRA"
-        },
-        {
-          "from": "base",
-          "to": "quantization",
-          "kind": "call",
-          "label": "按需量化：AWQ / GPTQ"
-        },
-        {
-          "from": "base",
-          "to": "artifacts",
-          "kind": "flow",
-          "label": "原始模型权重"
-        },
-        {
-          "from": "training",
-          "to": "artifacts",
-          "kind": "flow",
-          "label": "Adapter / Checkpoint"
-        },
-        {
-          "from": "quantization",
-          "to": "artifacts",
-          "kind": "flow",
-          "label": "量化权重与配置"
-        },
-        {
-          "from": "artifacts",
-          "to": "evaluation",
-          "kind": "flow",
-          "label": "版本评测与回归检查"
-        },
-        {
-          "from": "evaluation",
-          "to": "serving",
-          "kind": "flow",
-          "label": "选择部署版本"
-        },
-        {
-          "from": "container",
-          "to": "serving",
-          "kind": "config",
-          "label": "运行环境与模型挂载"
-        }
-      ]
-    }
-  }
+  ]
 }
