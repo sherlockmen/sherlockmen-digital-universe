@@ -46,33 +46,10 @@
     { id:'field', folder:'visual', title:'线条之外 · 图形练习', english:'BETWEEN\nTHE LINES.', art:'field', tags:['视觉概念','线条与节奏','演示项目'], description:'把重复的线条，变成可以呼吸的节奏。', storyTitle:'重复，也可以长出不同。', story:'一组连续的线条，在位置与间距之间形成变化。这个图形练习尝试用很少的元素，构成一个安静而有张力的视觉场。它是一个概念示例，期待被更多真实作品替换。' },
     { id:'note', folder:'notes', title:'一切从一个“为什么”开始', english:'WHAT\nIF?', art:'note', tags:['灵感记录','示例随记'], description:'如果换一种方式，会发生什么？很多有趣的事情，都从这个小问题开始。', storyTitle:'给还没成形的想法留个位置。', story:'不必等一个想法完全成熟，再给它一个名字。先把问题记下来，再做一个小小的实验。这里暂时是一篇示例随记，你的真实思考、过程和故事，可以慢慢填进这个个人空间。' }
   ];
-  const folderDetails = { interactive:{title:'交互实验',index:'01'}, visual:{title:'视觉概念',index:'02'}, notes:{title:'灵感记录',index:'03'} };
-  const folderPanel = $('#folder-panel');
-  let activeFolder = null;
-  let folderTrigger = null;
   function artHTML(art) {
     const designs = {knot:'<i class="mini-sculpture"></i>',orbit:'<i class="mini-orbit"></i>',crystal:'<i class="mini-crystal"></i>',typography:'<span class="poster-type">STAY.<br>CURIOUS.</span>',field:'<i class="field-lines"></i>',note:'<span class="note-art">WHAT<br>IF?</span>'};
     return designs[art] || '';
   }
-  function closeFolder(returnFocus = true) {
-    activeFolder = null; folderPanel.hidden = true;
-    document.querySelectorAll('[data-folder]').forEach((button) => button.setAttribute('aria-expanded','false'));
-    if (returnFocus) folderTrigger?.focus({preventScroll:true});
-  }
-  document.querySelectorAll('[data-folder]').forEach((button) => button.addEventListener('click', (event) => {
-    const key = button.dataset.folder;
-    if (activeFolder === key) { closeFolder(false); return; }
-    activeFolder = key; folderTrigger = button;
-    document.querySelectorAll('[data-folder]').forEach((item) => item.setAttribute('aria-expanded', String(item === button)));
-    $('#folder-panel-label').textContent = `COLLECTION / ${folderDetails[key].index}`;
-    $('#folder-panel-title').textContent = folderDetails[key].title;
-    $('#project-list').innerHTML = projects.filter((project) => project.folder === key).map((project) => `<button class="project-card" data-project="${project.id}" aria-label="查看${project.title}作品详情"><span class="project-art art-${project.art}" aria-hidden="true">${artHTML(project.art)}</span><span class="project-title"><span>${project.title}</span></span><span class="mono">${project.mode ? 'INTERACTIVE 3D' : 'CREATIVE CONCEPT'} / DEMO PROJECT</span></button>`).join('');
-    folderPanel.hidden = false;
-    folderPanel.scrollIntoView({behavior:reduced.matches || event.detail===0?'instant':'smooth',block:'nearest'});
-    $('#folder-panel-title').focus({preventScroll:true});
-  }));
-  $('#close-folder').addEventListener('click', () => closeFolder());
-
   const dialog = $('#project-dialog');
   let selectedProject = 0;
   let projectTrigger;
@@ -111,8 +88,8 @@
   $('#next-case').addEventListener('click', () => showProject(selectedProject+1));
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || dialog.open) return;
-    if (!menu.hidden) closeMenu(true);
-    else if (activeFolder) closeFolder();
+    if (!menu.hidden) { closeMenu(true); event.preventDefault(); }
+
   });
 
   function updatePause() {

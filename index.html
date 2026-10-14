@@ -12,7 +12,7 @@
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.dataset.heroIntro = 'pending';
     addEventListener('error', event => {
       const source = event.target?.getAttribute?.('src') || event.filename || '';
-      if (/(?:^|\/)(?:galaxy|app|particle-logos)\.js(?:[?#]|$)/.test(source)) {
+      if (/(?:^|\/)(?:galaxy|app|base-app|particle-logos)\.js(?:[?#]|$)/.test(source)) {
         document.documentElement.dataset.heroIntro = 'complete';
         document.documentElement.dataset.heroIntroFailed = 'true';
         const title = document.getElementById('hero-title');
@@ -27,6 +27,7 @@
   <link rel="modulepreload" href="vendor/three.module.min.js">
   <link rel="modulepreload" href="vendor/three.core.min.js">
   <link rel="stylesheet" href="styles.css?v=about-dedupe-1">
+  <link rel="stylesheet" href="portfolio.css?v=materials-4">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -60,17 +61,13 @@
       <div class="particle-caption"><p class="eyebrow mono">CURIOSITY INTO ACTION</p><h2 id="particle-cursor-title" tabindex="-1">把想法，变成行动。</h2><p id="particle-cursor-hint">划过星点，看看它们的回应。拖动，换一个视角。</p></div>
     </section>
 
-    <section id="work" class="work section" aria-labelledby="work-title">
-      <div class="container"><div class="section-heading reveal"><p class="eyebrow mono">02 / WORLDS IN THE MAKING</p><span>探索作品</span></div>
-        <div class="work-heading reveal"><h2 id="work-title" class="display-heading" tabindex="-1">想法，<br>正在发生。</h2><div><p>从微小的灵感，到可以触碰的体验。<br>选择一个方向，开始探索。</p><span class="demo-note">当前展示演示作品，等待真实项目入驻。</span></div></div>
-        <div class="collections" role="group" aria-label="作品分类">
-          <button class="collection-card reveal" data-folder="interactive" aria-expanded="false" aria-controls="folder-panel"><span class="collection-art orbit-art" aria-hidden="true"><i></i><i></i><i></i><b></b><span class="mono">01 / INTERACTION</span></span><span class="collection-caption"><span><b>交互实验</b><span>把想象，变成可以探索的空间。</span></span></span><span class="mono collection-count">3 EXPERIMENTS</span></button>
-          <button class="collection-card reveal" data-folder="visual" aria-expanded="false" aria-controls="folder-panel"><span class="collection-art light-art" aria-hidden="true"><i></i><i></i><i></i><span class="mono">02 / VISUAL</span></span><span class="collection-caption"><span><b>视觉概念</b><span>在光、线条与留白之间寻找表达。</span></span></span><span class="mono collection-count">2 CONCEPTS</span></button>
-          <button class="collection-card reveal" data-folder="notes" aria-expanded="false" aria-controls="folder-panel"><span class="collection-art thought-art" aria-hidden="true"><i></i><i></i><i></i><b>?</b><span class="mono">03 / NOTES</span></span><span class="collection-caption"><span><b>灵感记录</b><span>给还没成形的想法，留一个位置。</span></span></span><span class="mono collection-count">1 NOTE</span></button>
-        </div>
-        <div id="folder-panel" class="folder-panel" hidden><div class="folder-panel-heading"><div><p class="eyebrow mono" id="folder-panel-label">COLLECTION / 01</p><h3 id="folder-panel-title" tabindex="-1">交互实验</h3></div><button id="close-folder" class="close-button" aria-label="收起作品分类">×</button></div><div id="project-list" class="project-list"></div><p class="folder-tip mono">选择作品，进入详情 · ESC 收起</p></div>
-      </div>
-    </section>
+    <section id="work" class="work section" aria-labelledby="work-title"><div class="container">
+<div class="section-heading reveal"><p class="eyebrow mono">02 / IDEAS INTO SYSTEMS</p><span>探索作品</span></div>
+<div class="work-heading reveal"><h2 id="work-title" class="display-heading" tabindex="-1">从业务问题，<br>到真实项目。</h2><div><p>十个项目，三条实践路径。<br>作为项目主要负责人，把业务需求变成可用的系统。</p></div></div>
+<div class="collections portfolio-collections" role="group" aria-label="项目分类"><button class="collection-card portfolio-group reveal" disabled data-portfolio-folder="agents" aria-expanded="false" aria-controls="portfolio-panel"><span class="collection-art orbit-art" aria-hidden="true"><i></i><i></i><i></i><b></b><span class="mono">01 / PROJECT COLLECTION</span></span><span class="collection-caption"><span><b>Agent 与自动化</b><span>覆盖投诉工单定责、事前内容合规审核与重复任务自动化。</span></span></span><span class="mono collection-count">03 PROJECTS</span></button><button class="collection-card portfolio-group reveal" disabled data-portfolio-folder="service" aria-expanded="false" aria-controls="portfolio-panel"><span class="collection-art light-art" aria-hidden="true"><i></i><i></i><i></i><span class="mono">02 / PROJECT COLLECTION</span></span><span class="collection-caption"><span><b>客服产品</b><span>覆盖在线、语音、工单、话术知识库与 C 端客服入口。</span></span></span><span class="mono collection-count">04 PROJECTS</span></button><button class="collection-card portfolio-group reveal" disabled data-portfolio-folder="platform" aria-expanded="false" aria-controls="portfolio-panel"><span class="collection-art thought-art" aria-hidden="true"><i></i><i></i><i></i><b>+</b><span class="mono">03 / PROJECT COLLECTION</span></span><span class="collection-caption"><span><b>基础服务与业务平台</b><span>覆盖多类认证、员工欠薪欠款投诉与事中服务态势感知。</span></span></span><span class="mono collection-count">03 PROJECTS</span></button></div>
+<p id="portfolio-load-status" role="status" hidden></p>
+<div id="portfolio-panel" class="portfolio-panel" hidden><div class="folder-panel-heading"><div><p class="eyebrow mono" id="portfolio-panel-label"></p><h3 id="portfolio-panel-title" tabindex="-1"></h3></div><button id="portfolio-close-group" class="close-button" aria-label="收起项目分类">×</button></div><div id="portfolio-list" class="portfolio-list"></div><p class="folder-tip mono">选择项目，探索详情 · ESC 收起</p></div>
+</div></section>
 
     <section id="featured" class="featured section" aria-labelledby="featured-title"><div class="container"><div class="section-heading reveal"><p class="eyebrow mono">03 / THE SHAPE OF CURIOSITY</p><span>创意实验</span></div><div class="featured-heading reveal"><div><h2 id="featured-title" class="display-heading" tabindex="-1">换个角度，<br>发现另一种可能。</h2><p>让抽象的想法，拥有可以触碰的形状。</p></div><span class="demo-note">3D 交互演示</span></div><button class="feature-case reveal" data-project="infinity" aria-label="打开无限之结 3D 交互作品"><span class="feature-visual" aria-hidden="true"><span class="feature-rings"><i></i><i></i><i></i></span><span class="feature-graphic-text">Beyond<br>the ordinary.</span><span class="feature-visual-label mono">INFINITY KNOT / AN INTERACTIVE SCULPTURE</span></span><span class="feature-case-caption"><span><b>无限之结 / Infinity knot</b><span>一段线条的无限可能。</span></span><span class="feature-open">进入实验 </span></span></button></div></section>
 
@@ -88,6 +85,16 @@
   </main>
 
   <dialog id="project-dialog" class="project-dialog" aria-labelledby="case-title"><div class="case-header"><a class="wordmark" href="#home" id="case-home">SherlockMen</a><p class="mono" id="case-index">CREATIVE EXPERIMENT / 01</p><button id="close-case" class="close-button" aria-label="关闭作品详情">×</button></div><div class="case-content"><div class="case-intro"><p class="eyebrow mono" id="case-eyebrow">INTERACTIVE / DEMO PROJECT</p><h2 id="case-title" class="display-heading" tabindex="-1">INFINITY<br>KNOT.</h2><p id="case-description"></p><div class="case-tags" id="case-tags"></div></div><div class="case-stage" id="case-stage"><canvas id="hero-canvas" tabindex="0" role="img" aria-label="可交互三维雕塑，拖动或方向键旋转"></canvas><div class="case-static-art" id="case-static-art" hidden></div><p id="scene-status" role="status"></p><div class="case-controls" id="case-controls"><button class="text-button" id="reset-scene">重置视角 </button><button class="pause-button" id="pause-scene" aria-label="暂停作品动画" aria-pressed="false">Ⅱ</button></div></div></div><div class="case-story"><div><p class="eyebrow mono">THE IDEA</p><h3 id="case-story-title">把一条线，变成一种可能。</h3></div><p id="case-story-text"></p></div><div class="case-next"><button id="previous-case" class="text-button">上一个作品</button><span class="mono" id="case-counter">01 / 06</span><button id="next-case" class="text-button">下一个作品</button></div></dialog>
-  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-  <script src="scene.js?v=open-space-1"></script><script type="module" src="galaxy.js?v=word-clear-1"></script><script src="app.js?v=restored-layout-1"></script>
+  <dialog id="portfolio-dialog" class="project-dialog portfolio-dialog" aria-labelledby="portfolio-title">
+  <div class="case-header"><span class="wordmark">SherlockMen</span><p class="mono">PROJECT EXPLORER</p><button id="portfolio-close" class="close-button" aria-label="关闭项目详情">×</button></div>
+  <div class="case-content">
+    <div class="case-intro"><p class="eyebrow mono" id="portfolio-eyebrow"></p><h2 id="portfolio-title" class="display-heading" tabindex="-1"></h2><p id="portfolio-description"></p><div class="portfolio-meta"><span id="portfolio-role"></span><span id="portfolio-group"></span></div><div class="case-tags" id="portfolio-tags"></div></div>
+    <div id="portfolio-details" class="portfolio-details"></div>
+    <div class="portfolio-diagram"><div class="diagram-heading"><div><p class="mono">BUSINESS &amp; CAPABILITIES</p><h3 id="portfolio-diagram-title">业务与能力架构</h3></div><a id="portfolio-diagram-download" class="text-button" download>下载 SVG ↗</a></div><p id="portfolio-diagram-note" hidden></p><div id="portfolio-architecture" class="architecture-canvas"></div><ul id="portfolio-relations" class="architecture-relations" aria-label="系统关系"></ul><div class="diagram-legend"><span><i class="flow-line"></i>业务流向</span><span><i class="support-line"></i>能力、依据或系统接入</span></div></div>
+  </div>
+  <div class="case-next"><button id="portfolio-previous" class="text-button">上一个项目</button><span class="mono" id="portfolio-counter"></span><button id="portfolio-next" class="text-button">下一个项目</button></div>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="scene.js?v=open-space-1"></script><script type="module" src="galaxy.js?v=word-clear-1"></script><script src="app.js?v=projects-1"></script>
+<script type="module" src="portfolio.js?v=materials-4"></script>
 </body></html>

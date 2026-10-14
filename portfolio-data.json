@@ -1,0 +1,902 @@
+{
+  "status": "confirmed-outline",
+  "groups": [
+    {
+      "id": "agents",
+      "title": "Agent 与自动化",
+      "index": "01",
+      "summary": "覆盖投诉工单定责、事前内容合规审核与重复任务自动化。",
+      "projects": [
+        {
+          "id": "order-review-agent",
+          "title": "事后审单定责 Agent",
+          "role": "项目主要负责人",
+          "summary": "面向客户投诉工单，结合业务记录与附件证据形成定责建议；以 DeepSeek Harness 研究动态调查与冲突重审的新架构。",
+          "tags": [
+            "事后定责",
+            "动态调查",
+            "证据核查",
+            "DeepSeek Harness",
+            "人工复核"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "作为项目主要负责人，推进客户投诉工单的审单与定责。结合投诉诉求、业务记录、协议、短信及录音等材料，依据工信部和集团发文形成定责建议。"
+            },
+            {
+              "label": "既有审核体系",
+              "text": "项目自 2025 年启动，逐步完成当时规划场景的上线。既有体系以工作流规则引擎为主，结合规则召回、附件分类、规则级反证检查与全局复核持续迭代。"
+            },
+            {
+              "label": "新架构研究",
+              "text": "针对复杂工单中的核查遗漏、证据串用和结论冲突，研究由 Agent 掌握整单诉求与共享事实的审核方式。调查中遇到新业务、新证据或冲突时，补查相关材料并重新检查受影响的结论。"
+            },
+            {
+              "label": "证据与定责口径",
+              "text": "以文件索引定位协议条款、签署位置及录音片段，关键判断回到原文。用 SOP 和专业 Skill 组织调查方法，用 Policy 维护正式定责口径；日期、金额等比较交给程序计算。"
+            },
+            {
+              "label": "技术方案",
+              "text": "复用现有 Java 系统的工单、附件、权限、业务查询和人工复核能力。新架构以 DeepSeek Harness 组织执行循环、模型调用与上下文，通过业务及证据工具支撑智能审单服务。"
+            },
+            {
+              "label": "复核与持续改进",
+              "text": "定责建议关联事实、证据引用和判断理由，有责工单必经人工复核，疑难事项交业务专家。方案分阶段接通 Langfuse 运行观测、人工标注与回归评测，并验证批量实验和优化 Agent。"
+            }
+          ],
+          "architecture": {
+            "title": "新架构研究方案",
+            "note": "复用现有业务系统，研究由 Agent 组织动态调查的审核架构；运行观测与评测按阶段接通。",
+            "focus": "review-agent",
+            "nodes": [
+              {
+                "id": "java-system",
+                "label": "现有 Java 系统",
+                "items": [
+                  "工单 / 附件 / 权限",
+                  "业务查询 / 人工复核"
+                ]
+              },
+              {
+                "id": "harness",
+                "label": "DeepSeek Harness",
+                "items": [
+                  "执行循环 / 上下文",
+                  "模型调用 / 工具调用"
+                ]
+              },
+              {
+                "id": "audit-knowledge",
+                "label": "审核方法与口径",
+                "items": [
+                  "SOP / 专业 Skill",
+                  "Policy / 已确认案例"
+                ]
+              },
+              {
+                "id": "evidence-tools",
+                "label": "业务与证据工具",
+                "items": [
+                  "原文读取 / 系统查询",
+                  "日期与金额计算"
+                ]
+              },
+              {
+                "id": "review-agent",
+                "label": "智能审单服务",
+                "items": [
+                  "诉求分析 / 文件索引",
+                  "动态调查 / 共享事实",
+                  "逐项定责 / 整单校验"
+                ]
+              },
+              {
+                "id": "review-report",
+                "label": "定责建议报告",
+                "items": [
+                  "事实 / 定责口径",
+                  "证据引用 / 判断理由"
+                ]
+              },
+              {
+                "id": "observability",
+                "label": "Langfuse 评测方案",
+                "items": [
+                  "运行观测 / 人工标注",
+                  "批量实验 / 回归评测"
+                ]
+              },
+              {
+                "id": "human-review",
+                "label": "人工复核",
+                "items": [
+                  "有责必经复核",
+                  "疑难交业务专家"
+                ]
+              }
+            ],
+            "edges": [
+              {
+                "from": "java-system",
+                "to": "review-agent",
+                "label": "工单与业务能力",
+                "kind": "flow"
+              },
+              {
+                "from": "harness",
+                "to": "review-agent",
+                "label": "运行支撑",
+                "kind": "foundation"
+              },
+              {
+                "from": "audit-knowledge",
+                "to": "review-agent",
+                "label": "调查与定责依据",
+                "kind": "foundation"
+              },
+              {
+                "from": "evidence-tools",
+                "to": "review-agent",
+                "label": "取证与计算",
+                "kind": "integration"
+              },
+              {
+                "from": "review-agent",
+                "to": "review-agent",
+                "label": "新线索或冲突触发补查",
+                "kind": "feedback"
+              },
+              {
+                "from": "review-agent",
+                "to": "review-report",
+                "label": "形成建议",
+                "kind": "flow"
+              },
+              {
+                "from": "review-agent",
+                "to": "observability",
+                "label": "分阶段接通",
+                "kind": "integration"
+              },
+              {
+                "from": "review-report",
+                "to": "human-review",
+                "label": "有责 / 疑难工单",
+                "kind": "flow"
+              }
+            ]
+          }
+        },
+        {
+          "id": "pre-review-agent",
+          "title": "事前审核 Agent",
+          "role": "项目主要负责人",
+          "summary": "依据工信部及集团发文，对短信、宣传入口和文案进行事前合规审核。",
+          "tags": [
+            "内容合规",
+            "工信部及集团发文",
+            "pi"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "面向短信、宣传入口、文案等内容的事前合规审核 Agent。"
+            },
+            {
+              "label": "核心能力",
+              "text": "根据工信部及集团发文中的要求，审核相关内容的合规性。"
+            },
+            {
+              "label": "实现基础",
+              "text": "基于 pi 实现。"
+            }
+          ],
+          "architecture": {
+            "focus": "compliance-agent",
+            "nodes": [
+              {
+                "id": "review-content",
+                "label": "待审核内容",
+                "items": [
+                  "短信",
+                  "宣传入口",
+                  "文案"
+                ]
+              },
+              {
+                "id": "review-rules",
+                "label": "规则依据",
+                "items": [
+                  "工信部发文",
+                  "集团发文"
+                ]
+              },
+              {
+                "id": "pi",
+                "label": "pi",
+                "detail": "Agent 实现基础"
+              },
+              {
+                "id": "compliance-agent",
+                "label": "事前审核 Agent"
+              },
+              {
+                "id": "review-result",
+                "label": "合规审核结果"
+              }
+            ],
+            "edges": [
+              {
+                "from": "review-content",
+                "to": "compliance-agent",
+                "label": "内容审核",
+                "kind": "flow"
+              },
+              {
+                "from": "review-rules",
+                "to": "compliance-agent",
+                "label": "审核规则",
+                "kind": "foundation"
+              },
+              {
+                "from": "pi",
+                "to": "compliance-agent",
+                "label": "实现基础",
+                "kind": "foundation"
+              },
+              {
+                "from": "compliance-agent",
+                "to": "review-result",
+                "label": "审核结果",
+                "kind": "flow"
+              }
+            ]
+          },
+          "links": [
+            {
+              "label": "pi 开源框架",
+              "url": "https://github.com/earendil-works/pi"
+            }
+          ]
+        },
+        {
+          "id": "sansi-rpa",
+          "title": "三思 RPA",
+          "role": "项目主要负责人",
+          "summary": "通过控制电脑、执行点击等操作，用流程自动化处理重复任务。",
+          "tags": [
+            "流程自动化",
+            "重复任务",
+            "电脑操作"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "用于处理重复任务的流程自动化机器人。"
+            },
+            {
+              "label": "核心能力",
+              "text": "能够控制和操作电脑，执行点击等操作。"
+            }
+          ],
+          "architecture": {
+            "nodes": [
+              {
+                "id": "rpa-robot",
+                "label": "流程自动化机器人",
+                "detail": "三思 RPA"
+              },
+              {
+                "id": "computer-actions",
+                "label": "控制电脑 / 点击操作",
+                "detail": "处理重复任务"
+              }
+            ],
+            "edges": [
+              {
+                "from": "rpa-robot",
+                "to": "computer-actions",
+                "label": "执行操作",
+                "kind": "flow"
+              }
+            ],
+            "focus": "rpa-robot"
+          }
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "title": "客服产品",
+      "index": "02",
+      "summary": "覆盖在线、语音、工单、话术知识库与 C 端客服入口。",
+      "projects": [
+        {
+          "id": "customer-service-online",
+          "title": "客服平台 · 在线",
+          "role": "项目主要负责人",
+          "summary": "提供在线客服，智能知识库根据用户问题匹配对应回答话术。",
+          "tags": [
+            "在线客服",
+            "智能知识库",
+            "共享工单与知识库"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "面向在线客服业务的服务平台。"
+            },
+            {
+              "label": "核心能力",
+              "text": "接入智能知识库，根据用户问题找到对应的回答话术。"
+            },
+            {
+              "label": "共享服务",
+              "text": "与语音客服、C 端客服中心共用工单系统和话术知识库。"
+            }
+          ],
+          "architecture": {
+            "focus": "online-service",
+            "nodes": [
+              {
+                "id": "online-service",
+                "label": "在线客服平台"
+              },
+              {
+                "id": "intelligent-knowledge",
+                "label": "智能知识库",
+                "detail": "按用户问题匹配话术"
+              },
+              {
+                "id": "shared-ticket",
+                "label": "共享工单系统"
+              },
+              {
+                "id": "shared-knowledge",
+                "label": "共享话术知识库"
+              }
+            ],
+            "edges": [
+              {
+                "from": "online-service",
+                "to": "intelligent-knowledge",
+                "label": "智能能力",
+                "kind": "contains"
+              },
+              {
+                "from": "online-service",
+                "to": "shared-ticket",
+                "label": "共享接入",
+                "kind": "integration"
+              },
+              {
+                "from": "online-service",
+                "to": "shared-knowledge",
+                "label": "共享接入",
+                "kind": "integration"
+              }
+            ]
+          }
+        },
+        {
+          "id": "customer-service-voice",
+          "title": "客服平台 · 语音",
+          "role": "项目主要负责人",
+          "summary": "基于 FreeSWITCH 的呼叫中心，覆盖坐席接待、坐席外呼、智能外呼与智能语音能力。",
+          "tags": [
+            "FreeSWITCH",
+            "呼叫中心",
+            "智能语音",
+            "共享工单与知识库"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "基于 FreeSWITCH 的语音客服呼叫中心。"
+            },
+            {
+              "label": "呼叫服务",
+              "text": "支持坐席接待、坐席外呼与智能外呼。"
+            },
+            {
+              "label": "智能语音",
+              "text": "接入 IVR、意图识别、ASR 和 TTS 能力。"
+            },
+            {
+              "label": "共享服务",
+              "text": "与在线客服、C 端客服中心共用工单系统和话术知识库。"
+            }
+          ],
+          "architecture": {
+            "focus": "voice-center",
+            "nodes": [
+              {
+                "id": "voice-center",
+                "label": "FreeSWITCH 呼叫中心"
+              },
+              {
+                "id": "call-services",
+                "label": "呼叫服务",
+                "items": [
+                  "坐席接待",
+                  "坐席外呼",
+                  "智能外呼"
+                ]
+              },
+              {
+                "id": "intelligent-voice",
+                "label": "智能语音",
+                "items": [
+                  "IVR",
+                  "意图识别",
+                  "ASR",
+                  "TTS"
+                ]
+              },
+              {
+                "id": "shared-ticket",
+                "label": "共享工单系统"
+              },
+              {
+                "id": "shared-knowledge",
+                "label": "共享话术知识库"
+              }
+            ],
+            "edges": [
+              {
+                "from": "voice-center",
+                "to": "call-services",
+                "label": "呼叫中心能力",
+                "kind": "contains"
+              },
+              {
+                "from": "voice-center",
+                "to": "intelligent-voice",
+                "label": "智能能力",
+                "kind": "contains"
+              },
+              {
+                "from": "voice-center",
+                "to": "shared-ticket",
+                "label": "共享接入",
+                "kind": "integration"
+              },
+              {
+                "from": "voice-center",
+                "to": "shared-knowledge",
+                "label": "共享接入",
+                "kind": "integration"
+              }
+            ]
+          }
+        },
+        {
+          "id": "customer-service-ticket-knowledge",
+          "title": "客服平台 · 工单与知识库",
+          "role": "项目主要负责人",
+          "summary": "工单系统承接坐席服务下单，知识库提供客服回答话术，支撑多端客服服务。",
+          "tags": [
+            "坐席服务下单",
+            "工单系统",
+            "回答话术知识库",
+            "多端共用"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "面向客服业务的工单系统与回答话术知识库。"
+            },
+            {
+              "label": "工单服务",
+              "text": "承接坐席接到服务后的下单。"
+            },
+            {
+              "label": "话术知识",
+              "text": "提供客服需要的回答话术。"
+            },
+            {
+              "label": "共享服务",
+              "text": "在线客服、语音客服和 C 端客服中心共用工单系统与知识库。"
+            }
+          ],
+          "architecture": {
+            "focus": "ticket-knowledge-services",
+            "nodes": [
+              {
+                "id": "ticket-knowledge-services",
+                "label": "客服工单与知识库",
+                "detail": "多端共用服务"
+              },
+              {
+                "id": "service-order",
+                "label": "坐席服务下单"
+              },
+              {
+                "id": "ticket-system",
+                "label": "工单系统"
+              },
+              {
+                "id": "knowledge-base",
+                "label": "回答话术知识库"
+              }
+            ],
+            "edges": [
+              {
+                "from": "ticket-knowledge-services",
+                "to": "ticket-system",
+                "label": "服务组成",
+                "kind": "contains"
+              },
+              {
+                "from": "ticket-knowledge-services",
+                "to": "knowledge-base",
+                "label": "服务组成",
+                "kind": "contains"
+              },
+              {
+                "from": "service-order",
+                "to": "ticket-system",
+                "label": "服务下单",
+                "kind": "flow"
+              }
+            ]
+          }
+        },
+        {
+          "id": "customer-service-digital-human",
+          "title": "C 端客服中心 · 数字人",
+          "role": "项目主要负责人",
+          "summary": "面向客户的在线客服入口，提供猜你想问、语音转文本与数字人。",
+          "tags": [
+            "C 端客服入口",
+            "猜你想问",
+            "语音转文本",
+            "数字人"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "面向 C 端用户的在线客服入口。"
+            },
+            {
+              "label": "核心能力",
+              "text": "入口接入猜你想问、语音转文本等智能能力，并包含数字人。"
+            },
+            {
+              "label": "共享服务",
+              "text": "与在线客服、语音客服共用工单系统和话术知识库。"
+            }
+          ],
+          "architecture": {
+            "focus": "consumer-entry",
+            "nodes": [
+              {
+                "id": "consumer-entry",
+                "label": "C 端客服入口"
+              },
+              {
+                "id": "online-service",
+                "label": "在线客服"
+              },
+              {
+                "id": "entry-capabilities",
+                "label": "入口能力",
+                "items": [
+                  "猜你想问",
+                  "语音转文本",
+                  "数字人"
+                ]
+              },
+              {
+                "id": "shared-ticket",
+                "label": "共享工单系统"
+              },
+              {
+                "id": "shared-knowledge",
+                "label": "共享话术知识库"
+              }
+            ],
+            "edges": [
+              {
+                "from": "consumer-entry",
+                "to": "online-service",
+                "label": "在线客服入口",
+                "kind": "flow"
+              },
+              {
+                "from": "consumer-entry",
+                "to": "entry-capabilities",
+                "label": "入口能力",
+                "kind": "contains"
+              },
+              {
+                "from": "consumer-entry",
+                "to": "shared-ticket",
+                "label": "共享接入",
+                "kind": "integration"
+              },
+              {
+                "from": "consumer-entry",
+                "to": "shared-knowledge",
+                "label": "共享接入",
+                "kind": "integration"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "platform",
+      "title": "基础服务与业务平台",
+      "index": "03",
+      "summary": "覆盖多类认证、员工欠薪欠款投诉与事中服务态势感知。",
+      "projects": [
+        {
+          "id": "authentication-center",
+          "title": "认证中心",
+          "role": "项目主要负责人",
+          "summary": "提供企业、借贷与商户认证能力，并接入人行等系统。",
+          "tags": [
+            "企业认证",
+            "借贷认证",
+            "商户认证",
+            "人行系统"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "为公司提供企业、借贷、商户等认证能力。"
+            },
+            {
+              "label": "核心能力",
+              "text": "支持企业认证、借贷认证与商户认证，并接入人行等外部系统。"
+            }
+          ],
+          "architecture": {
+            "nodes": [
+              {
+                "id": "authentication-center",
+                "label": "认证中心",
+                "detail": "公司认证能力"
+              },
+              {
+                "id": "enterprise-authentication",
+                "label": "企业认证"
+              },
+              {
+                "id": "lending-authentication",
+                "label": "借贷认证"
+              },
+              {
+                "id": "merchant-authentication",
+                "label": "商户认证"
+              },
+              {
+                "id": "pbc-system",
+                "label": "人行系统",
+                "detail": "已接入的外部系统"
+              }
+            ],
+            "edges": [
+              {
+                "from": "authentication-center",
+                "to": "enterprise-authentication",
+                "label": "中心能力",
+                "kind": "contains"
+              },
+              {
+                "from": "authentication-center",
+                "to": "lending-authentication",
+                "label": "中心能力",
+                "kind": "contains"
+              },
+              {
+                "from": "authentication-center",
+                "to": "merchant-authentication",
+                "label": "中心能力",
+                "kind": "contains"
+              },
+              {
+                "from": "authentication-center",
+                "to": "pbc-system",
+                "label": "外部系统接入",
+                "kind": "integration"
+              }
+            ],
+            "focus": "authentication-center"
+          }
+        },
+        {
+          "id": "wage-payment-complaints",
+          "title": "欠薪欠款投诉平台",
+          "role": "项目主要负责人",
+          "summary": "为部委建设，供员工提交欠薪欠款投诉。",
+          "tags": [
+            "部委业务",
+            "员工投诉",
+            "欠薪欠款"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "为部委建设、面向员工欠薪欠款投诉的业务平台。"
+            },
+            {
+              "label": "核心能力",
+              "text": "员工通过平台提交欠薪欠款投诉。"
+            }
+          ],
+          "architecture": {
+            "nodes": [
+              {
+                "id": "employee",
+                "label": "员工",
+                "detail": "欠薪欠款投诉人"
+              },
+              {
+                "id": "complaints-platform",
+                "label": "部委欠薪欠款投诉平台",
+                "detail": "投诉提交入口"
+              }
+            ],
+            "edges": [
+              {
+                "from": "employee",
+                "to": "complaints-platform",
+                "label": "提交投诉",
+                "kind": "flow"
+              }
+            ],
+            "focus": "complaints-platform"
+          }
+        },
+        {
+          "id": "in-process-quality-control",
+          "title": "事中态势感知 · 服务驾驶舱",
+          "role": "项目主要负责人",
+          "summary": "汇聚省公司与本公司的服务数据，以定时入湖和指标计算呈现客户服务量；新版方案围绕企业、客户与专业条线组织三屏视图。",
+          "tags": [
+            "服务态势感知",
+            "数据湖",
+            "指标计算",
+            "定时同步",
+            "三屏驾驶舱"
+          ],
+          "sections": [
+            {
+              "label": "项目定位",
+              "text": "作为项目主要负责人，推进服务数据接入与驾驶舱建设，将分散在各省公司及本公司业务系统中的服务信息汇聚展示，帮助观察客户服务量与服务态势。"
+            },
+            {
+              "label": "数据接入与指标基础",
+              "text": "以非实时方式定时同步业务数据，梳理数据来源、指标口径、入湖表和服务场景标签。按不同业务的数据条件，接入清单级或统计级数据，逐步完善指标覆盖。"
+            },
+            {
+              "label": "数据计算链路",
+              "text": "按指标周期处理服务数据。部分指标由源端生成每日统计数据并按日上传入湖，再通过跨平台、多维计算形成月度指标，支撑服务量、服务结构与服务占比展示。"
+            },
+            {
+              "label": "新版三屏方案",
+              "text": "S1 从企业视角呈现外部、监管与内部评价，观察服务结果与变化；S2 从客户视角按业务和受理入口呈现服务量、诉求结构与重点问题；S3 从专业条线视角展示服务表现、监督检查与专项治理进展。"
+            },
+            {
+              "label": "指标下钻与客户声音",
+              "text": "新版方案结合 TOP 诉求、工单根因和归责信息，设计从汇总指标下钻到具体服务问题的分析路径，并通过原声听音理解客户诉求。"
+            },
+            {
+              "label": "后续演进方向",
+              "text": "在态势可视化与数据基础上，逐步完善问题归因、责任划分和治理闭环，让服务数据进一步支持问题研判与管理决策。"
+            }
+          ],
+          "architecture": {
+            "title": "数据链路与三屏方案",
+            "note": "数据按指标周期定时同步；三屏及下钻分析属于新版建设方案。",
+            "focus": "cockpit",
+            "nodes": [
+              {
+                "id": "business-systems",
+                "label": "省公司 / 本公司业务系统",
+                "items": [
+                  "多业务来源",
+                  "清单级 / 统计级数据"
+                ]
+              },
+              {
+                "id": "data-lake",
+                "label": "定时入湖",
+                "items": [
+                  "源端统计 / 数据汇聚",
+                  "非实时同步"
+                ]
+              },
+              {
+                "id": "metric-calculation",
+                "label": "数据治理与指标计算",
+                "items": [
+                  "指标口径 / 场景标签",
+                  "跨平台 / 多维计算",
+                  "日度数据 / 月度指标"
+                ]
+              },
+              {
+                "id": "cockpit",
+                "label": "服务态势驾驶舱",
+                "items": [
+                  "客户服务量",
+                  "服务结构与服务占比"
+                ]
+              },
+              {
+                "id": "enterprise-view",
+                "label": "S1 企业总览",
+                "items": [
+                  "新版方案",
+                  "外部 / 监管 / 内部评价",
+                  "服务结果与变化"
+                ]
+              },
+              {
+                "id": "customer-view",
+                "label": "S2 客户声音",
+                "items": [
+                  "新版方案",
+                  "业务 / 受理入口 / 诉求",
+                  "重点问题与原声听音"
+                ]
+              },
+              {
+                "id": "professional-view",
+                "label": "S3 专业服务",
+                "items": [
+                  "新版方案",
+                  "专业条线服务表现",
+                  "监督检查 / 专项治理"
+                ]
+              }
+            ],
+            "edges": [
+              {
+                "from": "business-systems",
+                "to": "data-lake",
+                "label": "按指标周期定时同步",
+                "kind": "flow"
+              },
+              {
+                "from": "data-lake",
+                "to": "metric-calculation",
+                "label": "汇聚数据",
+                "kind": "flow"
+              },
+              {
+                "from": "metric-calculation",
+                "to": "cockpit",
+                "label": "指标展示",
+                "kind": "flow"
+              },
+              {
+                "from": "cockpit",
+                "to": "enterprise-view",
+                "label": "企业视角",
+                "kind": "contains"
+              },
+              {
+                "from": "cockpit",
+                "to": "customer-view",
+                "label": "客户视角",
+                "kind": "contains"
+              },
+              {
+                "from": "cockpit",
+                "to": "professional-view",
+                "label": "专业条线视角",
+                "kind": "contains"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
