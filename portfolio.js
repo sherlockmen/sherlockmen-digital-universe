@@ -1,8 +1,8 @@
-import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-12';
+import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-13';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-12',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-13',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
