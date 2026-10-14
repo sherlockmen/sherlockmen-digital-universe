@@ -1,0 +1,101 @@
+.portfolio-collections .collection-art.collection-sculpture {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 240px;
+  overflow: hidden;
+  isolation: isolate;
+  background: radial-gradient(ellipse at 50% 48%, #204c7126 0, #07121b08 52%, transparent 72%);
+  border: 0;
+}
+.collection-sculpture canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+}
+.collection-sculpture.is-sculpture-ready canvas { opacity: 1; }
+.collection-art.collection-sculpture > .mono {
+  z-index: 2;
+  inset: auto 0 9px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: .11em;
+  color: #95b2c7;
+  pointer-events: none;
+}
+.collection-card:has(.collection-sculpture):focus-visible {
+  outline: 2px solid #c4e7ff;
+  outline-offset: 8px;
+  border-radius: 3px;
+}
+.collection-card:has(.collection-sculpture):is(:hover, :focus-visible) .collection-art > .mono { color: #e1f2ff; }
+/* These static silhouettes remain available without JavaScript or WebGL. */
+.collection-art.collection-sculpture::before,
+.collection-art.collection-sculpture::after {
+  content: "";
+  position: absolute;
+  display: block;
+  left: 50%;
+  top: 45%;
+  pointer-events: none;
+  background: linear-gradient(135deg, #d0ebfc 0, #6a98b8 20%, #152e42 48%, #a6d4ef 74%, #273d50);
+}
+.collection-sculpture[data-collection-visual="agents"]::before {
+  width: 123px;
+  height: 123px;
+  border: 12px solid #7ba7c4;
+  border-radius: 50%;
+  background: transparent;
+  transform: translate(-50%, -50%) rotate(-28deg) scaleX(.78);
+}
+.collection-sculpture[data-collection-visual="agents"]::after {
+  width: 65px;
+  height: 65px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 1px solid #c8eaff;
+  border-radius: 10px;
+}
+.collection-sculpture[data-collection-visual="service"]::before {
+  width: 119px;
+  height: 116px;
+  border: 13px solid #97bdd6;
+  border-bottom: 0;
+  border-radius: 75px 75px 0 0;
+  background: transparent;
+  transform: translate(-50%, -57%) rotate(-8deg);
+}
+.collection-sculpture[data-collection-visual="service"]::after {
+  width: 28px;
+  height: 55px;
+  border-radius: 13px;
+  transform: translate(-70px, 4px) rotate(-8deg);
+  box-shadow: 116px -15px 0 #719bb8;
+}
+.collection-sculpture[data-collection-visual="platform"]::before {
+  width: 126px;
+  height: 74px;
+  border-radius: 10px;
+  transform: translate(-50%, -72%) rotate(-23deg) skew(14deg);
+  box-shadow: -11px 24px 0 #426a88, -22px 48px 0 #27465f;
+  border: 1px solid #bcdeef;
+}
+.collection-sculpture[data-collection-visual="platform"]::after {
+  width: 37px;
+  height: 37px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 24%, #f7e4c6, #d3a874 34%, #495f6c 76%);
+  transform: translate(-50%, -130%);
+}
+.collection-art.collection-sculpture.is-sculpture-ready::before,
+.collection-art.collection-sculpture.is-sculpture-ready::after { display: none; }
+@media (max-width: 680px) {
+  .portfolio-collections .collection-art.collection-sculpture { height: 240px; }
+  .collection-art.collection-sculpture > .mono { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .collection-sculpture, .collection-sculpture canvas { animation: none; transition: none; }
+}

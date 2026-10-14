@@ -1,8 +1,8 @@
-import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=stack-7';
+import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=showcase-8';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=stack-7',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=showcase-8',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -20,6 +20,74 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     if (text) element.textContent = text;
     return element;
   };
+  const diagram = dialog.querySelector('.portfolio-diagram');
+  const architectureCanvas = $('#portfolio-architecture');
+  const motionControls = create('div','diagram-motion-controls');
+  const motionCopy = create('span','diagram-motion-copy','光点演示调用与数据流向 · 非实时数据');
+  const motionToggle = create('button','diagram-motion-toggle');
+  motionToggle.type = 'button';
+  motionToggle.setAttribute('aria-label','数据流动动画');
+  motionToggle.setAttribute('aria-controls','portfolio-architecture portfolio-relations');
+  const motionStatus = create('span','diagram-motion-status');
+  const motionActions = create('div','diagram-motion-actions');
+  motionActions.append(motionStatus,motionToggle);
+  motionControls.append(motionCopy,motionActions);
+  diagram.querySelector('.diagram-heading').after(motionControls);
+  let userPaused = false;
+  let pageSuspended = false;
+  let diagramInView = false;
+  let svgInView = false;
+  let activeSVG = null;
+  let svgRunning = null;
+  let motionItems = [];
+  const visibleItems = new Set();
+  function syncMotion() {
+    const running = dialog.open && diagramInView && !document.hidden && !pageSuspended && !reduced.matches && !userPaused;
+    diagram.dataset.motion = running ? 'running' : 'paused';
+    const runSVG = running && svgInView;
+    if (activeSVG && svgRunning !== runSVG) {
+      activeSVG.dataset.motion = runSVG ? 'running' : 'paused';
+      if (runSVG) activeSVG.unpauseAnimations?.();
+      else activeSVG.pauseAnimations?.();
+      svgRunning = runSVG;
+    }
+    motionItems.forEach(item => {item.dataset.motion = running && visibleItems.has(item) ? 'running' : 'paused';});
+    motionToggle.disabled = reduced.matches;
+    motionToggle.setAttribute('aria-pressed',String(!userPaused && !reduced.matches));
+    motionToggle.textContent = reduced.matches ? '静态展示' : userPaused ? '▶ 播放流动' : 'Ⅱ 暂停流动';
+    motionStatus.textContent = reduced.matches ? '已减少动态效果' : userPaused ? '已暂停' : running ? '流动示意中' : '进入图示后自动播放';
+  }
+  const motionObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const visible = entry.isIntersecting && entry.intersectionRatio > 0;
+      if (entry.target === diagram) diagramInView = visible;
+      else if (entry.target === architectureCanvas) svgInView = visible;
+      else if (motionItems.includes(entry.target)) {
+        if (visible) visibleItems.add(entry.target);
+        else visibleItems.delete(entry.target);
+      }
+    });
+    syncMotion();
+  },{root:dialog,threshold:.01});
+  function bindMotion() {
+    motionObserver.disconnect();
+    visibleItems.clear();
+    diagramInView = false;
+    svgInView = false;
+    activeSVG = architectureCanvas.querySelector('svg');
+    svgRunning = null;
+    motionItems = [...diagram.querySelectorAll('.architecture-component,.architecture-relation')];
+    syncMotion();
+    motionObserver.observe(diagram);
+    motionObserver.observe(architectureCanvas);
+    motionItems.forEach(item => motionObserver.observe(item));
+  }
+  motionToggle.addEventListener('click',() => {userPaused = !userPaused; syncMotion();});
+  reduced.addEventListener('change',syncMotion);
+  document.addEventListener('visibilitychange',syncMotion);
+  window.addEventListener('pagehide',() => {pageSuspended = true; syncMotion();});
+  window.addEventListener('pageshow',() => {pageSuspended = false; syncMotion();});
+  syncMotion();
   function closeGroup(returnFocus = true) {
     panel.hidden = true;
     document.querySelectorAll('[data-portfolio-folder]').forEach(button => button.setAttribute('aria-expanded','false'));
@@ -50,7 +118,8 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     const diagramNote = $('#portfolio-diagram-note');
     diagramNote.textContent = project.architecture.note || '';
     diagramNote.hidden = !project.architecture.note;
-    $('#portfolio-architecture').innerHTML = renderArchitecture(project);
+    activeSVG?.pauseAnimations?.();
+    architectureCanvas.innerHTML = renderArchitecture(project);
     const nodes = new Map(project.architecture.nodes.map(node => [node.id,node]));
     const layerCards = project.architecture.layers.map((layer,index) => {
       const section = create('section','architecture-layer');
@@ -58,6 +127,7 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
       const list = create('ul','architecture-components');
       list.append(...project.architecture.nodes.filter(node => node.layer === layer.id).map(node => {
         const card = create('li',`architecture-component${node.id === project.architecture.focus ? ' component-focus' : ''}`);
+        card.style.setProperty('--motion-delay',`-${(project.architecture.nodes.indexOf(node) * .27).toFixed(2)}s`);
         card.append(create('span','component-type',[componentType(node),node.state].filter(Boolean).join(' / ')),create('strong','',node.label),create('span','component-detail',node.items.join(' · ')));
         return card;
       }));
@@ -67,15 +137,23 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     connections.append(create('h4','','接口与数据流'));
     const connectionList = create('ol','architecture-connection-list');
     connectionList.append(...project.architecture.edges.map((edge,index) => {
-      const item = create('li',`architecture-relation relation-${edge.kind}`);
+      const item = create('li',`architecture-relation relation-${edge.kind}${edge.bidirectional ? ' relation-bidirectional' : ''}`);
+      item.style.setProperty('--motion-delay',`-${(index * .43).toFixed(2)}s`);
+      item.style.setProperty('--motion-duration',`${edge.kind === 'flow' ? 3.2 : 4.1}s`);
+      const track = create('span','relation-motion-track');
+      track.setAttribute('aria-hidden','true');
+      track.append(create('span','relation-motion-packet packet-forward'));
+      if (edge.bidirectional) track.append(create('span','relation-motion-packet packet-reverse'));
+      item.append(track);
       item.append(create('span','relation-source',`${String(index + 1).padStart(2,'0')} / ${nodes.get(edge.from).label}`),create('span','relation-connector',`${edge.bidirectional ? '↔' : '↓'} ${relationLabel(edge)}`),create('span','relation-target',nodes.get(edge.to).label));
       return item;
     }));
     connections.append(connectionList);
     $('#portfolio-relations').replaceChildren(...layerCards,connections);
-    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg?v=stack-7`,import.meta.url).href;
+    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg?v=showcase-8`,import.meta.url).href;
     $('#portfolio-diagram-download').download = `${project.title}技术架构图.svg`;
     dialog.scrollTop = 0;
+    bindMotion();
     if (dialog.open) $('#portfolio-title').focus({preventScroll:true});
   }
   document.querySelectorAll('[data-portfolio-folder]').forEach(button => {
@@ -108,10 +186,11 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     const trigger = event.target.closest('[data-portfolio-project]'); if (!trigger) return;
     const index = projects.findIndex(project => project.id === trigger.dataset.portfolioProject); if (index < 0) return;
     projectTrigger = trigger; showProject(index); dialog.showModal(); document.body.style.overflow = 'hidden';
+    syncMotion();
     $('#portfolio-close').focus();
   });
   $('#portfolio-close').addEventListener('click',() => dialog.close());
-  dialog.addEventListener('close',() => {document.body.style.overflow = ''; projectTrigger?.focus({preventScroll:true});});
+  dialog.addEventListener('close',() => {syncMotion(); document.body.style.overflow = ''; projectTrigger?.focus({preventScroll:true});});
   $('#portfolio-previous').addEventListener('click',() => showProject(selected - 1));
   $('#portfolio-next').addEventListener('click',() => showProject(selected + 1));
   document.addEventListener('keydown',event => {

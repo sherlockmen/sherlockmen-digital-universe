@@ -447,105 +447,243 @@
         },
         {
           "id": "desktop-workflow-automation",
-          "title": "桌面流程自动化",
+          "title": "跨应用流程自动化",
           "role": "项目主要负责人",
-          "summary": "让机器人按流程执行电脑操作，处理反复出现的点击和操作任务。",
+          "summary": "把重复的办公操作组织为可执行流程，连接 Web 与桌面应用，并提供机器人调度、运行监控和 AI 辅助。",
           "tags": [
             "RPA",
-            "流程自动化",
-            "桌面操作"
+            "可视化编排",
+            "跨应用操作",
+            "集中调度"
           ],
           "sections": [
             {
-              "label": "业务场景",
-              "text": "面向需要反复执行电脑操作的任务，用流程自动化机器人承接重复操作。"
+              "label": "流程设计",
+              "text": "通过组件拖拽、操作记录和条件逻辑构建自动化流程；借助元素拾取，将页面与桌面上的操作对象纳入流程定义。"
             },
             {
-              "label": "操作方式",
-              "text": "机器人可以控制电脑、执行点击等操作，按流程完成对应任务。"
+              "label": "跨应用执行",
+              "text": "机器人按流程执行点击、复制粘贴、数据提取和录入等操作，连接 Web 与桌面应用，支持手动、定时及批量任务。"
+            },
+            {
+              "label": "集中管控",
+              "text": "统一接收任务、分发执行并管理机器人运行，结合日志、录屏与状态监控定位执行问题；任务可从邮件、文件传输或 API 接入。"
+            },
+            {
+              "label": "AI 辅助",
+              "text": "结合 OCR、自然语言处理与语言模型辅助流程生成和材料处理，并将任务意图、动作拆解、操作指令及执行反馈衔接到机器人能力中。"
+            },
+            {
+              "label": "权限管理",
+              "text": "按组织和角色管理使用权限，提供业务空间隔离及敏感信息保护，为流程设计、任务管理与执行运维划分访问范围。"
+            },
+            {
+              "label": "技术实现",
+              "text": "TypeScript / React 支撑管理与监控界面，Java / Spring 承接任务接口与调度业务。流程设计、机器人运行和应用操作按组件职责展示，其具体执行框架保持抽象。"
             }
           ],
           "architecture": {
-            "title": "流程执行器与桌面控制",
-            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
-            "focus": "executor",
+            "title": "流程设计、集中调度与机器人执行",
+            "note": "依据产品能力呈现逻辑组件；AI 辅助与应用操作通过能力接口衔接，具体执行框架保持抽象。",
+            "focus": "robot",
             "layers": [
               {
-                "id": "config",
-                "label": "流程配置",
-                "caption": "STEPS / PARAMS"
+                "id": "design",
+                "label": "设计与接入",
+                "caption": "DESIGN / API"
               },
               {
-                "id": "runtime",
-                "label": "执行与控制",
+                "id": "control",
+                "label": "编排与调度",
+                "caption": "JAVA / SPRING"
+              },
+              {
+                "id": "execution",
+                "label": "机器人执行",
                 "caption": "RUNTIME / TOOL"
               },
               {
-                "id": "target",
-                "label": "目标应用",
-                "caption": "DESKTOP"
+                "id": "operation",
+                "label": "运行反馈",
+                "caption": "REACT / OBSERVABILITY"
               }
             ],
             "nodes": [
               {
-                "id": "steps",
-                "label": "流程定义",
-                "layer": "config",
+                "id": "designer",
+                "label": "流程设计器",
+                "layer": "design",
+                "type": "ui",
+                "items": [
+                  "组件拖拽 / 操作记录",
+                  "条件逻辑 / 元素拾取"
+                ]
+              },
+              {
+                "id": "components",
+                "label": "流程组件库",
+                "layer": "design",
                 "type": "data",
                 "items": [
-                  "重复任务的操作步骤",
-                  "电脑操作参数"
+                  "应用操作 / 条件组件"
                 ]
               },
               {
-                "id": "executor",
-                "label": "流程执行器",
-                "layer": "runtime",
+                "id": "entry",
+                "label": "任务接入接口",
+                "layer": "design",
+                "type": "api",
+                "items": [
+                  "Java / Spring",
+                  "邮件 / 文件传输 / API"
+                ]
+              },
+              {
+                "id": "flow",
+                "label": "流程定义",
+                "layer": "control",
+                "type": "data",
+                "items": [
+                  "操作步骤 / 参数 / 条件"
+                ]
+              },
+              {
+                "id": "scheduler",
+                "label": "调度管理服务",
+                "layer": "control",
+                "type": "service",
+                "items": [
+                  "Java / Spring",
+                  "任务分发 / 执行管理",
+                  "手动 / 定时任务"
+                ]
+              },
+              {
+                "id": "ai",
+                "label": "AI 辅助能力",
+                "layer": "control",
+                "type": "model",
+                "items": [
+                  "OCR / NLP / 语言模型",
+                  "意图理解 / 动作拆解"
+                ]
+              },
+              {
+                "id": "robot",
+                "label": "执行机器人",
+                "layer": "execution",
                 "type": "runtime",
                 "items": [
-                  "按步骤驱动任务",
-                  "生成电脑操作指令"
+                  "按流程执行任务",
+                  "元素定位 / 电脑操作"
                 ]
               },
               {
-                "id": "control",
-                "label": "桌面控制适配",
-                "layer": "runtime",
-                "type": "tool",
-                "items": [
-                  "点击等输入事件",
-                  "电脑操作能力封装"
-                ]
-              },
-              {
-                "id": "app",
-                "label": "目标桌面应用",
-                "layer": "target",
+                "id": "apps",
+                "label": "Web 与桌面应用",
+                "layer": "execution",
                 "type": "external",
                 "items": [
-                  "接收操作事件",
-                  "执行对应应用行为"
+                  "点击 / 数据读取与录入"
+                ]
+              },
+              {
+                "id": "console",
+                "label": "运行管理界面",
+                "layer": "operation",
+                "type": "ui",
+                "items": [
+                  "TypeScript / React",
+                  "任务与机器人状态"
+                ]
+              },
+              {
+                "id": "logs",
+                "label": "运行记录",
+                "layer": "operation",
+                "type": "data",
+                "items": [
+                  "执行日志 / 录屏"
                 ]
               }
             ],
             "edges": [
               {
-                "to": "executor",
-                "label": "步骤与操作参数",
-                "kind": "flow",
-                "from": "steps"
+                "from": "components",
+                "to": "designer",
+                "label": "组件配置",
+                "kind": "config"
               },
               {
-                "to": "control",
-                "label": "电脑控制调用",
+                "from": "designer",
+                "to": "flow",
+                "label": "流程编排结果",
+                "kind": "flow"
+              },
+              {
+                "from": "designer",
+                "to": "ai",
+                "label": "流程生成与材料处理",
                 "kind": "call",
-                "from": "executor"
+                "bidirectional": true
               },
               {
-                "to": "app",
-                "label": "点击等操作事件",
-                "kind": "flow",
-                "from": "control"
+                "from": "entry",
+                "to": "scheduler",
+                "label": "任务接入",
+                "kind": "call"
+              },
+              {
+                "from": "flow",
+                "to": "scheduler",
+                "label": "流程与执行配置",
+                "kind": "config"
+              },
+              {
+                "from": "scheduler",
+                "to": "robot",
+                "label": "任务下发 / 执行状态",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "flow",
+                "to": "robot",
+                "label": "流程定义",
+                "kind": "config"
+              },
+              {
+                "from": "ai",
+                "to": "robot",
+                "label": "动作指令 / 执行反馈",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "robot",
+                "to": "apps",
+                "label": "应用操作 / 操作结果",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "robot",
+                "to": "logs",
+                "label": "执行日志与录屏",
+                "kind": "event"
+              },
+              {
+                "from": "logs",
+                "to": "console",
+                "label": "运行记录展示",
+                "kind": "flow"
+              },
+              {
+                "from": "console",
+                "to": "scheduler",
+                "label": "任务管理 / 状态查询",
+                "kind": "call",
+                "bidirectional": true
               }
             ]
           }
@@ -773,61 +911,90 @@
           "id": "customer-service-online",
           "title": "在线客服平台",
           "role": "项目主要负责人",
-          "summary": "在在线服务中，根据用户问题提供对应的回答话术，并连接共用的工单与知识库服务。",
+          "summary": "将智能应答、人工接待和服务分流放在同一在线服务平台，以话术知识和共享工单支撑咨询处理。",
           "tags": [
-            "在线客服",
-            "话术匹配",
-            "共用工单",
-            "知识支持"
+            "在线接待",
+            "智能应答",
+            "服务分流",
+            "人机协同"
           ],
           "sections": [
             {
-              "label": "在线服务",
-              "text": "为在线客服接待提供服务平台，支持客户通过在线渠道寻求帮助。"
+              "label": "服务接入",
+              "text": "组织自助、智能与人工服务入口，结合服务分流和转人工策略，将咨询交给对应的接待能力。"
             },
             {
-              "label": "回答支持",
-              "text": "知识能力根据用户提出的问题查找对应话术，为客服回答提供参考。"
+              "label": "统一接待",
+              "text": "在坐席工作台呈现客户信息、历史记录与会话提醒，支持快捷回复和服务受理，让咨询上下文随接待过程延续。"
             },
             {
-              "label": "服务衔接",
-              "text": "在线、语音和面向客户的客服入口共用工单与知识库，作为各渠道的业务支持。"
+              "label": "智能协同",
+              "text": "根据用户问题查找知识库中的对应话术，结合在线问答与坐席辅助能力提供回答参考，并支持智能服务与人工接待衔接。"
+            },
+            {
+              "label": "业务支持",
+              "text": "在线、语音和面向客户的服务入口共用工单与知识库，分别支持服务下单、处理跟踪和话术查询；管理侧维护分流策略、知识内容与权限。"
             },
             {
               "label": "技术实现",
-              "text": "TypeScript / React 组织在线接待界面，WebSocket 传递会话消息，Java / Spring 承接会话业务及工单、知识接口。智能话术查询与知识数据分别作为能力组件和数据组件展示。"
+              "text": "TypeScript / React 构建客户入口与坐席工作台，WebSocket 支撑会话消息交互，Java / Spring 组织会话、分流及共享业务接口。智能问答通过能力接口连接模型与知识服务。"
             }
           ],
           "architecture": {
-            "title": "会话服务与共享接口",
-            "note": "React / TypeScript 承载接待界面，Java / Spring 提供业务服务，WebSocket 支撑双向会话；话术匹配算法、存储产品及部署拓扑未展开。",
+            "title": "在线会话、服务分流与智能辅助",
+            "note": "展示逻辑服务与共享接口；WebSocket 负责会话消息，模型、检索与数据存储的具体产品未展开。",
             "focus": "session",
             "layers": [
               {
                 "id": "access",
-                "label": "交互接入",
+                "label": "在线交互",
                 "caption": "REACT / TYPESCRIPT"
               },
               {
                 "id": "service",
-                "label": "服务组件",
+                "label": "会话与接待",
                 "caption": "JAVA / SPRING"
               },
               {
                 "id": "shared",
-                "label": "共享能力",
-                "caption": "API / DATA"
+                "label": "智能与共享接口",
+                "caption": "MODEL / API"
+              },
+              {
+                "id": "context",
+                "label": "上下文与配置",
+                "caption": "DATA / POLICY"
               }
             ],
             "nodes": [
               {
-                "id": "ui",
-                "label": "在线接待界面",
+                "id": "client",
+                "label": "客户在线入口",
                 "layer": "access",
                 "type": "ui",
                 "items": [
                   "TypeScript / React",
-                  "客户咨询 / 坐席回答"
+                  "咨询输入 / 智能与人工服务"
+                ]
+              },
+              {
+                "id": "ui",
+                "label": "坐席接待工作台",
+                "layer": "access",
+                "type": "ui",
+                "items": [
+                  "TypeScript / React",
+                  "客户信息 / 快捷回复"
+                ]
+              },
+              {
+                "id": "router",
+                "label": "服务分流",
+                "layer": "service",
+                "type": "service",
+                "items": [
+                  "Java / Spring",
+                  "接待路由 / 转人工策略"
                 ]
               },
               {
@@ -837,17 +1004,28 @@
                 "type": "service",
                 "items": [
                   "Java / Spring",
-                  "会话消息与状态处理",
-                  "话术查询 / 服务下单"
+                  "消息与会话状态",
+                  "服务接续 / 业务受理"
                 ]
               },
               {
-                "id": "lookup",
-                "label": "智能话术查询",
+                "id": "assistant",
+                "label": "智能应答与辅助",
                 "layer": "service",
                 "type": "service",
                 "items": [
-                  "根据问题匹配回答话术"
+                  "问题处理 / 话术建议",
+                  "问答与坐席辅助调用"
+                ]
+              },
+              {
+                "id": "model",
+                "label": "智能模型能力",
+                "layer": "shared",
+                "type": "model",
+                "items": [
+                  "在线问答 / 坐席辅助",
+                  "模型调用接口"
                 ]
               },
               {
@@ -856,8 +1034,8 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
-                  "Java / Spring 业务接口",
-                  "服务下单"
+                  "Java / Spring",
+                  "服务下单 / 处理跟踪"
                 ]
               },
               {
@@ -866,54 +1044,102 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
-                  "Java / Spring 业务接口",
-                  "客服话术查询"
+                  "Java / Spring",
+                  "话术查询 / 知识维护"
                 ]
               },
               {
-                "id": "store",
-                "label": "话术知识库",
-                "layer": "shared",
+                "id": "history",
+                "label": "会话上下文",
+                "layer": "context",
                 "type": "data",
                 "items": [
-                  "问题与回答内容"
+                  "客户信息 / 历史记录"
+                ]
+              },
+              {
+                "id": "settings",
+                "label": "策略与权限配置",
+                "layer": "context",
+                "type": "data",
+                "items": [
+                  "服务分流 / 角色权限"
                 ]
               }
             ],
             "edges": [
               {
+                "from": "client",
+                "to": "router",
+                "label": "服务接入 / 转人工请求",
+                "kind": "call"
+              },
+              {
+                "from": "router",
                 "to": "session",
-                "label": "WebSocket · 咨询消息 / 回答内容",
+                "label": "接待路由 / 服务接续",
+                "kind": "call"
+              },
+              {
+                "from": "client",
+                "to": "session",
+                "label": "WebSocket · 咨询消息 / 回答",
                 "kind": "call",
+                "bidirectional": true
+              },
+              {
                 "from": "ui",
+                "to": "session",
+                "label": "WebSocket · 接待消息 / 状态",
+                "kind": "call",
                 "bidirectional": true
               },
               {
-                "to": "lookup",
-                "label": "问题输入 / 话术建议",
-                "kind": "call",
                 "from": "session",
+                "to": "assistant",
+                "label": "问题与上下文 / 回答参考",
+                "kind": "call",
                 "bidirectional": true
               },
               {
-                "to": "ticket",
-                "label": "创建服务工单",
+                "from": "assistant",
+                "to": "model",
+                "label": "模型调用 / 应答结果",
                 "kind": "call",
-                "from": "session"
+                "bidirectional": true
               },
               {
+                "from": "assistant",
                 "to": "knowledge",
                 "label": "话术查询 / 匹配结果",
                 "kind": "call",
-                "from": "lookup",
                 "bidirectional": true
               },
               {
-                "to": "store",
-                "label": "话术数据读取",
+                "from": "session",
+                "to": "ticket",
+                "label": "创建与查询服务工单",
                 "kind": "call",
-                "from": "knowledge",
                 "bidirectional": true
+              },
+              {
+                "from": "session",
+                "to": "history",
+                "label": "上下文与历史记录",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "settings",
+                "to": "router",
+                "label": "分流与转人工策略",
+                "kind": "config"
+              },
+              {
+                "from": "settings",
+                "to": "session",
+                "label": "接待访问权限",
+                "kind": "config"
               }
             ]
           }
@@ -922,59 +1148,63 @@
           "id": "customer-service-voice",
           "title": "语音客服与呼叫中心",
           "role": "项目主要负责人",
-          "summary": "承接客服来电与外呼，将人工坐席服务与语音交互能力结合。",
+          "summary": "围绕来电接待、人工外呼和智能外呼，连接呼叫控制、语音交互与任务管理，为电话服务提供统一工作台。",
           "tags": [
-            "呼叫处理",
+            "FreeSWITCH",
             "来电与外呼",
-            "语音交互",
-            "客服协同"
+            "智能语音",
+            "任务管理"
           ],
           "sections": [
             {
-              "label": "呼叫服务",
-              "text": "提供坐席来电接待、坐席外呼和智能外呼，覆盖电话客服的主要服务方式。"
+              "label": "电话接待",
+              "text": "通过呼叫中心承接来电接待与坐席外呼，结合 IVR 导航、智能语音和人工服务组织电话接待与转接。"
+            },
+            {
+              "label": "外呼管理",
+              "text": "支持批量任务接入、拨打策略配置和执行进度查看，将坐席外呼与智能外呼纳入统一任务管理。"
             },
             {
               "label": "语音交互",
-              "text": "结合语音应答、意图识别、语音识别与语音合成，为电话服务提供交互支持。"
+              "text": "以语音识别、意图识别、多轮对话和语音合成组织智能语音交互；各组件分别处理音频、文本、对话上下文与播报内容。"
             },
             {
-              "label": "呼叫能力组织",
-              "text": "以呼叫系统承接电话连接，将坐席服务与语音交互能力放在同一服务平台中。"
+              "label": "通话分析",
+              "text": "结合通话转写与智能质检辅助发现服务风险线索，提供通话与任务分析视图，供服务管理使用。"
             },
             {
-              "label": "服务衔接",
-              "text": "与在线客服及面向客户的服务入口共用工单和话术知识，支持电话服务中的业务受理与回答。"
+              "label": "服务协同",
+              "text": "坐席通过共享工单完成服务受理，并查询共用知识中的话术；在线、语音和面向客户的入口沿用同一业务支持体系。"
             },
             {
               "label": "技术实现",
-              "text": "TypeScript / React 支撑坐席工作台，WebRTC 提供浏览器音频接入；Java / Spring 组织外呼及业务接口。FreeSWITCH 承接呼叫和语音媒体，IVR、ASR、意图识别与 TTS 按各自职责接入，呼叫控制与媒体处理分开表达。"
+              "text": "TypeScript / React 支撑坐席工作台，WebRTC 提供浏览器音频接入；Java / Spring 承接外呼任务与共享业务接口，FreeSWITCH 处理呼叫和媒体。控制调用与音频处理按逻辑职责展开。"
             }
           ],
           "architecture": {
-            "title": "FreeSWITCH 呼叫与语音链路",
-            "note": "React / TypeScript 提供坐席工作台，WebRTC 用于浏览器音频接入，Java / Spring 承接外呼及共享业务服务。连线表示逻辑调用；FreeSWITCH 控制协议和媒体网关拓扑未展开。",
+            "title": "呼叫控制、语音交互与服务协同",
+            "note": "WebRTC 标注浏览器音频接入能力，连线表示逻辑调用；媒体网关、控制协议及物理部署拓扑未展开。",
             "focus": "switch",
             "layers": [
               {
                 "id": "access",
                 "label": "接入与坐席",
-                "caption": "CALL / UI"
+                "caption": "CALL / REACT"
               },
               {
                 "id": "call",
-                "label": "呼叫控制",
-                "caption": "FREESWITCH"
+                "label": "呼叫与任务控制",
+                "caption": "FREESWITCH / JAVA"
               },
               {
                 "id": "voice",
-                "label": "语音处理",
-                "caption": "ASR / INTENT / TTS"
+                "label": "语音交互",
+                "caption": "ASR / DIALOGUE / TTS"
               },
               {
                 "id": "shared",
-                "label": "共享服务",
-                "caption": "TICKET / KNOWLEDGE"
+                "label": "业务与分析",
+                "caption": "API / DATA"
               }
             ],
             "nodes": [
@@ -993,17 +1223,8 @@
                 "layer": "access",
                 "type": "ui",
                 "items": [
-                  "TypeScript / React 工作台",
+                  "TypeScript / React",
                   "WebRTC 浏览器音频接入"
-                ]
-              },
-              {
-                "id": "ivr",
-                "label": "IVR 交互控制",
-                "layer": "call",
-                "type": "service",
-                "items": [
-                  "语音导航 / 服务转接"
                 ]
               },
               {
@@ -1017,13 +1238,23 @@
                 ]
               },
               {
-                "id": "outbound",
-                "label": "外呼任务控制",
+                "id": "ivr",
+                "label": "IVR 交互控制",
                 "layer": "call",
                 "type": "service",
                 "items": [
-                  "Java / Spring 业务控制",
-                  "坐席外呼 / 智能外呼"
+                  "导航 / 服务转接"
+                ]
+              },
+              {
+                "id": "outbound",
+                "label": "外呼任务管理",
+                "layer": "call",
+                "type": "service",
+                "items": [
+                  "Java / Spring",
+                  "任务接入 / 拨打策略",
+                  "执行进度与状态"
                 ]
               },
               {
@@ -1045,6 +1276,16 @@
                 ]
               },
               {
+                "id": "dialogue",
+                "label": "智能对话控制",
+                "layer": "voice",
+                "type": "service",
+                "items": [
+                  "多轮对话上下文",
+                  "应答内容组织"
+                ]
+              },
+              {
                 "id": "tts",
                 "label": "TTS 语音合成",
                 "layer": "voice",
@@ -1059,7 +1300,7 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
-                  "Java / Spring 业务接口",
+                  "Java / Spring",
                   "坐席服务下单"
                 ]
               },
@@ -1069,82 +1310,146 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
-                  "Java / Spring 业务接口",
+                  "Java / Spring",
                   "话术与回答查询"
+                ]
+              },
+              {
+                "id": "records",
+                "label": "通话与任务记录",
+                "layer": "shared",
+                "type": "data",
+                "items": [
+                  "通话转写 / 呼叫状态",
+                  "外呼任务进度"
+                ]
+              },
+              {
+                "id": "analysis",
+                "label": "质检与服务分析",
+                "layer": "shared",
+                "type": "service",
+                "items": [
+                  "风险线索 / 通话分析",
+                  "任务分析视图"
                 ]
               }
             ],
             "edges": [
               {
+                "from": "phone",
                 "to": "switch",
                 "label": "呼叫信令与语音媒体",
                 "kind": "call",
-                "from": "phone",
                 "bidirectional": true
               },
               {
+                "from": "seat",
                 "to": "switch",
                 "label": "坐席呼叫控制",
                 "kind": "call",
-                "from": "seat",
                 "bidirectional": true
               },
               {
-                "to": "ivr",
-                "label": "呼叫状态 / 交互控制",
-                "kind": "call",
                 "from": "switch",
+                "to": "ivr",
+                "label": "呼叫状态 / 导航控制",
+                "kind": "call",
                 "bidirectional": true
               },
               {
+                "from": "outbound",
                 "to": "switch",
                 "label": "外呼执行 / 呼叫状态",
                 "kind": "call",
-                "from": "outbound",
                 "bidirectional": true
               },
               {
-                "to": "asr",
-                "label": "待识别音频",
-                "kind": "flow",
-                "from": "ivr"
+                "from": "ivr",
+                "to": "dialogue",
+                "label": "智能服务接续",
+                "kind": "call",
+                "bidirectional": true
               },
               {
+                "from": "outbound",
+                "to": "dialogue",
+                "label": "智能外呼交互",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "switch",
+                "to": "asr",
+                "label": "待识别音频",
+                "kind": "flow"
+              },
+              {
+                "from": "asr",
                 "to": "intent",
                 "label": "识别文本",
-                "kind": "flow",
-                "from": "asr"
+                "kind": "flow"
               },
               {
                 "from": "intent",
-                "to": "ivr",
+                "to": "dialogue",
                 "label": "意图识别结果",
                 "kind": "flow"
               },
               {
-                "from": "ivr",
+                "from": "dialogue",
                 "to": "tts",
                 "label": "待播报文本",
                 "kind": "flow"
               },
               {
-                "to": "switch",
-                "label": "合成语音返回",
-                "kind": "flow",
-                "from": "tts"
+                "from": "ivr",
+                "to": "tts",
+                "label": "导航播报文本",
+                "kind": "call"
               },
               {
+                "from": "tts",
+                "to": "switch",
+                "label": "合成语音播放",
+                "kind": "call"
+              },
+              {
+                "from": "seat",
                 "to": "ticket",
                 "label": "创建服务工单",
-                "kind": "call",
-                "from": "seat"
+                "kind": "call"
               },
               {
+                "from": "seat",
                 "to": "knowledge",
                 "label": "坐席话术查询 / 回答参考",
                 "kind": "call",
-                "from": "seat",
                 "bidirectional": true
+              },
+              {
+                "from": "asr",
+                "to": "records",
+                "label": "通话转写",
+                "kind": "flow"
+              },
+              {
+                "from": "switch",
+                "to": "records",
+                "label": "呼叫状态",
+                "kind": "event"
+              },
+              {
+                "from": "outbound",
+                "to": "records",
+                "label": "任务进度",
+                "kind": "event"
+              },
+              {
+                "from": "records",
+                "to": "analysis",
+                "label": "通话与任务分析输入",
+                "kind": "flow"
               }
             ]
           }
@@ -1153,7 +1458,7 @@
           "id": "customer-service-ticket-knowledge",
           "title": "客服工单与知识服务",
           "role": "项目主要负责人",
-          "summary": "以工单承接坐席受理后的服务下单，以话术知识支持客户问题回答。",
+          "summary": "以工单承接服务受理与处理跟踪，以共用话术知识支持各客服渠道的客户问题回答。",
           "tags": [
             "服务工单",
             "客服话术",
@@ -1161,8 +1466,8 @@
           ],
           "sections": [
             {
-              "label": "服务下单",
-              "text": "坐席受理服务后，通过工单系统创建相应工单。"
+              "label": "服务受理",
+              "text": "坐席受理服务后创建工单，支持协同流转和处理进度跟踪。"
             },
             {
               "label": "话术参考",
@@ -1211,12 +1516,13 @@
               },
               {
                 "id": "ticket",
-                "label": "工单创建接口",
+                "label": "工单业务接口",
                 "layer": "service",
                 "type": "api",
                 "items": [
                   "Java / Spring",
-                  "服务受理信息 / 工单创建"
+                  "服务下单 / 协同流转",
+                  "处理进度查询"
                 ]
               },
               {
@@ -1235,7 +1541,7 @@
                 "layer": "data",
                 "type": "data",
                 "items": [
-                  "服务下单数据"
+                  "服务受理 / 处理记录"
                 ]
               },
               {
@@ -1251,9 +1557,10 @@
             "edges": [
               {
                 "to": "ticket",
-                "label": "服务下单请求",
+                "label": "服务下单 / 处理跟踪",
                 "kind": "call",
-                "from": "channels"
+                "from": "channels",
+                "bidirectional": true
               },
               {
                 "to": "query",
@@ -1454,130 +1761,244 @@
           "id": "authentication-center",
           "title": "业务认证平台",
           "role": "项目主要负责人",
-          "summary": "围绕企业、借贷与商户等业务提供认证支持，并连接外部业务系统。",
+          "summary": "面向企业、借贷与商户业务，将资料识别、信息核验和外部能力接入组织为可组合的认证服务。",
           "tags": [
             "业务认证",
-            "企业认证",
-            "借贷认证",
-            "商户认证"
+            "资料识别",
+            "能力路由",
+            "标准接口"
           ],
           "sections": [
             {
-              "label": "业务场景",
-              "text": "面向不同业务中的认证需求，提供企业、借贷与商户认证能力。"
+              "label": "业务认证",
+              "text": "围绕账户、企业和商户等场景提供资料核验能力，为企业、借贷与商户业务的认证环节提供支持。"
             },
             {
-              "label": "能力组成",
-              "text": "将多类认证能力集中在平台中，供相关业务使用。"
+              "label": "资料识别",
+              "text": "结合 OCR、图像检查、人脸识别与活体检测处理认证材料，并提供证件、银行卡、手机号及企业商户信息的查询或核验。"
             },
             {
-              "label": "系统衔接",
-              "text": "连接外部业务系统，支撑认证相关业务。"
+              "label": "能力组织",
+              "text": "通过统一接口封装不同认证能力，支持同步与异步调用；以产品配置和通道路由组织能力调用，并监测调用状态与异常。"
+            },
+            {
+              "label": "场景组合",
+              "text": "围绕商户准入、信息补录与表单返填等需求设计组合方案，将资料识别与信息核验衔接到业务页面和接口中。"
             },
             {
               "label": "技术实现",
-              "text": "Java / Spring 承接认证请求与业务处理，通过独立适配组件连接外部业务能力，将接入接口、认证服务和外部系统边界分开。"
+              "text": "TypeScript / React 支撑业务接入页面，Java / Spring 承接标准接口、能力配置与调用组织。外部信息交互通过适配接口封装，认证能力与业务场景分别表达。"
             }
           ],
           "architecture": {
-            "title": "认证服务与外部接口适配",
-            "note": "Java / Spring 提供认证接口、业务处理及外部系统适配；外部协议、存储产品和部署拓扑未展开。",
-            "focus": "auth",
+            "title": "认证接口、能力路由与资料核验",
+            "note": "展示平台能力的逻辑关系；组合场景为方案表达，外部能力来源与物理部署保持抽象。",
+            "focus": "router",
             "layers": [
               {
                 "id": "access",
                 "label": "业务接入",
-                "caption": "BUSINESS / API"
+                "caption": "REACT / API"
               },
               {
-                "id": "service",
-                "label": "认证处理",
+                "id": "platform",
+                "label": "能力组织",
                 "caption": "JAVA / SPRING"
               },
               {
-                "id": "external",
-                "label": "外部能力",
-                "caption": "EXTERNAL SYSTEM"
+                "id": "capability",
+                "label": "认证组件",
+                "caption": "VERIFICATION / OCR"
+              },
+              {
+                "id": "integration",
+                "label": "外部适配",
+                "caption": "INTEGRATION"
               }
             ],
             "nodes": [
+              {
+                "id": "client",
+                "label": "业务接入页面",
+                "layer": "access",
+                "type": "ui",
+                "items": [
+                  "TypeScript / React",
+                  "认证资料提交 / 结果展示"
+                ]
+              },
               {
                 "id": "business",
                 "label": "业务调用方",
                 "layer": "access",
                 "type": "external",
                 "items": [
-                  "提交业务认证资料"
+                  "企业 / 借贷 / 商户场景"
                 ]
               },
               {
                 "id": "api",
-                "label": "认证接入接口",
+                "label": "标准认证接口",
                 "layer": "access",
                 "type": "api",
                 "items": [
                   "Java / Spring",
-                  "认证请求与结果返回"
+                  "同步 / 异步调用"
                 ]
               },
               {
-                "id": "auth",
-                "label": "业务认证服务",
-                "layer": "service",
+                "id": "config",
+                "label": "认证产品配置",
+                "layer": "platform",
                 "type": "service",
                 "items": [
                   "Java / Spring",
-                  "企业 / 借贷 / 商户认证",
-                  "认证处理与结果组织"
+                  "认证项目 / 能力组合"
+                ]
+              },
+              {
+                "id": "router",
+                "label": "能力路由服务",
+                "layer": "platform",
+                "type": "service",
+                "items": [
+                  "Java / Spring",
+                  "通道选择 / 调用组织"
+                ]
+              },
+              {
+                "id": "monitor",
+                "label": "调用监测",
+                "layer": "platform",
+                "type": "service",
+                "items": [
+                  "调用状态 / 异常告警"
+                ]
+              },
+              {
+                "id": "personal",
+                "label": "个人资料核验",
+                "layer": "capability",
+                "type": "service",
+                "items": [
+                  "证件 / 银行卡 / 手机号",
+                  "信息核验结果"
+                ]
+              },
+              {
+                "id": "merchant",
+                "label": "企业商户核验",
+                "layer": "capability",
+                "type": "service",
+                "items": [
+                  "企业信息查询 / 资质核验",
+                  "商户资料核验"
+                ]
+              },
+              {
+                "id": "media",
+                "label": "媒介识别能力",
+                "layer": "capability",
+                "type": "tool",
+                "items": [
+                  "OCR / 图像检查",
+                  "人脸识别 / 活体检测"
                 ]
               },
               {
                 "id": "adapter",
-                "label": "外部系统适配",
-                "layer": "service",
+                "label": "外部能力适配",
+                "layer": "integration",
                 "type": "tool",
                 "items": [
-                  "Java / Spring 业务适配",
-                  "外部业务系统对接"
+                  "Java / Spring",
+                  "外部接口封装"
                 ]
               },
               {
                 "id": "external",
-                "label": "外部业务系统",
-                "layer": "external",
+                "label": "外部数据与服务",
+                "layer": "integration",
                 "type": "external",
                 "items": [
-                  "相关业务信息交互"
+                  "认证相关信息与能力"
                 ]
               }
             ],
             "edges": [
               {
+                "from": "client",
                 "to": "api",
-                "label": "认证资料 / 认证结果",
+                "label": "资料提交 / 认证结果",
                 "kind": "call",
+                "bidirectional": true
+              },
+              {
                 "from": "business",
+                "to": "api",
+                "label": "认证请求 / 返回",
+                "kind": "call",
                 "bidirectional": true
               },
               {
-                "to": "auth",
-                "label": "认证处理调用 / 返回",
-                "kind": "call",
                 "from": "api",
+                "to": "router",
+                "label": "能力调用 / 结果组织",
+                "kind": "call",
                 "bidirectional": true
               },
               {
+                "from": "config",
+                "to": "router",
+                "label": "能力与通道配置",
+                "kind": "config"
+              },
+              {
+                "from": "router",
+                "to": "personal",
+                "label": "个人资料核验",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "router",
+                "to": "merchant",
+                "label": "企业商户核验",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "router",
+                "to": "media",
+                "label": "资料识别与检查",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "router",
+                "to": "monitor",
+                "label": "调用状态与异常",
+                "kind": "event"
+              },
+              {
+                "from": "personal",
                 "to": "adapter",
-                "label": "业务信息交互 / 返回",
+                "label": "外部信息核验",
                 "kind": "call",
-                "from": "auth",
                 "bidirectional": true
               },
               {
-                "to": "external",
-                "label": "外部系统调用 / 业务信息",
+                "from": "merchant",
+                "to": "adapter",
+                "label": "外部信息查询与核验",
                 "kind": "call",
+                "bidirectional": true
+              },
+              {
                 "from": "adapter",
+                "to": "external",
+                "label": "外部接口调用",
+                "kind": "call",
                 "bidirectional": true
               }
             ]

@@ -18,6 +18,31 @@ const wrapText = (text,width,size) => {
 };
 const textLines = (lines,x,y,size,color,step = size * 1.45,anchor = 'start') => `<text x="${x}" y="${y}" fill="${color}" font-size="${size}" text-anchor="${anchor}">${lines.map((line,index) => `<tspan x="${x}" dy="${index ? step : 0}">${escapeXML(line)}</tspan>`).join('')}</text>`;
 
+// Routes contain only M/H/V commands. Use their real distance so short API
+// links and long cross-layer routes both read as a steady transfer.
+const routeLength = path => {
+  const tokens = path.match(/[MHV]|-?(?:\d*\.)?\d+/g);
+  let x = 0, y = 0, length = 0;
+  for (let index = 0; index < tokens.length;) {
+    const command = tokens[index++];
+    if (command === 'M') {x = Number(tokens[index++]); y = Number(tokens[index++]);}
+    else if (command === 'H') {const next = Number(tokens[index++]); length += Math.abs(next - x); x = next;}
+    else if (command === 'V') {const next = Number(tokens[index++]); length += Math.abs(next - y); y = next;}
+  }
+  return length;
+};
+const renderPackets = (path,edge,index) => {
+  const flow = edge.kind === 'flow';
+  const duration = (Math.max(1.9,Math.min(6.4,routeLength(path) / 125)) + .65).toFixed(2);
+  const color = flow ? '#d3f1ff' : '#efc896';
+  const shape = flow ? `<circle r="3.3" fill="${color}"/>` : `<path d="M0 -4 L4 0 L0 4 L-4 0 Z" fill="${color}"/>`;
+  return Array.from({length:edge.bidirectional ? 2 : 1},(_,direction) => {
+    const delay = ((index * .43 + direction * 1.1) % Number(duration)).toFixed(2);
+    const timing = `dur="${duration}s" begin="-${delay}s" repeatCount="indefinite"`;
+    return `<g class="architecture-packet packet-${flow ? 'flow' : 'support'}" data-direction="${direction ? 'reverse' : 'forward'}" aria-hidden="true" opacity="0"><circle r="9" fill="${color}" opacity=".12"/><circle r="5.5" fill="${color}" opacity=".18"/>${shape}<animateMotion path="${path}" keyPoints="${direction ? '1;0;0' : '0;1;1'}" keyTimes="0;.82;1" calcMode="linear" ${timing}/><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.035;.76;.82;1" calcMode="linear" ${timing}/></g>`;
+  }).join('');
+};
+
 export function describeArchitecture(architecture) {
   const names = Object.fromEntries(architecture.nodes.map(node => [node.id,node.label]));
   const layers = architecture.layers.map(layer => `${layer.label}：${architecture.nodes.filter(node => node.layer === layer.id).map(node => [node.label,node.state,...(node.items || [])].filter(Boolean).join('，')).join('；')}`);
@@ -84,7 +109,7 @@ export function renderArchitecture(project) {
     }
     const color = edge.kind === 'flow' ? '#afcee3' : '#6f91aa';
     const number = String(index + 1).padStart(2,'0');
-    return `<g data-edge="${number}"><path d="${path}" fill="none" stroke="${color}" stroke-width="1.4" ${edge.kind === 'flow' ? '' : 'stroke-dasharray="5 4"'} ${edge.bidirectional ? `marker-start="url(#${markerId})"` : ''} marker-end="url(#${markerId})"/><circle cx="${labelX}" cy="${labelY}" r="12" fill="#0a1015" stroke="${color}"/>${textLines([number],labelX,labelY + 3.5,10,'#c1d9ea',14,'middle')}</g>`;
+    return `<g data-edge="${number}" data-kind="${escapeXML(edge.kind)}"><path class="architecture-route" d="${path}" fill="none" stroke="${color}" stroke-width="1.4" ${edge.kind === 'flow' ? '' : 'stroke-dasharray="5 4"'} ${edge.bidirectional ? `marker-start="url(#${markerId})"` : ''} marker-end="url(#${markerId})"/>${renderPackets(path,edge,index)}<circle cx="${labelX}" cy="${labelY}" r="12" fill="#0a1015" stroke="${color}"/>${textLines([number],labelX,labelY + 3.5,10,'#c1d9ea',14,'middle')}</g>`;
   }).join('');
   const nodeMarkup = nodes.map(node => {
     const {x,y,width:boxWidth} = positions[node.id];
@@ -97,6 +122,7 @@ export function renderArchitecture(project) {
     return `<g data-node="${escapeXML(node.id)}"><rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="5" fill="${core ? '#152b3a' : '#101e29'}" stroke="${core ? '#a6d0eb' : '#405c70'}" ${node.state === '规划' ? 'stroke-dasharray="5 4"' : ''}/>${dataGlyph}${textLines([types[node.type] || 'COMPONENT'],badgeX,y + 22,10,'#85a9c2')}${state}${textLines(titleLines,x + 14,y + 53,17,'#edf4f8',23)}${textLines(detailLines,x + 14,y + 64 + titleLines.length * 23,12,'#a4bacb',18)}</g>`;
   }).join('');
   let legendY = graphBottom + 74;
+  const motionNote = textLines(['流动示意 · 非实时数据 / 圆点：数据传递 · 菱形：接口调用与配置'],24,graphBottom + 38,11,'#8da9bd');
   const legendHeading = textLines(['技术连接 / 调用与数据流'],24,legendY,16,'#d0e2ef');
   legendY += 36;
   let legendMarkup = '';
@@ -115,7 +141,7 @@ export function renderArchitecture(project) {
     legendY += rowHeight;
   }
   const height = legendY + 12;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title-${project.id} desc-${project.id}" style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a1015"><title id="title-${project.id}">${escapeXML(project.title)} · ${escapeXML(project.architecture.title || '技术架构')}</title><desc id="desc-${project.id}">${escapeXML([project.architecture.note,describeArchitecture(project.architecture)].filter(Boolean).join('；'))}</desc><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#85a9c2"/></marker></defs>${bandMarkup}${lineMarkup}${nodeMarkup}${legendHeading}${legendMarkup}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title-${project.id}" aria-describedby="desc-${project.id}" style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a1015"><title id="title-${project.id}">${escapeXML(project.title)} · ${escapeXML(project.architecture.title || '技术架构')}</title><desc id="desc-${project.id}">${escapeXML(['光点仅示意调用与数据流向，非实时数据。',project.architecture.note,describeArchitecture(project.architecture)].filter(Boolean).join('；'))}</desc><style>.architecture-packet{pointer-events:none}svg[data-motion="paused"] .architecture-packet{visibility:hidden}@media(prefers-reduced-motion:reduce){.architecture-packet{display:none}}</style><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#85a9c2"/></marker></defs>${bandMarkup}${lineMarkup}${nodeMarkup}${motionNote}${legendHeading}${legendMarkup}</svg>`;
 }
 
 export function relationLabel(edge) {return edge.label || labels[edge.kind];}
