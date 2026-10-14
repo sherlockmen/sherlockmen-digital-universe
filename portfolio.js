@@ -1,9 +1,9 @@
-import {renderArchitecture,relationLabel} from './portfolio-diagrams.mjs?v=materials-4';
+import {renderArchitecture,relationLabel} from './portfolio-diagrams.mjs?v=public-5';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=materials-4',import.meta.url)).then(response => {
-    if (!response.ok) throw new Error('无法读取作品内容');
+  const data = await fetch(new URL('./portfolio-data.json?v=public-5',import.meta.url)).then(response => {
+    if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
   const $ = selector => document.querySelector(selector);
@@ -46,7 +46,7 @@ import {renderArchitecture,relationLabel} from './portfolio-diagrams.mjs?v=mater
       details.at(-1)?.append(anchor);
     });
     $('#portfolio-details').replaceChildren(...details);
-    $('#portfolio-diagram-title').textContent = project.architecture.title || '业务与能力架构';
+    $('#portfolio-diagram-title').textContent = project.architecture.title || '功能关系示意';
     const diagramNote = $('#portfolio-diagram-note');
     diagramNote.textContent = project.architecture.note || '';
     diagramNote.hidden = !project.architecture.note;
@@ -66,7 +66,7 @@ import {renderArchitecture,relationLabel} from './portfolio-diagrams.mjs?v=mater
       return item;
     }));
     $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg`,import.meta.url).href;
-    $('#portfolio-diagram-download').download = `${project.title}架构图.svg`;
+    $('#portfolio-diagram-download').download = `${project.title}功能关系图.svg`;
     dialog.scrollTop = 0;
     if (dialog.open) $('#portfolio-title').focus({preventScroll:true});
   }
@@ -111,6 +111,6 @@ import {renderArchitecture,relationLabel} from './portfolio-diagrams.mjs?v=mater
   });
 })().catch(error => {
   const note = document.querySelector('#portfolio-load-status');
-  note.hidden = false; note.textContent = '作品内容暂时无法加载，请刷新页面。';
+  note.hidden = false; note.textContent = '项目资料加载失败，请刷新后重试。';
   console.error(error);
 });

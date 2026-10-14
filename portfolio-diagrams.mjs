@@ -1,5 +1,5 @@
 const escapeXML = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
-const labels = {flow:'业务流向',contains:'能力组成',foundation:'基础支撑',integration:'系统接入',feedback:'反馈补查'};
+const labels = {flow:'处理方向',contains:'功能关联',foundation:'参考支撑',integration:'能力连接',feedback:'线索回查'};
 const wrapText = (text,width,size) => {
   const lines = []; let line = '', used = 0;
   for (const token of String(text).match(/[A-Za-z0-9_]+|[\s\S]/g) || []) {
@@ -59,7 +59,15 @@ export function renderArchitecture(project) {
     const x1 = from.x + from.width / 2, y1 = from.y + boxHeight, x2 = to.x + to.width / 2, y2 = to.y;
     const middle = (y1 + y2) / 2;
     const flow = edge.kind === 'flow';
-    return `<path d="M${x1} ${y1} C${x1} ${middle},${x2} ${middle},${x2} ${y2}" fill="none" stroke="${flow ? '#bedbf2' : '#657f91'}" stroke-width="1.5" ${flow ? `marker-end="url(#${markerId})"` : 'stroke-dasharray="4 6"'}/><text x="${(x1 + x2) / 2}" y="${middle - 10}" fill="#a9bac6" font-size="12" text-anchor="middle" stroke="#0a1015" stroke-width="5" paint-order="stroke">${escapeXML(edge.label || labels[edge.kind])}</text>`;
+    const skipsRow = to.y - from.y > rowHeight;
+    const routeX = x1 <= width / 2 ? 12 : width - 12;
+    const entryY = y1 + gapY / 2, exitY = y2 - gapY / 2;
+    const path = skipsRow
+      ? `M${x1} ${y1} V${entryY} H${routeX} V${exitY} H${x2} V${y2}`
+      : `M${x1} ${y1} C${x1} ${middle},${x2} ${middle},${x2} ${y2}`;
+    const labelX = skipsRow ? (routeX + x2) / 2 : (x1 + x2) / 2;
+    const labelY = skipsRow ? exitY - 10 : middle - 10;
+    return `<path d="${path}" fill="none" stroke="${flow ? '#bedbf2' : '#657f91'}" stroke-width="1.5" ${flow ? `marker-end="url(#${markerId})"` : 'stroke-dasharray="4 6"'}/><text x="${labelX}" y="${labelY}" fill="#a9bac6" font-size="12" text-anchor="middle" stroke="#0a1015" stroke-width="5" paint-order="stroke">${escapeXML(edge.label || labels[edge.kind])}</text>`;
   }).join('');
   const nodeMarkup = nodes.map(node => {
     const {x,y,width:boxWidth} = positions[node.id];
@@ -71,7 +79,7 @@ export function renderArchitecture(project) {
     const detailTop = 36 + lines.length * 23;
     return `<g><rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="4" fill="${core ? '#122332' : '#0c161f'}" stroke="${core ? '#bedbf2' : '#3a5060'}"/><text x="${x + boxWidth / 2}" y="${y + top}" fill="#edf4f8" font-size="17" text-anchor="middle">${lines.map((line,index) => `<tspan x="${x + boxWidth / 2}" dy="${index ? 23 : 0}">${escapeXML(line)}</tspan>`).join('')}</text>${detailLines.length ? `<text x="${x + boxWidth / 2}" y="${y + detailTop}" fill="#99aebd" font-size="12" text-anchor="middle">${detailLines.map((line,index) => `<tspan x="${x + boxWidth / 2}" dy="${index ? 18 : 0}">${escapeXML(line)}</tspan>`).join('')}</text>` : ''}</g>`;
   }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title-${project.id} desc-${project.id}" style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a1015"><title id="title-${project.id}">${escapeXML(project.title)} · ${escapeXML(project.architecture.title || '业务与能力架构')}</title><desc id="desc-${project.id}">${escapeXML([project.architecture.note,describeArchitecture(project.architecture)].filter(Boolean).join('；'))}</desc><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#bedbf2"/></marker></defs>${lineMarkup}${nodeMarkup}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title-${project.id} desc-${project.id}" style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a1015"><title id="title-${project.id}">${escapeXML(project.title)} · ${escapeXML(project.architecture.title || '功能关系示意')}</title><desc id="desc-${project.id}">${escapeXML([project.architecture.note,describeArchitecture(project.architecture)].filter(Boolean).join('；'))}</desc><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#bedbf2"/></marker></defs>${lineMarkup}${nodeMarkup}</svg>`;
 }
 
 export function relationLabel(edge) {return edge.label || labels[edge.kind];}
