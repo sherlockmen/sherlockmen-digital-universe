@@ -1,9 +1,9 @@
-import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-16';
-import {createDialogStarfield} from './dialog-background.js?v=technical-16';
+import {renderArchitecture,renderResponsiveArchitecture,renderFocusedArchitecture,layoutFocusedArchitecture,componentType} from './portfolio-diagrams.mjs?v=technical-18';
+import {createDialogStarfield} from './dialog-background.js?v=technical-18';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-16',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-18',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -39,57 +39,154 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-16';
   diagram.after(modelEngineering);
   let pageSuspended = false;
   const activeSVGs = new Map();
-  let motionItems = [];
-  const visibleItems = new Set();
+  const narrowArchitecture = matchMedia('(max-width: 999px)');
+  const architectureSources = new WeakMap();
+  function renderPhoneCanvas(canvas,source,width) {
+    const {project} = source, architecture = project.architecture;
+    const layout = layoutFocusedArchitecture(architecture,width,source.anchorId);
+    const inspected = architecture.nodes.find(node => node.id === source.inspectedId);
+    const toolbar = create('div','architecture-focus-toolbar');
+    toolbar.append(create('span','mono',`FOCUS MAP · ${layout.visibleNodes.length} / ${architecture.nodes.length}`));
+    const home = create('button','architecture-core-link','回到核心');
+    home.type = 'button'; home.dataset.architectureCore = '';
+    home.hidden = source.anchorId === architecture.focus;
+    toolbar.append(home);
+    const stage = create('div','architecture-focus-stage');
+    stage.innerHTML = renderFocusedArchitecture(project,width,source.anchorId);
+    const targets = create('div','architecture-node-targets');
+    layout.visibleNodes.forEach(node => {
+      const box = layout.positions[node.id];
+      const target = create('button','architecture-node-target');
+      target.type = 'button'; target.dataset.architectureInspect = node.id;
+      target.setAttribute('aria-label',`查看 ${node.label} 技术细节`);
+      target.setAttribute('aria-pressed',String(node.id === source.inspectedId));
+      target.style.cssText = `left:${box.x / width * 100}%;top:${box.y / layout.height * 100}%;width:${box.width / width * 100}%;height:${box.height / layout.height * 100}%`;
+      targets.append(target);
+    });
+    stage.append(targets);
+    const inspector = create('section','architecture-inspector');
+    inspector.setAttribute('aria-label','选中组件的技术细节');
+    inspector.setAttribute('aria-live','polite');
+    const caption = create('div','architecture-inspector-heading');
+    caption.append(create('span','mono',componentType(inspected)),create('h4','',inspected.label));
+    const items = create('ul','architecture-inspector-items');
+    items.append(...(inspected.items || []).map(item => create('li','',item)));
+    inspector.append(caption,items);
+    const navigation = create('nav','architecture-component-nav');
+    navigation.setAttribute('aria-label','按技术层浏览全部架构组件');
+    navigation.append(create('p','architecture-nav-caption',`浏览全部 ${architecture.nodes.length} 个组件`));
+    const layers = create('div','architecture-layer-tabs');
+    architecture.layers.forEach((layer,index) => {
+      const button = create('button','architecture-layer-tab');
+      button.type = 'button'; button.dataset.architectureLayer = layer.id;
+      button.setAttribute('aria-pressed',String(source.layerId === layer.id));
+      button.append(create('span','mono',String(index + 1).padStart(2,'0')),create('span','',layer.label));
+      layers.append(button);
+    });
+    const nodes = create('div','architecture-component-options');
+    architecture.nodes.filter(node => node.layer === source.layerId).forEach(node => {
+      const button = create('button','architecture-component-option',node.label);
+      button.type = 'button'; button.dataset.architectureFocus = node.id;
+      button.setAttribute('aria-pressed',String(source.anchorId === node.id));
+      nodes.append(button);
+    });
+    navigation.append(layers,nodes);
+    canvas.replaceChildren(toolbar,stage,inspector,navigation);
+  }
   function syncMotion() {
     starfield.sync(pageSuspended);
     const running = dialog.open && !document.hidden && !pageSuspended && !reduced.matches;
     activeSVGs.forEach(state => {
       const runSVG = running && state.visible;
-      if (state.running === runSVG) return;
+      if (!state.svg || state.running === runSVG) return;
       state.svg.dataset.motion = runSVG ? 'running' : 'paused';
       if (runSVG) state.svg.unpauseAnimations?.();
-      else state.svg.pauseAnimations?.();
+      else state.svg?.pauseAnimations?.();
       state.running = runSVG;
     });
-    motionItems.forEach(item => {item.dataset.motion = running && visibleItems.has(item) ? 'running' : 'paused';});
-
   }
   const motionObserver = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       const visible = entry.isIntersecting && entry.intersectionRatio > 0;
       if (activeSVGs.has(entry.target)) activeSVGs.get(entry.target).visible = visible;
-      else if (motionItems.includes(entry.target)) {
-        if (visible) visibleItems.add(entry.target);
-        else visibleItems.delete(entry.target);
-      }
     });
     syncMotion();
   },{root:dialog,threshold:.01});
-  // The packet traverses the whole track during 82% of its keyframe cycle.
-  const relationResizeObserver = new ResizeObserver(entries => {
-    entries.forEach(({target,contentRect}) => {
-      if (contentRect.height > 0) {
-        target.closest('.architecture-relation').style.setProperty('--motion-duration',`${(contentRect.height / (.82 * 40)).toFixed(3)}s`);
-      }
-    });
+  function renderCanvas(canvas,width = canvas.clientWidth) {
+    const source = architectureSources.get(canvas);
+    if (!source || width <= 0) return;
+    const measuredWidth = Math.floor(width);
+    const phone = narrowArchitecture.matches && measuredWidth < 520;
+    const key = phone ? `focus:${measuredWidth}:${source.anchorId}:${source.inspectedId}:${source.layerId}` : narrowArchitecture.matches ? `responsive:${measuredWidth}` : 'desktop';
+    if (source.key === key) return;
+    const focused = document.activeElement;
+    const focusAttribute = canvas.contains(focused) ? ['data-architecture-inspect','data-architecture-focus','data-architecture-layer','data-architecture-core'].find(attribute => focused.hasAttribute(attribute)) : null;
+    const focusValue = focusAttribute ? focused.getAttribute(focusAttribute) : null;
+    const previous = activeSVGs.get(canvas);
+    previous?.svg?.pauseAnimations?.();
+    canvas.dataset.layout = phone ? 'focus' : narrowArchitecture.matches ? 'responsive' : 'desktop';
+    if (phone) renderPhoneCanvas(canvas,source,measuredWidth);
+    else canvas.innerHTML = narrowArchitecture.matches
+        ? renderResponsiveArchitecture(source.project,measuredWidth)
+        : renderArchitecture(source.project);
+    source.key = key;
+    if (focusAttribute) {
+      if (phone) canvas.querySelector(`[${focusAttribute}="${focusValue}"]`)?.focus({preventScroll:true});
+      else $('#portfolio-title').focus({preventScroll:true});
+    }
+    if (previous) {
+      activeSVGs.set(canvas,{svg:canvas.querySelector('svg'),visible:previous.visible,running:null});
+      syncMotion();
+    }
+  }
+  const canvasResizeObserver = new ResizeObserver(entries => {
+    entries.forEach(({target,contentRect}) => renderCanvas(target,contentRect.width));
+  });
+  function setArchitecture(canvas,project) {
+    const core = project.architecture.nodes.find(node => node.id === project.architecture.focus) || project.architecture.nodes[0];
+    architectureSources.set(canvas,{project,key:null,anchorId:core.id,inspectedId:core.id,layerId:core.layer});
+    // Opening the dialog gives ResizeObserver its first real content width.
+    canvas.innerHTML = '';
+    renderCanvas(canvas);
+  }
+  dialog.addEventListener('click',event => {
+    const button = event.target.closest('[data-architecture-inspect],[data-architecture-focus],[data-architecture-layer],[data-architecture-core]');
+    if (!button) return;
+    const canvas = button.closest('.architecture-canvas'), source = architectureSources.get(canvas);
+    if (!source) return;
+    let selector;
+    if (button.hasAttribute('data-architecture-inspect')) {
+      source.inspectedId = button.dataset.architectureInspect;
+      selector = `[data-architecture-inspect="${source.inspectedId}"]`;
+    } else if (button.hasAttribute('data-architecture-layer')) {
+      source.layerId = button.dataset.architectureLayer;
+      selector = `[data-architecture-layer="${source.layerId}"]`;
+    } else {
+      const id = button.hasAttribute('data-architecture-core') ? source.project.architecture.focus : button.dataset.architectureFocus;
+      const node = source.project.architecture.nodes.find(node => node.id === id);
+      source.anchorId = source.inspectedId = node.id;
+      source.layerId = node.layer;
+      selector = button.hasAttribute('data-architecture-core') ? `[data-architecture-inspect="${node.id}"]` : `[data-architecture-focus="${node.id}"]`;
+    }
+    renderCanvas(canvas);
+    canvas.querySelector(selector)?.focus({preventScroll:true});
   });
   function bindMotion() {
     motionObserver.disconnect();
-    relationResizeObserver.disconnect();
-    visibleItems.clear();
-    activeSVGs.forEach(state => state.svg.pauseAnimations?.());
+    canvasResizeObserver.disconnect();
+    activeSVGs.forEach(state => state.svg?.pauseAnimations?.());
     activeSVGs.clear();
     dialog.querySelectorAll('.architecture-canvas').forEach(canvas => {
       const svg = canvas.querySelector('svg');
-      if (svg) activeSVGs.set(canvas,{svg,visible:false,running:null});
+      activeSVGs.set(canvas,{svg,visible:false,running:null});
+      motionObserver.observe(canvas);
+      canvasResizeObserver.observe(canvas);
     });
-    motionItems = [...dialog.querySelectorAll('.architecture-component,.architecture-relation')];
     syncMotion();
-    activeSVGs.forEach((state,canvas) => motionObserver.observe(canvas));
-    motionItems.forEach(item => motionObserver.observe(item));
-    dialog.querySelectorAll('.relation-motion-track').forEach(track => relationResizeObserver.observe(track));
   }
+  narrowArchitecture.addEventListener('change',() => {
+    activeSVGs.forEach((state,canvas) => renderCanvas(canvas));
+  });
   reduced.addEventListener('change',syncMotion);
   document.addEventListener('visibilitychange',syncMotion);
   window.addEventListener('pagehide',() => {pageSuspended = true; syncMotion();});
@@ -99,40 +196,6 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-16';
     panel.hidden = true;
     document.querySelectorAll('[data-portfolio-folder]').forEach(button => button.setAttribute('aria-expanded','false'));
     if (returnFocus) groupTrigger?.focus({preventScroll:true});
-  }
-  function createArchitectureRelations(project) {
-    const nodes = new Map(project.architecture.nodes.map(node => [node.id,node]));
-    const layerCards = project.architecture.layers.map((layer,index) => {
-      const section = create('section','architecture-layer');
-      section.append(create('h4','',`${String(index + 1).padStart(2,'0')} / ${layer.label}`),create('span','layer-caption',layer.caption));
-      const list = create('ul','architecture-components');
-      list.setAttribute('role','list');
-      list.append(...project.architecture.nodes.filter(node => node.layer === layer.id).map(node => {
-        const card = create('li',`architecture-component${node.id === project.architecture.focus ? ' component-focus' : ''}`);
-        card.style.setProperty('--motion-delay',`-${(project.architecture.nodes.indexOf(node) * .27).toFixed(2)}s`);
-        const state = ['研究','复用'].includes(node.state) ? '' : node.state;
-        card.append(create('span','component-type',[componentType(node),state].filter(Boolean).join(' / ')),create('strong','',node.label),create('span','component-detail',node.items.join(' · ')));
-        return card;
-      }));
-      section.append(list); return section;
-    });
-    const connections = create('section','architecture-connections');
-    connections.append(create('h4','','接口与数据流'));
-    const connectionList = create('ol','architecture-connection-list');
-    connectionList.setAttribute('role','list');
-    connectionList.append(...project.architecture.edges.map((edge,index) => {
-      const item = create('li',`architecture-relation relation-${edge.kind}${edge.bidirectional ? ' relation-bidirectional' : ''}`);
-      item.style.setProperty('--motion-delay',`-${(index * .43).toFixed(2)}s`);
-      const track = create('span','relation-motion-track');
-      track.setAttribute('aria-hidden','true');
-      track.append(create('span','relation-motion-packet packet-forward'));
-      if (edge.bidirectional) track.append(create('span','relation-motion-packet packet-reverse'));
-      item.append(track);
-      item.append(create('span','relation-source',`${String(index + 1).padStart(2,'0')} / ${nodes.get(edge.from).label}`),create('span','relation-connector',`${edge.bidirectional ? '↔' : '↓'} ${relationLabel(edge)}`),create('span','relation-target',nodes.get(edge.to).label));
-      return item;
-    }));
-    connections.append(connectionList);
-    return [...layerCards,connections];
   }
   function showProject(index) {
     selected = (index + projects.length) % projects.length;
@@ -203,9 +266,8 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-16';
     const diagramNote = $('#portfolio-diagram-note');
     diagramNote.textContent = project.architecture.note || '';
     diagramNote.hidden = !project.architecture.note;
-    activeSVGs.forEach(state => state.svg.pauseAnimations?.());
-    architectureCanvas.innerHTML = renderArchitecture(project);
-    $('#portfolio-relations').replaceChildren(...createArchitectureRelations(project));
+    activeSVGs.forEach(state => state.svg?.pauseAnimations?.());
+    setArchitecture(architectureCanvas,project);
     modelEngineering.replaceChildren();
     const infra = project.modelEngineering;
     modelEngineering.hidden = !infra;
@@ -217,11 +279,8 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-16';
       stack.setAttribute('aria-label','Recommended Tech Stack');
       stack.append(...infra.stack.map(name => create('li','',name)));
       const canvas = create('div','architecture-canvas');
-      canvas.innerHTML = renderArchitecture(infra);
-      const relations = create('div','architecture-relations');
-      relations.setAttribute('aria-label',infra.architecture.title);
-      relations.append(...createArchitectureRelations(infra));
-      modelEngineering.append(heading,create('p','',infra.summary),stack,create('p','model-engineering-note',infra.architecture.note),canvas,relations);
+      setArchitecture(canvas,infra);
+      modelEngineering.append(heading,create('p','',infra.summary),stack,create('p','model-engineering-note',infra.architecture.note),canvas);
     }
     dialog.scrollTop = 0;
     bindMotion();
