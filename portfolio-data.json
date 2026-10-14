@@ -38,17 +38,21 @@
             {
               "label": "执行与质量研究",
               "text": "复用已有业务能力，探索以模型和工具调用组织调查过程。结合运行记录与样本评估，研究如何发现审核遗漏及判断差异。"
+            },
+            {
+              "label": "技术实现",
+              "text": "业务系统以 Java / Spring 提供工单、附件和结果接口，TypeScript / React 支撑复核界面。新架构研究将 DeepSeek Harness、模型和领域工具接入已有业务能力，保留人工确认环节。"
             }
           ],
           "architecture": {
             "title": "Agent Runtime 与领域插件",
-            "note": "图示为新架构研究：复用 Java 业务接口，基于 DeepSeek Harness 组织模型与工具；运行观测和离线评测按阶段规划。",
+            "note": "图示为新架构研究：Java / Spring 提供业务接口，TypeScript / React 承载复核界面；DeepSeek Harness 组织模型与工具，观测和评测按阶段规划。",
             "focus": "harness",
             "layers": [
               {
                 "id": "access",
                 "label": "业务接入",
-                "caption": "JAVA / API"
+                "caption": "JAVA / SPRING"
               },
               {
                 "id": "runtime",
@@ -73,6 +77,7 @@
                 "layer": "access",
                 "type": "api",
                 "items": [
+                  "Java / Spring",
                   "工单 / 附件 / 权限",
                   "受控查询与结果接口"
                 ],
@@ -150,8 +155,8 @@
                 "layer": "output",
                 "type": "ui",
                 "items": [
-                  "人工核对审核建议",
-                  "业务系统承载正式结果"
+                  "TypeScript / React",
+                  "审核建议复核 / 正式结果"
                 ],
                 "state": "复用"
               },
@@ -260,6 +265,10 @@
             {
               "label": "与业务流程衔接",
               "text": "通过接口获取送审资料并反馈审核结果，将内容解析、规则核验和报告生成组织为可接入业务流程的审核能力。"
+            },
+            {
+              "label": "技术实现",
+              "text": "Java / Spring 承接送审与结果接口，pi 编排模型调用、材料解析及规则核验，TypeScript / React 展示报告与原始资料，支持人工复核。"
             }
           ],
           "architecture": {
@@ -270,7 +279,7 @@
               {
                 "id": "access",
                 "label": "接口接入",
-                "caption": "REST API"
+                "caption": "JAVA / SPRING API"
               },
               {
                 "id": "runtime",
@@ -295,6 +304,7 @@
                 "layer": "access",
                 "type": "api",
                 "items": [
+                  "Java / Spring",
                   "文字 / 图片 / 文档 / 录音",
                   "资料提交与业务对接"
                 ]
@@ -365,6 +375,7 @@
                 "layer": "output",
                 "type": "api",
                 "items": [
+                  "Java / Spring",
                   "向业务流程反馈结果"
                 ]
               },
@@ -374,6 +385,7 @@
                 "layer": "output",
                 "type": "ui",
                 "items": [
+                  "TypeScript / React",
                   "查看问题与原始材料"
                 ]
               }
@@ -565,6 +577,10 @@
             {
               "label": "解释问题并支持后续判断",
               "text": "在结果中说明疑点、判断依据和相关要求，提供调整表达的建议，为人工复核提供参考。"
+            },
+            {
+              "label": "技术实现",
+              "text": "TypeScript / React 承载报告与片段查看界面。编排、模型和专业审核能力按技术方案描述，片段定位与证据展示保留演示范围，媒体解析引擎不指定产品。"
             }
           ],
           "architecture": {
@@ -685,6 +701,7 @@
                 "layer": "output",
                 "type": "ui",
                 "items": [
+                  "TypeScript / React",
                   "核对片段与报告说明"
                 ]
               }
@@ -775,22 +792,26 @@
             {
               "label": "服务衔接",
               "text": "在线、语音和面向客户的客服入口共用工单与知识库，作为各渠道的业务支持。"
+            },
+            {
+              "label": "技术实现",
+              "text": "TypeScript / React 组织在线接待界面，WebSocket 传递会话消息，Java / Spring 承接会话业务及工单、知识接口。智能话术查询与知识数据分别作为能力组件和数据组件展示。"
             }
           ],
           "architecture": {
             "title": "会话服务与共享接口",
-            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "note": "React / TypeScript 承载接待界面，Java / Spring 提供业务服务，WebSocket 支撑双向会话；话术匹配算法、存储产品及部署拓扑未展开。",
             "focus": "session",
             "layers": [
               {
                 "id": "access",
                 "label": "交互接入",
-                "caption": "WEB UI"
+                "caption": "REACT / TYPESCRIPT"
               },
               {
                 "id": "service",
                 "label": "服务组件",
-                "caption": "SESSION / QUERY"
+                "caption": "JAVA / SPRING"
               },
               {
                 "id": "shared",
@@ -805,6 +826,7 @@
                 "layer": "access",
                 "type": "ui",
                 "items": [
+                  "TypeScript / React",
                   "客户咨询 / 坐席回答"
                 ]
               },
@@ -814,8 +836,9 @@
                 "layer": "service",
                 "type": "service",
                 "items": [
-                  "承接问题与回答",
-                  "连接话术查询和服务下单"
+                  "Java / Spring",
+                  "会话消息与状态处理",
+                  "话术查询 / 服务下单"
                 ]
               },
               {
@@ -833,6 +856,7 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
+                  "Java / Spring 业务接口",
                   "服务下单"
                 ]
               },
@@ -842,6 +866,7 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
+                  "Java / Spring 业务接口",
                   "客服话术查询"
                 ]
               },
@@ -858,7 +883,7 @@
             "edges": [
               {
                 "to": "session",
-                "label": "咨询消息 / 回答内容",
+                "label": "WebSocket · 咨询消息 / 回答内容",
                 "kind": "call",
                 "from": "ui",
                 "bidirectional": true
@@ -920,11 +945,15 @@
             {
               "label": "服务衔接",
               "text": "与在线客服及面向客户的服务入口共用工单和话术知识，支持电话服务中的业务受理与回答。"
+            },
+            {
+              "label": "技术实现",
+              "text": "TypeScript / React 支撑坐席工作台，WebRTC 提供浏览器音频接入；Java / Spring 组织外呼及业务接口。FreeSWITCH 承接呼叫和语音媒体，IVR、ASR、意图识别与 TTS 按各自职责接入，呼叫控制与媒体处理分开表达。"
             }
           ],
           "architecture": {
             "title": "FreeSWITCH 呼叫与语音链路",
-            "note": "明确展示已确认的 FreeSWITCH、IVR、ASR、意图识别与 TTS；通信协议和部署选型待补充。",
+            "note": "React / TypeScript 提供坐席工作台，WebRTC 用于浏览器音频接入，Java / Spring 承接外呼及共享业务服务。连线表示逻辑调用；FreeSWITCH 控制协议和媒体网关拓扑未展开。",
             "focus": "switch",
             "layers": [
               {
@@ -964,7 +993,8 @@
                 "layer": "access",
                 "type": "ui",
                 "items": [
-                  "人工接听 / 坐席外呼"
+                  "TypeScript / React 工作台",
+                  "WebRTC 浏览器音频接入"
                 ]
               },
               {
@@ -992,6 +1022,7 @@
                 "layer": "call",
                 "type": "service",
                 "items": [
+                  "Java / Spring 业务控制",
                   "坐席外呼 / 智能外呼"
                 ]
               },
@@ -1028,6 +1059,7 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
+                  "Java / Spring 业务接口",
                   "坐席服务下单"
                 ]
               },
@@ -1037,6 +1069,7 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
+                  "Java / Spring 业务接口",
                   "话术与回答查询"
                 ]
               }
@@ -1138,11 +1171,15 @@
             {
               "label": "共用能力",
               "text": "工单与知识库服务面向在线、语音及客户入口共用，分别支撑服务下单和问题回答。"
+            },
+            {
+              "label": "技术实现",
+              "text": "Java / Spring 将工单创建与话术查询组织为共用业务接口，供在线、语音和客户入口调用；工单记录与知识内容按数据职责展示。"
             }
           ],
           "architecture": {
             "title": "工单接口与知识存储",
-            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "note": "Java / Spring 提供共用工单和知识接口；调用方按渠道抽象，数据库、检索产品及部署拓扑未展开。",
             "focus": "ticket",
             "layers": [
               {
@@ -1153,7 +1190,7 @@
               {
                 "id": "service",
                 "label": "应用接口",
-                "caption": "TICKET / QUERY API"
+                "caption": "JAVA / SPRING API"
               },
               {
                 "id": "data",
@@ -1178,8 +1215,8 @@
                 "layer": "service",
                 "type": "api",
                 "items": [
-                  "服务受理信息",
-                  "工单创建处理"
+                  "Java / Spring",
+                  "服务受理信息 / 工单创建"
                 ]
               },
               {
@@ -1188,6 +1225,7 @@
                 "layer": "service",
                 "type": "api",
                 "items": [
+                  "Java / Spring",
                   "问题输入 / 话术返回"
                 ]
               },
@@ -1263,17 +1301,21 @@
             {
               "label": "服务衔接",
               "text": "与在线客服、语音客服共用工单和话术知识，为客户入口提供业务支持。"
+            },
+            {
+              "label": "技术实现",
+              "text": "TypeScript / React 组织客户交互，WebSocket 承载会话消息，Java / Spring 接入共享工单与知识服务。语音转写、问题推荐和数字人分别保留独立能力边界。"
             }
           ],
           "architecture": {
             "title": "客户端交互与服务集成",
-            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "note": "React / TypeScript 构建客户入口，WebSocket 承载在线会话，Java / Spring 提供业务集成；数字人引擎、推荐算法和语音转写协议未展开。",
             "focus": "client",
             "layers": [
               {
                 "id": "ui",
                 "label": "客户端呈现",
-                "caption": "UI / AVATAR"
+                "caption": "REACT / TYPESCRIPT"
               },
               {
                 "id": "service",
@@ -1293,6 +1335,7 @@
                 "layer": "ui",
                 "type": "ui",
                 "items": [
+                  "TypeScript / React",
                   "文字 / 语音输入",
                   "在线客服入口"
                 ]
@@ -1330,7 +1373,8 @@
                 "layer": "service",
                 "type": "service",
                 "items": [
-                  "承接在线咨询内容"
+                  "Java / Spring",
+                  "在线咨询业务与消息处理"
                 ]
               },
               {
@@ -1339,6 +1383,7 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
+                  "Java / Spring 业务接口",
                   "服务受理支持"
                 ]
               },
@@ -1348,6 +1393,7 @@
                 "layer": "shared",
                 "type": "api",
                 "items": [
+                  "Java / Spring 业务接口",
                   "问题与话术查询"
                 ]
               }
@@ -1369,7 +1415,7 @@
               },
               {
                 "to": "session",
-                "label": "咨询消息 / 回答内容",
+                "label": "WebSocket · 咨询消息 / 回答内容",
                 "kind": "call",
                 "from": "client",
                 "bidirectional": true
@@ -1427,11 +1473,15 @@
             {
               "label": "系统衔接",
               "text": "连接外部业务系统，支撑认证相关业务。"
+            },
+            {
+              "label": "技术实现",
+              "text": "Java / Spring 承接认证请求与业务处理，通过独立适配组件连接外部业务能力，将接入接口、认证服务和外部系统边界分开。"
             }
           ],
           "architecture": {
             "title": "认证服务与外部接口适配",
-            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "note": "Java / Spring 提供认证接口、业务处理及外部系统适配；外部协议、存储产品和部署拓扑未展开。",
             "focus": "auth",
             "layers": [
               {
@@ -1442,7 +1492,7 @@
               {
                 "id": "service",
                 "label": "认证处理",
-                "caption": "SERVICE / ADAPTER"
+                "caption": "JAVA / SPRING"
               },
               {
                 "id": "external",
@@ -1466,6 +1516,7 @@
                 "layer": "access",
                 "type": "api",
                 "items": [
+                  "Java / Spring",
                   "认证请求与结果返回"
                 ]
               },
@@ -1475,6 +1526,7 @@
                 "layer": "service",
                 "type": "service",
                 "items": [
+                  "Java / Spring",
                   "企业 / 借贷 / 商户认证",
                   "认证处理与结果组织"
                 ]
@@ -1485,6 +1537,7 @@
                 "layer": "service",
                 "type": "tool",
                 "items": [
+                  "Java / Spring 业务适配",
                   "外部业务系统对接"
                 ]
               },
@@ -1548,22 +1601,26 @@
             {
               "label": "使用方式",
               "text": "员工通过平台提交相关投诉，反映遇到的问题。"
+            },
+            {
+              "label": "技术实现",
+              "text": "TypeScript / React 提供投诉填报界面，Java / Spring 接收提交内容并组织业务记录；界面、应用服务和数据分别展示。"
             }
           ],
           "architecture": {
             "title": "投诉入口、提交服务与记录",
-            "note": "按已确认能力抽象组件职责；框架、存储与通信选型待补充。",
+            "note": "React / TypeScript 提供填报界面，Java / Spring 承接投诉提交；业务记录存储及部署拓扑未展开。",
             "focus": "submission",
             "layers": [
               {
                 "id": "ui",
                 "label": "入口交互",
-                "caption": "FORM UI"
+                "caption": "REACT / TYPESCRIPT"
               },
               {
                 "id": "service",
                 "label": "提交处理",
-                "caption": "APPLICATION"
+                "caption": "JAVA / SPRING"
               },
               {
                 "id": "data",
@@ -1578,6 +1635,7 @@
                 "layer": "ui",
                 "type": "ui",
                 "items": [
+                  "TypeScript / React",
                   "欠薪 / 欠款问题填报"
                 ]
               },
@@ -1587,8 +1645,8 @@
                 "layer": "service",
                 "type": "service",
                 "items": [
-                  "接收投诉内容",
-                  "形成提交记录"
+                  "Java / Spring",
+                  "接收投诉 / 形成提交记录"
                 ]
               },
               {
@@ -1649,6 +1707,10 @@
             {
               "label": "演进方向",
               "text": "在数据展示基础上，继续探索问题分析及服务治理支持。"
+            },
+            {
+              "label": "技术实现",
+              "text": "TypeScript / React 呈现指标图表。数据按周期采集入湖，再进行加工、聚合和指标计算；数据平台与计算引擎按功能抽象，保留非实时同步的实际方式。"
             }
           ],
           "architecture": {
@@ -1674,7 +1736,7 @@
               {
                 "id": "output",
                 "label": "指标与可视化",
-                "caption": "DATASET / DISPLAY"
+                "caption": "DATASET / REACT UI"
               }
             ],
             "nodes": [
@@ -1750,6 +1812,7 @@
                 "layer": "output",
                 "type": "ui",
                 "items": [
+                  "TypeScript / React",
                   "服务量与结构图表",
                   "新版下钻：设计方案"
                 ]

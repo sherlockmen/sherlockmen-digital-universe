@@ -1,8 +1,8 @@
-import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-6';
+import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=stack-7';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-6',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=stack-7',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -73,7 +73,7 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
     }));
     connections.append(connectionList);
     $('#portfolio-relations').replaceChildren(...layerCards,connections);
-    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg?v=technical-6`,import.meta.url).href;
+    $('#portfolio-diagram-download').href = new URL(`./architectures/${project.id}.svg?v=stack-7`,import.meta.url).href;
     $('#portfolio-diagram-download').download = `${project.title}技术架构图.svg`;
     dialog.scrollTop = 0;
     if (dialog.open) $('#portfolio-title').focus({preventScroll:true});
