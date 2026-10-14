@@ -25,7 +25,7 @@
             },
             {
               "label": "模型与工具编排",
-              "text": "Agent 架构方案采用 DeepSeek Harness 管理执行循环和任务上下文，分别调用推理模型、业务查询与证据计算工具。模型负责理解和推理，工具返回可用于核验的事实与计算结果。"
+              "text": "DeepSeek Harness 管理执行循环和任务上下文，调度 deepseek-v4-pro 进行材料理解与调查规划，通过 Tool Calling 调用业务查询、附件解析和计算插件。推理、工具执行与结果检查分别承担判断、事实获取与核验职责，避免把未经核查的模型判断直接作为结论。"
             },
             {
               "label": "证据索引与共享状态",
@@ -42,7 +42,7 @@
           ],
           "architecture": {
             "title": "Agent Runtime 与领域插件",
-            "note": "以现有规则工作流和业务接口为接入基础，展示 Harness 的 Agent 架构方案；模型与工具分别承担推理和事实获取，观测评测属于后续建设规划。",
+            "note": "展示基于 DeepSeek Harness 与 deepseek-v4-pro 的定责 Agent 架构：通过任务上下文、证据工具、引用索引与 Skill / Policy 组织调查，以结构化输出和程序化校验衔接人工复核；Langfuse 与离线评测属于后续建设规划。",
             "focus": "harness",
             "layers": [
               {
@@ -85,19 +85,20 @@
                 "layer": "runtime",
                 "type": "runtime",
                 "items": [
-                  "执行循环 / 上下文管理",
-                  "模型调用与插件装载"
+                  "执行循环 / Context Management",
+                  "Tool Calling / 插件注册",
+                  "步骤状态 / 异常处理"
                 ],
                 "state": "研究"
               },
               {
                 "id": "model",
-                "label": "DeepSeek 推理模型",
+                "label": "deepseek-v4-pro",
                 "layer": "runtime",
                 "type": "model",
                 "items": [
                   "材料理解 / 调查规划",
-                  "推理结果返回运行底座"
+                  "结构化工具调用 / 推理返回"
                 ],
                 "state": "研究"
               },
@@ -107,8 +108,8 @@
                 "layer": "plugins",
                 "type": "tool",
                 "items": [
-                  "附件原文 / 业务查询",
-                  "日期与金额计算"
+                  "附件解析 / 受控业务查询",
+                  "日期与金额计算 / 证据返回"
                 ],
                 "state": "研究"
               },
@@ -118,8 +119,9 @@
                 "layer": "plugins",
                 "type": "data",
                 "items": [
-                  "共享事实 / 原文定位",
-                  "引用位置与待查事项"
+                  "案件事实 / 文件与引用索引",
+                  "原文定位 / 待查事项",
+                  "跨步骤共享调查上下文"
                 ],
                 "state": "研究"
               },
@@ -129,19 +131,21 @@
                 "layer": "plugins",
                 "type": "data",
                 "items": [
-                  "专业核查方法 / 规则口径",
-                  "按版本装载领域知识"
+                  "专业核查 Skill / Policy",
+                  "规则版本 / 核查步骤",
+                  "工具使用与输出约束"
                 ],
                 "state": "研究"
               },
               {
                 "id": "guard",
-                "label": "程序化提交检查",
+                "label": "结构化输出与校验",
                 "layer": "output",
                 "type": "service",
                 "items": [
-                  "计算与引用检查",
-                  "审核建议结构化输出"
+                  "输出 Schema / 必填项检查",
+                  "计算核验 / 证据引用校验",
+                  "审核建议 / 异常项返回"
                 ],
                 "state": "研究"
               },
@@ -235,20 +239,32 @@
               "React",
               "Java",
               "Spring",
-              "DeepSeek Harness"
+              "DeepSeek Harness",
+              "deepseek-v4-pro",
+              "Tool Calling",
+              "Context Management",
+              "Skill / Policy",
+              "证据工具插件",
+              "文件与引用索引",
+              "结构化输出",
+              "程序化校验"
             ],
             "highlights": [
               {
-                "label": "接入与编排",
-                "text": "Java 接口提供案件上下文，Harness 架构方案组织模型与工具调用。"
+                "label": "把材料变成核查上下文",
+                "text": "投诉描述、附件和业务记录往往分散，单次问答难以完成责任判断。以 Java / Spring 接口汇集案件资料，由 DeepSeek Harness 管理上下文，围绕 deepseek-v4-pro 的推理过程持续组织已知事实、待查事项与材料引用。"
               },
               {
-                "label": "证据与提交",
-                "text": "查询与计算工具返回证据，经结构化检查进入人工复核界面。"
+                "label": "让判断落到证据上",
+                "text": "责任核查既需要理解叙述，也需要查询业务事实和核对计算结果。将查询、附件读取与计算封装为工具，模型按核查步骤调用；工具结果携带来源与引用位置，使判断建议可以回到原始材料逐项核验。"
               },
               {
-                "label": "观测与验证",
-                "text": "运行记录连接样本评测；观测与回归评估属于后续建设规划。"
+                "label": "处理新线索与判断冲突",
+                "text": "核查过程中可能出现材料缺失、证据矛盾或新的调查线索。通过案件共享状态和文件索引衔接多轮工具调用，将事实、引用和待核查项分别维护，避免后续推理遗漏已发现的信息或混淆不同来源。"
+              },
+              {
+                "label": "让建议进入复核流程",
+                "text": "审核建议需要能被业务人员检查和接续处理。提交前以程序化检查核对计算与证据引用，再形成结构化结果交给 React 复核界面；模型与工具运行记录、标注样本及回归评估作为后续质量建设方向。"
               }
             ]
           }
@@ -257,7 +273,7 @@
           "id": "pre-review-agent",
           "title": "事前多模态审核 Agent",
           "role": "项目主要负责人",
-          "summary": "以 Python 接入送审材料，由独立 pi Runtime 装载并执行审核 Skill，LangChain 提供模型与工具适配，输出关联原始材料的结构化报告。",
+          "summary": "以 Python 接入多种送审材料，由 pi 执行审核 Skill，LangChain 适配 qwen3.8-27b 与解析工具，形成可定位问题原文的审核报告。",
           "tags": [
             "Python",
             "pi / Skill",
@@ -275,7 +291,7 @@
             },
             {
               "label": "LangChain 能力服务",
-              "text": "Python 服务通过 LangChain 封装模型与解析工具，为 pi 提供能力调用接口和结构化返回。OCR、ASR、文档解析提取材料内容，语言与视觉模型支持理解；随任务提交的业务参考资料作为对照上下文。"
+              "text": "Python 服务通过 LangChain 封装 qwen3.8-27b 模型调用与解析工具，为 pi 提供能力调用接口和结构化返回。OCR、ASR、文档解析提取不同材料中的内容，再交由模型结合审核 Skill 检查；随任务提交的业务参考资料作为对照上下文。"
             },
             {
               "label": "报告输出与运行跟踪",
@@ -284,7 +300,7 @@
           ],
           "architecture": {
             "title": "Python 接入、pi Skill 执行与能力服务",
-            "note": "Python 接入服务通过适配接口连接独立的 TypeScript / Node.js pi Runtime；pi 负责 Skill 执行循环，LangChain 服务负责模型与工具适配。监管要求以审核 Skill 装载，业务资料随任务参与对照，Langfuse 记录调用过程。",
+            "note": "Python 接入服务通过适配接口连接独立的 TypeScript / Node.js pi Runtime；pi 负责 Skill 执行循环，LangChain 服务负责qwen3.8-27b 与工具适配。监管要求以审核 Skill 装载，业务资料随任务参与对照，Langfuse 记录调用过程。",
             "focus": "pi",
             "layers": [
               {
@@ -341,11 +357,12 @@
               },
               {
                 "id": "model",
-                "label": "语言与视觉模型",
+                "label": "qwen3.8-27b",
                 "layer": "runtime",
                 "type": "model",
                 "items": [
-                  "语义理解 / 视觉理解"
+                  "材料语义理解 / Skill 检查",
+                  "模型调用 / 结构化返回"
                 ]
               },
               {
@@ -500,6 +517,7 @@
               "React",
               "pi",
               "Skill",
+              "qwen3.8-27b",
               "LangChain",
               "Langfuse",
               "OCR",
@@ -507,16 +525,289 @@
             ],
             "highlights": [
               {
-                "label": "职责边界",
-                "text": "Python API 接入任务，独立 pi Runtime 管理 Skill 执行循环，LangChain 服务提供模型与工具适配。"
+                "label": "把审核要求写成 Skill",
+                "text": "短信、宣传文案与送审材料中的说明可能不完整，审核口径也需要随要求调整。将监管内容整理为包含检查步骤、判断口径和必要要素的 Skill，由 pi 装载执行，使审核方法能够按场景组织和维护。"
               },
               {
-                "label": "规则与材料",
-                "text": "监管要求编写为 Skill；解析内容与提交的业务资料进入检查步骤，结论关联材料引用。"
+                "label": "跨材料核对内容一致性",
+                "text": "同一业务的文字、图片、文档与录音可能表达不同的费用或适用条件。Python 服务组织 OCR、ASR 和文档解析，LangChain 适配模型与工具，使用 qwen3.8-27b 对解析内容与随任务提交的参考资料进行核验。"
               },
               {
-                "label": "报告与观测",
-                "text": "Pydantic 约束报告结构，结果 API 返回报告，Langfuse 关联入口与能力调用。"
+                "label": "划清运行时与能力边界",
+                "text": "审核任务既要执行多步检查，也要接入不同解析和模型能力。FastAPI 接收任务，独立的 TypeScript / Node.js pi Runtime 管理执行循环，Python 能力服务返回结构化结果，避免把材料接入、任务执行和底层能力耦合在一起。"
+              },
+              {
+                "label": "问题定位与过程追踪",
+                "text": "只有审核结论难以支撑材料修改，问题还需要对应具体依据和原文。Pydantic 约束报告结构，将问题说明、引用与修改参考一起返回材料对照界面；Langfuse 关联任务、运行时与模型工具调用，帮助定位检查链路中的差异。"
+              }
+            ]
+          }
+        },
+        {
+          "id": "video-compliance-review",
+          "title": "视频直播审核 Agent",
+          "role": "项目主要负责人",
+          "summary": "以 Python / LangGraph 组织多模态核验状态图，通过条件分支选择解析、推理和专业能力，用 checkpoint 保存图状态，输出关联视频片段的证据与报告。",
+          "tags": [
+            "Python / LangGraph",
+            "条件分支",
+            "checkpoint",
+            "多模态证据"
+          ],
+          "sections": [
+            {
+              "label": "图状态与任务接入",
+              "text": "Python 任务接口接收视频、口播与商品资料，初始化 LangGraph StateGraph。图状态组织素材引用、解析内容、待核查项、核验结果和证据关联；节点返回状态更新，供后续分支与报告汇总使用。"
+            },
+            {
+              "label": "条件分支与专业核验",
+              "text": "根据素材类型和待核查项选择媒体解析、语言视觉理解或专业审核节点。解析、推理与 Skills 通过接口返回结果，规则与专业方法装载到核验能力；分支结果写回图状态，检查完成后进入证据汇总。"
+            },
+            {
+              "label": "checkpoint 与执行跟踪",
+              "text": "Checkpointer 按任务线程保存图状态快照，为中断后的继续执行提供状态基础。Langfuse 关联图节点、模型与工具调用，支持查看执行路径及节点输出，定位核验过程中需要进一步检查的环节。"
+            },
+            {
+              "label": "多模态证据与展示边界",
+              "text": "证据汇总将问题说明关联到视频时段、画面、口播文字、商品资料和核查依据，再生成报告与调整参考。React 界面支持回看原始片段；片段定位与证据展示延续演示范围，媒体解析与底层模型保留接口抽象。"
+            }
+          ],
+          "architecture": {
+            "title": "Python / LangGraph 状态图与多模态证据",
+            "note": "Python / LangGraph 组织有状态核验流程，条件分支连接解析、推理和专业审核节点，checkpoint 保存图状态，Langfuse 关联执行过程。媒体与模型能力按接口抽象，片段证据延续演示范围。",
+            "focus": "graph",
+            "layers": [
+              {
+                "id": "input",
+                "label": "素材与任务接入",
+                "caption": "VIDEO / PYTHON API"
+              },
+              {
+                "id": "runtime",
+                "label": "状态图与持久化",
+                "caption": "LANGGRAPH / CHECKPOINT"
+              },
+              {
+                "id": "tools",
+                "label": "解析与专业核验",
+                "caption": "MULTIMODAL / SKILLS"
+              },
+              {
+                "id": "output",
+                "label": "证据与观测",
+                "caption": "EVIDENCE / LANGFUSE"
+              }
+            ],
+            "nodes": [
+              {
+                "id": "video",
+                "label": "视频与商品资料",
+                "layer": "input",
+                "type": "data",
+                "items": [
+                  "画面 / 口播 / 商品信息"
+                ],
+                "state": "演示"
+              },
+              {
+                "id": "api",
+                "label": "Python 任务接口",
+                "layer": "input",
+                "type": "api",
+                "items": [
+                  "素材引用 / 核验参数"
+                ]
+              },
+              {
+                "id": "graph",
+                "label": "LangGraph StateGraph",
+                "layer": "runtime",
+                "type": "runtime",
+                "items": [
+                  "图状态 / 条件分支",
+                  "节点输出更新 / 结果汇总"
+                ]
+              },
+              {
+                "id": "checkpoint",
+                "label": "Checkpoint 状态存储",
+                "layer": "runtime",
+                "type": "data",
+                "items": [
+                  "Checkpointer / thread_id",
+                  "状态快照 / 继续执行"
+                ]
+              },
+              {
+                "id": "parse",
+                "label": "媒体内容解析",
+                "layer": "tools",
+                "type": "tool",
+                "items": [
+                  "帧与口播 / 资料解析",
+                  "生成待核查内容"
+                ],
+                "state": "方案"
+              },
+              {
+                "id": "model",
+                "label": "多模态推理接口",
+                "layer": "tools",
+                "type": "model",
+                "items": [
+                  "语言 / 视觉理解",
+                  "多来源内容分析"
+                ],
+                "state": "方案"
+              },
+              {
+                "id": "skills",
+                "label": "专业审核 Skills",
+                "layer": "tools",
+                "type": "tool",
+                "items": [
+                  "规则 / 语义 / 一致性核验",
+                  "按核查项选择能力"
+                ],
+                "state": "方案"
+              },
+              {
+                "id": "rules",
+                "label": "审核规则与方法",
+                "layer": "tools",
+                "type": "data",
+                "items": [
+                  "核验依据 / 专业方法"
+                ],
+                "state": "方案"
+              },
+              {
+                "id": "evidence",
+                "label": "证据汇总与报告",
+                "layer": "output",
+                "type": "service",
+                "items": [
+                  "片段时间 / 画面 / 口播",
+                  "商品资料 / 问题说明 / 依据"
+                ],
+                "state": "演示"
+              },
+              {
+                "id": "review",
+                "label": "片段证据界面",
+                "layer": "output",
+                "type": "ui",
+                "items": [
+                  "TypeScript / React",
+                  "回看片段 / 对照报告"
+                ]
+              },
+              {
+                "id": "trace",
+                "label": "图执行跟踪",
+                "layer": "output",
+                "type": "service",
+                "items": [
+                  "Langfuse",
+                  "图节点 / 模型 / 工具调用"
+                ]
+              }
+            ],
+            "edges": [
+              {
+                "from": "video",
+                "to": "api",
+                "label": "视频素材 / 口播 / 商品资料",
+                "kind": "flow"
+              },
+              {
+                "from": "api",
+                "to": "graph",
+                "label": "初始化任务与图状态",
+                "kind": "flow"
+              },
+              {
+                "from": "graph",
+                "to": "checkpoint",
+                "label": "状态快照保存 / checkpoint 恢复",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "graph",
+                "to": "parse",
+                "label": "素材类型分支 / 解析状态更新",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "graph",
+                "to": "model",
+                "label": "按核查需要推理 / 结果写回",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "rules",
+                "to": "skills",
+                "label": "核验规则与专业方法装载",
+                "kind": "config"
+              },
+              {
+                "from": "graph",
+                "to": "skills",
+                "label": "按核查项路由 / 核验结果写回",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "graph",
+                "to": "evidence",
+                "label": "完成分支 / 核验结果与来源汇总",
+                "kind": "flow"
+              },
+              {
+                "from": "evidence",
+                "to": "review",
+                "label": "报告与片段证据展示",
+                "kind": "flow"
+              },
+              {
+                "from": "graph",
+                "to": "trace",
+                "label": "执行路径 / 节点及能力调用记录",
+                "kind": "event"
+              }
+            ]
+          },
+          "implementation": {
+            "stack": [
+              "Python",
+              "LangGraph",
+              "StateGraph",
+              "Checkpointer",
+              "Langfuse",
+              "TypeScript",
+              "React",
+              "多模态接口",
+              "Skill"
+            ],
+            "highlights": [
+              {
+                "label": "联合核验画面与口播",
+                "text": "视频中的画面、口播和配套资料可能分别包含关键信息，孤立分析容易遗漏相互矛盾的表述。以 Python / LangGraph 组织解析与审核节点，把媒体内容和参考资料写入共享图状态，供不同核验能力共同使用。"
+              },
+              {
+                "label": "按问题选择检查路径",
+                "text": "不同素材与风险点需要调用不同专业能力，固定检查链路难以覆盖这些差异。StateGraph 根据素材类型和待核查项进入解析、推理或 Skill 节点，将分支输出写回状态，再汇总为可解释的问题与证据。"
+              },
+              {
+                "label": "保留多步骤执行状态",
+                "text": "媒体解析与多模态核验包含多个执行步骤，排查问题需要知道结果来自哪条路径。Checkpointer 按任务线程保存图状态，为中断后继续执行提供基础；Langfuse 关联节点与模型工具调用，支持检查分支选择和节点输出。"
+              },
+              {
+                "label": "让问题对应视频片段",
+                "text": "视频审核结果需要帮助使用者找到具体内容并理解原因。证据汇总将问题关联到时段、画面、口播文字和核验依据，React 界面承接报告与原始片段回看；片段定位和证据交互按照当前演示方案呈现。"
               }
             ]
           }
@@ -786,281 +1077,20 @@
             ],
             "highlights": [
               {
-                "label": "流程与任务",
-                "text": "设计器生成流程定义，Python API 接入执行请求，Celery 与 Redis 连接任务发布和 Worker 消费。"
+                "label": "把重复操作编成流程",
+                "text": "跨页面查询、录入和资料搬运依赖人工反复操作，任务步骤又可能包含条件差异。可视化设计器将操作、参数和分支保存为流程定义，Python 执行器按步骤推进，让业务人员可以组织并重复执行同类任务。"
               },
               {
-                "label": "执行与适配",
-                "text": "Python 执行器推进步骤，Playwright 处理 Web 操作，桌面适配接口连接电脑操作能力。"
+                "label": "衔接调度与执行资源",
+                "text": "手动、定时和批量任务需要统一交给机器人执行，同时保持管理端能够看到进展。FastAPI 接收执行请求，Celery 与 Celery Beat 组织任务和定时发布，Redis 衔接消息与结果状态，Python Worker 执行后回传任务结果。"
               },
               {
-                "label": "状态与记录",
-                "text": "结果状态回到任务后端，执行日志与录屏进入管理界面，支持任务查询和过程排查。"
-              }
-            ]
-          }
-        },
-        {
-          "id": "video-compliance-review",
-          "title": "视频多模态合规分析",
-          "role": "项目主要负责人",
-          "summary": "以 Python / LangGraph 组织多模态核验状态图，通过条件分支选择解析、推理和专业能力，用 checkpoint 保存图状态，输出关联视频片段的证据与报告。",
-          "tags": [
-            "Python / LangGraph",
-            "条件分支",
-            "checkpoint",
-            "多模态证据"
-          ],
-          "sections": [
-            {
-              "label": "图状态与任务接入",
-              "text": "Python 任务接口接收视频、口播与商品资料，初始化 LangGraph StateGraph。图状态组织素材引用、解析内容、待核查项、核验结果和证据关联；节点返回状态更新，供后续分支与报告汇总使用。"
-            },
-            {
-              "label": "条件分支与专业核验",
-              "text": "根据素材类型和待核查项选择媒体解析、语言视觉理解或专业审核节点。解析、推理与 Skills 通过接口返回结果，规则与专业方法装载到核验能力；分支结果写回图状态，检查完成后进入证据汇总。"
-            },
-            {
-              "label": "checkpoint 与执行跟踪",
-              "text": "Checkpointer 按任务线程保存图状态快照，为中断后的继续执行提供状态基础。Langfuse 关联图节点、模型与工具调用，支持查看执行路径及节点输出，定位核验过程中需要进一步检查的环节。"
-            },
-            {
-              "label": "多模态证据与展示边界",
-              "text": "证据汇总将问题说明关联到视频时段、画面、口播文字、商品资料和核查依据，再生成报告与调整参考。React 界面支持回看原始片段；片段定位与证据展示延续演示范围，媒体解析与底层模型保留接口抽象。"
-            }
-          ],
-          "architecture": {
-            "title": "Python / LangGraph 状态图与多模态证据",
-            "note": "Python / LangGraph 组织有状态核验流程，条件分支连接解析、推理和专业审核节点，checkpoint 保存图状态，Langfuse 关联执行过程。媒体与模型能力按接口抽象，片段证据延续演示范围。",
-            "focus": "graph",
-            "layers": [
-              {
-                "id": "input",
-                "label": "素材与任务接入",
-                "caption": "VIDEO / PYTHON API"
+                "label": "适配 Web 与桌面操作",
+                "text": "业务操作分布在浏览器和桌面应用，元素定位与操作方式存在差异。通过独立适配器封装定位、点击、读取和录入，Web 操作交给 Playwright，桌面操作连接电脑控制能力，OCR 等组件辅助提取难以直接读取的内容。"
               },
               {
-                "id": "runtime",
-                "label": "状态图与持久化",
-                "caption": "LANGGRAPH / CHECKPOINT"
-              },
-              {
-                "id": "tools",
-                "label": "解析与专业核验",
-                "caption": "MULTIMODAL / SKILLS"
-              },
-              {
-                "id": "output",
-                "label": "证据与观测",
-                "caption": "EVIDENCE / LANGFUSE"
-              }
-            ],
-            "nodes": [
-              {
-                "id": "video",
-                "label": "视频与商品资料",
-                "layer": "input",
-                "type": "data",
-                "items": [
-                  "画面 / 口播 / 商品信息"
-                ],
-                "state": "演示"
-              },
-              {
-                "id": "api",
-                "label": "Python 任务接口",
-                "layer": "input",
-                "type": "api",
-                "items": [
-                  "素材引用 / 核验参数"
-                ]
-              },
-              {
-                "id": "graph",
-                "label": "LangGraph StateGraph",
-                "layer": "runtime",
-                "type": "runtime",
-                "items": [
-                  "图状态 / 条件分支",
-                  "节点输出更新 / 结果汇总"
-                ]
-              },
-              {
-                "id": "checkpoint",
-                "label": "Checkpoint 状态存储",
-                "layer": "runtime",
-                "type": "data",
-                "items": [
-                  "Checkpointer / thread_id",
-                  "状态快照 / 继续执行"
-                ]
-              },
-              {
-                "id": "parse",
-                "label": "媒体内容解析",
-                "layer": "tools",
-                "type": "tool",
-                "items": [
-                  "帧与口播 / 资料解析",
-                  "生成待核查内容"
-                ],
-                "state": "方案"
-              },
-              {
-                "id": "model",
-                "label": "多模态推理接口",
-                "layer": "tools",
-                "type": "model",
-                "items": [
-                  "语言 / 视觉理解",
-                  "多来源内容分析"
-                ],
-                "state": "方案"
-              },
-              {
-                "id": "skills",
-                "label": "专业审核 Skills",
-                "layer": "tools",
-                "type": "tool",
-                "items": [
-                  "规则 / 语义 / 一致性核验",
-                  "按核查项选择能力"
-                ],
-                "state": "方案"
-              },
-              {
-                "id": "rules",
-                "label": "审核规则与方法",
-                "layer": "tools",
-                "type": "data",
-                "items": [
-                  "核验依据 / 专业方法"
-                ],
-                "state": "方案"
-              },
-              {
-                "id": "evidence",
-                "label": "证据汇总与报告",
-                "layer": "output",
-                "type": "service",
-                "items": [
-                  "片段时间 / 画面 / 口播",
-                  "商品资料 / 问题说明 / 依据"
-                ],
-                "state": "演示"
-              },
-              {
-                "id": "review",
-                "label": "片段证据界面",
-                "layer": "output",
-                "type": "ui",
-                "items": [
-                  "TypeScript / React",
-                  "回看片段 / 对照报告"
-                ]
-              },
-              {
-                "id": "trace",
-                "label": "图执行跟踪",
-                "layer": "output",
-                "type": "service",
-                "items": [
-                  "Langfuse",
-                  "图节点 / 模型 / 工具调用"
-                ]
-              }
-            ],
-            "edges": [
-              {
-                "from": "video",
-                "to": "api",
-                "label": "视频素材 / 口播 / 商品资料",
-                "kind": "flow"
-              },
-              {
-                "from": "api",
-                "to": "graph",
-                "label": "初始化任务与图状态",
-                "kind": "flow"
-              },
-              {
-                "from": "graph",
-                "to": "checkpoint",
-                "label": "状态快照保存 / checkpoint 恢复",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "graph",
-                "to": "parse",
-                "label": "素材类型分支 / 解析状态更新",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "graph",
-                "to": "model",
-                "label": "按核查需要推理 / 结果写回",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "rules",
-                "to": "skills",
-                "label": "核验规则与专业方法装载",
-                "kind": "config"
-              },
-              {
-                "from": "graph",
-                "to": "skills",
-                "label": "按核查项路由 / 核验结果写回",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "graph",
-                "to": "evidence",
-                "label": "完成分支 / 核验结果与来源汇总",
-                "kind": "flow"
-              },
-              {
-                "from": "evidence",
-                "to": "review",
-                "label": "报告与片段证据展示",
-                "kind": "flow"
-              },
-              {
-                "from": "graph",
-                "to": "trace",
-                "label": "执行路径 / 节点及能力调用记录",
-                "kind": "event"
-              }
-            ]
-          },
-          "implementation": {
-            "stack": [
-              "Python",
-              "LangGraph",
-              "StateGraph",
-              "Checkpointer",
-              "Langfuse",
-              "TypeScript",
-              "React",
-              "多模态接口",
-              "Skill"
-            ],
-            "highlights": [
-              {
-                "label": "图状态与分支",
-                "text": "素材进入 StateGraph，解析与核验节点更新共享状态，条件分支决定后续检查路径。"
-              },
-              {
-                "label": "持久化与跟踪",
-                "text": "Checkpointer 保存任务线程状态，Langfuse 关联图节点、模型与工具调用。"
-              },
-              {
-                "label": "证据与范围",
-                "text": "核验结果汇总为片段与多来源证据；React 展示报告，片段定位保持演示范围。"
+                "label": "定位流程失败的步骤",
+                "text": "自动化任务失败时，只看到最终状态难以判断是哪一步出了问题。将步骤状态、异常、执行日志和录屏关联到任务与机器人，React 管理界面集中呈现执行记录，便于回看操作过程、排查定位问题并调整流程定义。"
               }
             ]
           }
@@ -1087,7 +1117,7 @@
           "sections": [
             {
               "label": "坐席工作台与服务接入",
-              "text": "TypeScript、React 与 Ant Design 组织坐席工作台，呈现接待状态、待接咨询和并行会话。HTTPS API 承接会话操作，Spring Cloud Gateway 与 Spring Security 统一处理接入路由、身份权限和租户上下文。消息接入适配定义消息与会话事件的处理边界。"
+              "text": "TypeScript、React 与 Ant Design 组织坐席工作台，呈现接待状态、待接咨询和并行会话。HTTPS API 承接会话操作，Spring Cloud Gateway 与接入适配服务 统一处理接入路由、身份权限和租户上下文。消息接入适配定义消息与会话事件的处理边界。"
             },
             {
               "label": "状态管理与排队分配",
@@ -1117,7 +1147,6 @@
               "Spring Cloud Gateway",
               "Nacos",
               "OpenFeign",
-              "Spring Security",
               "MyBatis-Plus",
               "MySQL",
               "Redis",
@@ -1125,16 +1154,20 @@
             ],
             "highlights": [
               {
-                "label": "接待与调度",
-                "text": "坐席状态与待接队列参与分配，会话服务承接并行接待和转接上下文。"
+                "label": "把咨询分给合适的坐席",
+                "text": "咨询集中进入时，需要兼顾待接队列、坐席状态和并行接待容量。Java 微服务拆分会话与坐席调度，Redis 保存活动状态和排队信息，路由规则结合可用坐席完成分派，使接待关系与坐席容量共同参与调度。"
               },
               {
-                "label": "消息与状态",
-                "text": "消息标识与顺序信息完成重复检查，会话事件进入接待状态处理。"
+                "label": "维持并行会话与转接上下文",
+                "text": "坐席同时处理多路咨询，转接时还要避免丢失客户已经描述的问题。以会话标识组织接待关系和上下文，消息处理使用消息标识、顺序信息进行重复检查与整理，将目标坐席和已有处理记录衔接到同一咨询过程。"
               },
               {
-                "label": "知识与受理",
-                "text": "当前问题查询话术，受理动作创建工单，并保留会话与工单关联。"
+                "label": "让话术查询接上服务办理",
+                "text": "坐席回答问题后，部分诉求还需要建立工单继续处理。辅助服务根据当前咨询调用共享知识接口，将话术作为接待参考；受理动作关联共享工单，保留会话与工单标识，使沟通记录能够跟随后续办理。"
+              },
+              {
+                "label": "支撑 SaaS 服务协作",
+                "text": "多租户接待既要共享平台能力，也要保持各自的服务上下文。Spring Boot / Spring Cloud 按职责拆分服务，Gateway 承接入口与租户信息，Nacos、OpenFeign 组织配置和调用，RabbitMQ 传递会话事件，MySQL 保存接待历史。"
               }
             ]
           },
@@ -1191,7 +1224,7 @@
                 "layer": "access",
                 "type": "api",
                 "items": [
-                  "Spring Cloud Gateway / Security",
+                  "Spring Cloud Gateway",
                   "HTTPS 会话 API",
                   "身份权限 / 租户上下文"
                 ]
@@ -1400,7 +1433,7 @@
         },
         {
           "id": "customer-service-voice",
-          "title": "Java 呼叫控制与智能语音客服",
+          "title": "FreeSWITCH 呼叫控制与智能语音客服",
           "role": "项目主要负责人",
           "summary": "以 Java 微服务编排坐席接待、外呼任务和 IVR，连接 FreeSWITCH 媒体处理与 ASR、意图识别、TTS 链路，并支持 WebRTC 浏览器音频接入。",
           "tags": [
@@ -1428,7 +1461,7 @@
             },
             {
               "label": "微服务状态与业务协同",
-              "text": "Spring Cloud Gateway 和 Spring Security 处理坐席 API 接入，Nacos 与 OpenFeign 组织微服务治理与调用。MySQL 保存通话和任务记录，Redis 维护活动呼叫状态，RabbitMQ 传递呼叫与任务事件；共享工单与知识接口提供坐席服务下单和话术辅助。通话转写、呼叫状态和任务进度形成质检与服务分析输入。"
+              "text": "Spring Cloud Gateway 与接入适配服务 处理坐席 API 接入，Nacos 与 OpenFeign 组织微服务治理与调用。MySQL 保存通话和任务记录，Redis 维护活动呼叫状态，RabbitMQ 传递呼叫与任务事件；共享工单与知识接口提供坐席服务下单和话术辅助。通话转写、呼叫状态和任务进度形成质检与服务分析输入。"
             }
           ],
           "implementation": {
@@ -1442,7 +1475,6 @@
               "Spring Cloud Gateway",
               "Nacos",
               "OpenFeign",
-              "Spring Security",
               "FreeSWITCH",
               "WebRTC",
               "ASR",
@@ -1453,16 +1485,20 @@
             ],
             "highlights": [
               {
-                "label": "控制与媒体",
-                "text": "坐席 API → Java 呼叫控制 → FreeSWITCH；WebRTC 提供浏览器音频。"
+                "label": "协同呼叫控制与音频传输",
+                "text": "坐席操作、呼叫状态与实际通话音频需要同步衔接，但承担不同职责。Java 微服务管理接听、外呼和转接，FreeSWITCH 承接电话连接与媒体处理，WebRTC 提供浏览器音频接入，将控制请求、媒体传输和状态反馈分别建模。"
               },
               {
-                "label": "任务与接待",
-                "text": "呼叫状态衔接坐席接待、IVR 转接和外呼任务，服务关系随操作更新。"
+                "label": "贯通接待、IVR 与外呼",
+                "text": "来电导航、人工接待和主动外呼都需要接续服务关系，任务进度又不能与单次通话混淆。IVR 编排导航和转接，外呼服务组织任务与拨打状态，通过呼叫服务连接坐席外呼和智能外呼，分别维护任务与通话状态。"
               },
               {
-                "label": "识别与应答",
-                "text": "音频 → ASR 与意图识别 → 多轮对话 → TTS → 语音播报。"
+                "label": "组织语音理解与多轮应答",
+                "text": "语音交互需要把客户表达转为可处理的意图，并依据上下文给出连贯回应。ASR 提取文本，意图识别与对话控制组织多轮应答，TTS 生成播报音频；各能力通过独立接口衔接，让识别结果、对话状态与音频输出能够对应。"
+              },
+              {
+                "label": "保留通话与服务办理关联",
+                "text": "通话结束后仍可能需要工单处理、质检和服务分析。MySQL 保存通话与任务记录，Redis 维护活动呼叫状态，RabbitMQ 传递呼叫及任务事件；共享知识与工单服务提供话术和下单能力，将通话转写、办理记录和任务进度衔接起来。"
               }
             ]
           },
@@ -1519,7 +1555,7 @@
                 "layer": "access",
                 "type": "api",
                 "items": [
-                  "Spring Cloud Gateway / Security",
+                  "Spring Cloud Gateway",
                   "HTTPS 操作 / 身份权限"
                 ]
               },
@@ -1721,12 +1757,12 @@
         },
         {
           "id": "customer-service-ticket-knowledge",
-          "title": "Flowable 工单工作流与 Elasticsearch 知识检索",
+          "title": "客服工单与知识库",
           "role": "项目主要负责人",
-          "summary": "以 Java 微服务承接多渠道工单，使用 Flowable BPMN 管理流程实例、任务分配与流转历史，独立 Elasticsearch 搜索服务通过异步索引支撑话术查询。",
+          "summary": "以 Java 微服务承接多渠道工单，使用 Activiti BPMN 管理流程实例、任务分配与流转历史，独立 Elasticsearch 搜索服务通过异步索引支撑话术查询。",
           "tags": [
             "Java 微服务",
-            "Flowable BPMN",
+            "Activiti BPMN",
             "Elasticsearch",
             "异步索引"
           ],
@@ -1737,7 +1773,7 @@
             },
             {
               "label": "BPMN 定义与流程实例",
-              "text": "Flowable 执行 BPMN 流程定义，工单创建后关联流程实例，后续受理和处理动作作用于实例与任务。工单服务通过 MyBatis-Plus 保存业务记录，流程引擎管理节点执行及自身运行与历史数据，业务标识与流程标识连接两类状态。"
+              "text": "Activiti 执行 BPMN 流程定义，工单创建后关联流程实例，后续受理和处理动作作用于实例与任务。工单服务通过 MyBatis-Plus 保存业务记录，流程引擎管理节点执行及自身运行与历史数据，业务标识与流程标识连接两类状态。"
             },
             {
               "label": "任务分配、转派与时限",
@@ -1749,7 +1785,7 @@
             },
             {
               "label": "独立搜索与回答辅助",
-              "text": "搜索微服务接收用户问题，利用 Elasticsearch 分词与倒排索引执行全文检索，结合条件过滤和相关性排序返回话术。工单任务经 Flowable 流转，知识查询经独立搜索接口返回；两条能力供客服渠道组合调用，知识查询不推进工单状态。"
+              "text": "搜索微服务接收用户问题，利用 Elasticsearch 分词与倒排索引执行全文检索，结合条件过滤和相关性排序返回话术。工单任务经 Activiti 流转，知识查询经独立搜索接口返回；两条能力供客服渠道组合调用，知识查询不推进工单状态。"
             }
           ],
           "implementation": {
@@ -1767,27 +1803,31 @@
               "MyBatis-Plus",
               "MySQL",
               "RabbitMQ",
-              "Flowable",
+              "Activiti",
               "Elasticsearch"
             ],
             "highlights": [
               {
-                "label": "流程与任务",
-                "text": "工单关联 Flowable 实例，BPMN 驱动分配、转派、时限与流转历史。"
+                "label": "把服务受理变成可执行任务",
+                "text": "多渠道受理的问题需要按流程交给相应人员办理，业务状态不能只依赖人工修改。Java 工单服务关联 Activiti 流程实例，BPMN 定义节点和流转路径，业务标识与流程标识衔接工单内容、当前任务和处理动作。"
               },
               {
-                "label": "发布与索引",
-                "text": "知识发布 → RabbitMQ 变更事件 → 索引服务 → Elasticsearch 更新。"
+                "label": "跟踪分派、转派与处理时限",
+                "text": "办理过程中可能经历不同处理人和组织，当前责任归属与历史过程都需要可查询。工作流任务承接分配和转派，时限信息参与跟踪；提交处理动作后推进实例并更新工单状态，通过运行数据和历史记录还原办理轨迹。"
               },
               {
-                "label": "检索与辅助",
-                "text": "问题经分词、过滤和相关性排序返回话术，搜索接口独立于工单流转。"
+                "label": "协调知识发布与搜索更新",
+                "text": "知识维护和搜索查询承担不同任务，发布内容后需要让搜索索引同步变化。Java 知识服务管理话术与发布状态，通过 RabbitMQ 将变更交给索引服务，更新 Elasticsearch，使内容维护与索引处理按各自职责执行。"
+              },
+              {
+                "label": "从客户问题找到回答话术",
+                "text": "客户表达与知识标题未必一致，坐席需要在大量内容中找到相关回答。独立搜索微服务利用 Elasticsearch 分词、倒排索引、条件过滤和相关性排序返回话术，供在线与语音渠道调用，同时保持查询过程与工单流转相互独立。"
               }
             ]
           },
           "architecture": {
-            "title": "Java 工单微服务、Flowable BPMN 与独立搜索",
-            "note": "工单业务记录关联 Flowable 流程实例与任务；知识发布通过事件驱动异步索引更新，Elasticsearch 分词、倒排、过滤与相关性排序支撑独立话术查询。",
+            "title": "Java 工单微服务、Activiti BPMN 与独立搜索",
+            "note": "工单业务记录关联 Activiti 流程实例与任务；知识发布通过事件驱动异步索引更新，Elasticsearch 分词、倒排、过滤与相关性排序支撑独立话术查询。",
             "focus": "workflow",
             "layers": [
               {
@@ -1877,7 +1917,7 @@
               },
               {
                 "id": "workflow",
-                "label": "Flowable BPMN 引擎",
+                "label": "Activiti BPMN 引擎",
                 "layer": "execution",
                 "type": "runtime",
                 "items": [
@@ -2264,16 +2304,20 @@
             ],
             "highlights": [
               {
-                "label": "输入更自然",
-                "text": "语音转写与推荐问题共同降低输入成本，转写文本可编辑后再提交咨询。"
+                "label": "降低发起咨询的门槛",
+                "text": "客户不一定知道该如何描述问题，长文本输入也增加咨询成本。React 入口组合猜你想问、文字输入与语音转写，ASR 结果允许编辑后提交，通过输入、等待和回答状态组织交互，帮助客户更顺畅地表达诉求。"
               },
               {
-                "label": "回答可感知",
-                "text": "知识答案连接文字与数字人呈现，把回答和咨询引导组织成连贯的交互。"
+                "label": "把知识回答变成直观交互",
+                "text": "客户获得答案后，还需要理解下一步如何操作。页面将知识回答交给文字和数字人组件呈现，用形象交互承接咨询引导；数字人 SDK 与咨询逻辑分离，使回答内容、交互状态和呈现方式能够分别维护。"
               },
               {
-                "label": "服务能延续",
-                "text": "人工接待携带会话上下文；需要后续办理的问题关联工单，客户持续跟进处理进度。"
+                "label": "让咨询上下文持续保留",
+                "text": "在推荐问题、语音输入和人工服务之间切换时，已有信息容易分散。Java / Spring Boot 会话服务统一组织问题、咨询记录和处理状态，共享知识库提供回答依据，将不同入口产生的信息衔接到同一服务上下文。"
+              },
+              {
+                "label": "把未解决的问题交给后续服务",
+                "text": "自助回答无法覆盖所有诉求，进一步办理时还要减少客户重复描述。将已有咨询上下文交给在线坐席，并关联共享工单和处理进度，让客户从发起咨询到人工接待、后续反馈都能沿着同一服务路径继续。"
               }
             ]
           }
@@ -2538,16 +2582,20 @@
             ],
             "highlights": [
               {
-                "label": "接入与路由",
-                "text": "同步或异步 API → 能力路由 → 资料核验与媒介识别组件。"
+                "label": "统一不同场景的认证接入",
+                "text": "企业、商户等业务场景需要组合不同资料与核验能力，逐项接入会增加业务系统的对接成本。Java / Spring 提供同步和异步标准接口，React 承接资料提交与结果展示，让业务系统通过统一入口组织认证请求。"
               },
               {
-                "label": "适配与组合",
-                "text": "产品配置组织能力组合，适配接口封装外部认证信息交互。"
+                "label": "隔离外部通道与业务逻辑",
+                "text": "不同认证通道的调用方式和结果结构存在差异，变化容易传导到业务页面。能力路由结合产品配置组织通道与能力组合，外部适配接口封装信息交互，将业务请求、通道调用和返回结果分层处理。"
               },
               {
-                "label": "调用与观测",
-                "text": "路由服务输出调用状态和异常，监测组件连接运行反馈。"
+                "label": "连接识别结果与资料核验",
+                "text": "资料录入、图像识别和信息核验往往需要连续完成，单独输出识别文本难以支持业务办理。将 OCR、媒介识别与资料核验组合为能力链路，围绕信息补录和表单返填衔接页面；组合交互按当前方案设计范围展示。"
+              },
+              {
+                "label": "让调用状态与异常可定位",
+                "text": "认证能力涉及内部组件和外部接口，异常结果需要区分发生在哪个环节。路由服务组织调用状态与异常反馈，监测组件关联运行信息，帮助业务系统判断请求进展，也为排查能力调用与通道交互问题提供依据。"
               }
             ]
           }
@@ -2559,7 +2607,7 @@
           "summary": "围绕欠薪欠款诉求构建投诉工单系统，以流程引擎连接提交、受理、分派、办理与反馈，结合证据材料、时限管理和处理留痕，让每次投诉有可追踪的办理路径。",
           "tags": [
             "Java 微服务",
-            "Flowable",
+            "Activiti",
             "投诉工单",
             "SLA / 审计"
           ],
@@ -2570,7 +2618,7 @@
             },
             {
               "label": "工单领域与流程执行",
-              "text": "Spring Boot 将投诉内容组织成工单、参与人、材料和处理记录。Flowable 以 BPMN 定义受理、分派、办理、复核及反馈节点，流程实例关联工单，流程变量驱动路由和状态转换。"
+              "text": "Spring Boot 将投诉内容组织成工单、参与人、材料和处理记录。Activiti 以 BPMN 定义受理、分派、办理、复核及反馈节点，流程实例关联工单，流程变量驱动路由和状态转换。"
             },
             {
               "label": "分派、时限与结果反馈",
@@ -2578,7 +2626,7 @@
             },
             {
               "label": "证据、权限与全过程留痕",
-              "text": "MyBatis-Plus / MySQL 保存工单记录，Flowable 管理流程运行与历史数据，文件存储承载证明材料，Redis 支持状态缓存与提交幂等。Nacos 管理注册与配置，OpenFeign 组织服务间调用；角色和数据范围约束办理权限，节点操作与状态变更支持过程追溯。"
+              "text": "MyBatis-Plus / MySQL 保存工单记录，Activiti 管理流程运行与历史数据，文件存储承载证明材料，Redis 支持状态缓存与提交幂等。Nacos 管理注册与配置，OpenFeign 组织服务间调用；角色和数据范围约束办理权限，节点操作与状态变更支持过程追溯。"
             }
           ],
           "architecture": {
@@ -2653,7 +2701,7 @@
               },
               {
                 "id": "workflow",
-                "label": "Flowable 流程引擎",
+                "label": "Activiti 流程引擎",
                 "layer": "domain",
                 "type": "runtime",
                 "items": [
@@ -2838,7 +2886,7 @@
               "Nacos",
               "OpenFeign",
               "Spring Security",
-              "Flowable / BPMN",
+              "Activiti / BPMN",
               "MyBatis-Plus",
               "MySQL",
               "Redis",
@@ -2846,16 +2894,20 @@
             ],
             "highlights": [
               {
-                "label": "投诉变为待办",
-                "text": "诉求与证据生成工单，流程实例关联工单编号；当前节点决定处理人、可执行动作与下一步。"
+                "label": "把诉求与证据组织成工单",
+                "text": "投诉内容涉及事实描述、参与人和证明材料，需要完整进入办理过程。React 入口组织提交，Java 服务校验并关联工单、材料与处理记录，通过幂等控制减少重复受理，让每项诉求具备可识别、可跟踪的办理对象。"
               },
               {
-                "label": "办理过程可追踪",
-                "text": "分派、转派、退回和复核形成处理历史；状态变更与任务操作共同更新客户可见的办理进度。"
+                "label": "把办理规则交给工作流",
+                "text": "受理、分派、办理、复核和反馈存在不同责任主体，处理动作需要符合当前流程节点。Activiti 执行 BPMN 定义，以实例和流程变量组织路由，候选组、转派与退回连接协作，让工单状态与待办任务保持关联。"
               },
               {
-                "label": "时限与反馈协同",
-                "text": "SLA 检查生成催办事件，通知任务异步消费；反馈结果回到投诉入口，保留完整办理记录。"
+                "label": "让时限与通知衔接办理进度",
+                "text": "投诉办理不仅要展示当前状态，还需要跟踪待办时限并反馈进展。SLA 服务检查任务时限，RabbitMQ 将催办与结果通知交给异步任务，减少通知处理对主流程的影响，同时把办理结果回到客户可见的投诉入口。"
+              },
+              {
+                "label": "保留证据与全过程处理记录",
+                "text": "跨组织办理需要看清每一步操作，也需要控制不同角色可见的材料范围。MySQL 保存工单内容，Activiti 管理运行与历史数据，文件存储关联证明材料；角色和数据范围约束访问，将节点操作、状态变化和反馈组成可追溯的记录。"
               }
             ]
           }
@@ -3052,16 +3104,20 @@
             ],
             "highlights": [
               {
-                "label": "数据接入",
-                "text": "业务明细或源端统计 → 定时采集 → 数据湖，以非实时方式同步。"
+                "label": "汇集跨系统的服务数据",
+                "text": "服务数据分散在不同业务系统，直接汇总容易混淆来源和统计周期。通过定时采集将业务明细或源端统计按周期入湖，保留来源与周期信息，以非实时批量同步形成统一的数据加工输入。"
               },
               {
-                "label": "指标计算",
-                "text": "湖表 → 数据加工 → 多维聚合与占比计算 → 周期指标结果集。"
+                "label": "把明细加工成可比较指标",
+                "text": "服务量、结构与占比需要跨来源计算，单表结果难以覆盖完整视角。数据加工连接单表统计、多表运算和跨来源汇总，再进行多维聚合与占比计算，形成按周期组织的指标结果集，为图表提供一致的计算输出。"
               },
               {
-                "label": "图表呈现",
-                "text": "React 展示服务量与结构指标；新版下钻属于界面设计方案。"
+                "label": "让图表对应实际数据周期",
+                "text": "驾驶舱需要快速展示整体服务表现，也要避免把不同周期的数据混在一起。TypeScript / React 读取指标结果，将服务量和结构组织为多维图表，日数据与月度统计按各自周期呈现，使界面与定时同步链路保持一致。"
+              },
+              {
+                "label": "从整体指标走向问题线索",
+                "text": "整体服务量能够反映规模，进一步分析还需要连接客户问题和业务表现。新版界面方案将这些视角组合展示，并设计重点问题下钻与客户声音入口，让指标到问题的查看路径更清楚；这些扩展按当前设计方案范围呈现。"
               }
             ]
           }

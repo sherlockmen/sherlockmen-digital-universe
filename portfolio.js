@@ -1,8 +1,8 @@
-import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-11';
+import {renderArchitecture,relationLabel,componentType} from './portfolio-diagrams.mjs?v=technical-12';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-11',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-12',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -30,17 +30,7 @@ import {renderArchitecture,relationLabel,componentType} from './portfolio-diagra
   overview.append(intro,detailsContainer);
   const implementation = create('section','portfolio-implementation');
   implementation.setAttribute('aria-label','技术组件与实现要点');
-  const architectureJump = create('button','portfolio-architecture-jump');
-  architectureJump.type = 'button';
-  architectureJump.setAttribute('aria-controls','portfolio-architecture portfolio-relations');
-  architectureJump.append(create('span','','查看技术架构'),create('span','architecture-jump-arrow','↓'));
-  architectureJump.lastElementChild.setAttribute('aria-hidden','true');
-  intro.append(implementation,architectureJump);
-  $('#portfolio-diagram-title').tabIndex = -1;
-  architectureJump.addEventListener('click',event => {
-    diagram.scrollIntoView({behavior:reduced.matches || event.detail === 0 ? 'instant' : 'smooth',block:'start'});
-    $('#portfolio-diagram-title').focus({preventScroll:true});
-  });
+  intro.append(implementation);
   let pageSuspended = false;
   let diagramInView = false;
   let svgInView = false;
