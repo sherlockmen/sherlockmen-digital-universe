@@ -29,8 +29,11 @@
   });
   menu.addEventListener('click', (event) => {
     const link = event.target.closest('a'); if (!link) return;
-    event.preventDefault(); closeMenu();
-    const destination = $(link.getAttribute('href'));
+    const href = link.getAttribute('href');
+    closeMenu();
+    if (!href?.startsWith('#')) return;
+    event.preventDefault();
+    const destination = $(href);
     history.pushState(null, '', link.getAttribute('href'));
     destination.scrollIntoView({ behavior: reduced.matches || event.detail === 0 ? 'instant' : 'smooth' });
     destination.querySelector('h1,h2')?.focus({ preventScroll: true });

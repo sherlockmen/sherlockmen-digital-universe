@@ -44,3 +44,15 @@ main>section{position:relative;z-index:1}.site-header.is-scrolled{background:lin
 .about-focus{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:36px;padding-top:28px;border-top:1px solid #bedbf22b}
 .about-focus>div{min-width:0}.about-focus dt{font-size:17px;line-height:1.6;color:#e4edf3}.about-focus .mono{display:block;font-size:9px;color:#8fa6b8;letter-spacing:.08em;margin-bottom:12px}.about-focus dd{font-size:16px;line-height:1.75;color:#a8b4bd;margin:12px 0 0;text-wrap:pretty}
 @media(max-width:680px){.about .about-identity .about-lead{font-size:29px}.about-facts{grid-template-columns:1fr;gap:16px}.about-facts>div{display:grid;grid-template-columns:90px minmax(0,1fr);gap:16px;align-items:baseline}.about-facts dd{margin:0;font-size:16px}.about-focus{grid-template-columns:1fr;gap:26px}.about-focus>div+div{border-top:1px solid #bedbf21a;padding-top:24px}.about-focus .mono{margin-bottom:8px}.about-focus dd{margin-top:8px}}
+
+/* Profile links and the GitHub navigation entry. */
+.desktop-nav .nav-github,.mobile-nav .nav-github{display:inline-flex;align-items:center;gap:8px}
+.nav-github svg{flex:none}
+.desktop-nav .nav-github{border:0;border-radius:0;padding-inline:0}
+.about-links{display:flex;flex-wrap:wrap;gap:18px 36px;margin-top:8px}
+.about-links a{display:inline-flex;align-items:center;gap:12px;min-height:44px;font-size:14px;color:#bedbf2;transition:color 180ms ease}
+.about-links .mono{font-size:9px;letter-spacing:.08em;color:#8fa6b8}
+.about-links a:hover{color:#fff}
+.about-links a:focus-visible{outline:2px solid #bedbf2;outline-offset:5px}
+.about-links a>span:last-child{font-size:16px}
+@media(max-width:680px){.about-links{flex-direction:column;gap:4px;margin-top:0}.about-links a{font-size:14px}.about .about-identity .about-subtitle{max-width:35ch;line-height:1.8}}

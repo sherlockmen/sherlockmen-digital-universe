@@ -26,19 +26,19 @@
   <link rel="modulepreload" href="particle-logos.js?v=deepseek-outline-1">
   <link rel="modulepreload" href="vendor/three.module.min.js">
   <link rel="modulepreload" href="vendor/three.core.min.js">
-  <link rel="stylesheet" href="styles.css?v=technical-13">
-  <link rel="stylesheet" href="portfolio.css?v=technical-13">
-  <link rel="stylesheet" href="collection-visuals.css?v=technical-13">
-  <link rel="stylesheet" href="open-source.css?v=technical-13">
+  <link rel="stylesheet" href="styles.css?v=technical-14">
+  <link rel="stylesheet" href="portfolio.css?v=technical-14">
+  <link rel="stylesheet" href="collection-visuals.css?v=technical-14">
+  <link rel="stylesheet" href="open-source.css?v=technical-14">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
   <div class="scroll-progress" aria-hidden="true"></div>
   <header class="site-header">
     <a class="wordmark" href="#home" aria-label="SherlockMen 主页">SherlockMen</a>
-    <nav class="desktop-nav" aria-label="主导航"><a href="#about">关于我</a><a href="#work">探索作品</a><a href="#featured">开源项目</a><a href="#contact">保持联结 </a></nav>
+    <nav class="desktop-nav" aria-label="主导航"><a href="#about">关于我</a><a href="#work">探索作品</a><a class="nav-github" href="https://github.com/sherlockmen" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.65 7.65 0 0 1 8 3.86c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg><span>开源项目</span></a></nav>
     <button class="menu-toggle" aria-controls="mobile-nav" aria-expanded="false" aria-label="打开导航"><span></span><span></span></button>
-    <nav id="mobile-nav" class="mobile-nav" aria-label="移动导航" hidden><a href="#home">我的宇宙</a><a href="#about">关于我</a><a href="#work">探索作品</a><a href="#featured">开源项目</a><a href="#contact">保持联结</a></nav>
+    <nav id="mobile-nav" class="mobile-nav" aria-label="移动导航" hidden><a href="#home">我的宇宙</a><a href="#about">关于我</a><a href="#work">探索作品</a><a class="nav-github" href="https://github.com/sherlockmen" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.65 7.65 0 0 1 8 3.86c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg><span>开源项目</span></a></nav>
   </header>
   <main id="main">
       <div class="galaxy-stage"><canvas id="galaxy-canvas" tabindex="0" role="img" aria-label="实时三维粒子星河，鼠标划过扰动星点，滚动切换形态，拖动或方向键旋转，空格或P键暂停，Home键复位" aria-describedby="galaxy-status"></canvas></div>
@@ -55,9 +55,10 @@
     <section id="about" class="about section" aria-labelledby="about-title">
       <div class="container"><div class="section-heading reveal"><p class="eyebrow mono">01 / A LITTLE ABOUT ME</p><span id="about-title">关于我</span></div>
         <div class="about-grid">
-          <div class="about-identity reveal"><p class="about-subtitle">FULL STACK → AGENT → INFRA</p><h2 class="about-lead">把复杂问题，<br>落到可运行的系统。</h2><dl class="about-facts"><div><dt>研发经历</dt><dd>5 年</dd></div><div><dt>当前角色</dt><dd>技术研发核心负责人</dd></div><div><dt>研发路径</dt><dd>前端 / 后端 / Agent 应用</dd></div></dl></div>
-          <div class="about-copy reveal"><p>我是 SherlockMen。职业生涯贯穿前后端开发与 Agent 应用开发，作为项目主要负责人，参与智能审核、实时通信、流程自动化与平台系统建设。</p><p>我的技术实践从 TypeScript / React 的交互界面，延伸到 Java 微服务、Python 自动化与 Agent 应用。围绕 LangChain / LangGraph 的应用编排、WebRTC 音视频以及工作流和搜索系统，把模型能力接入可运行、可观测的系统。</p><p>当前，我主要投入大模型应用与 Infra 方向，关注 Agent 的执行循环、工具接入、上下文管理，以及支撑应用运行的基础设施。模型微调也是我持续关注的方向。</p></div>
+          <div class="about-identity reveal"><p class="about-subtitle">FULL STACK ARCHITECTURE / AGENT ENGINEERING / INFRA</p><h2 class="about-lead">把复杂问题，<br>落到可运行的系统。</h2><dl class="about-facts"><div><dt>研发经历</dt><dd>5 年</dd></div><div><dt>当前角色</dt><dd>技术研发核心负责人</dd></div><div><dt>技术纵深</dt><dd>全栈架构 / Agent 工程 / 平台基础设施</dd></div></dl></div>
+          <div class="about-copy reveal"><p>嗨，我是 SherlockMen，写代码的第 5 年，现在是技术研发核心负责人。从前端交互、后端服务，到今天的 Agent 应用，我喜欢一路钻到实现里，把一个想法变成真正能用的系统。</p><p>我的项目横跨智能审核、客服通信和平台工程：用 TypeScript / React 搭交互，用 Java 微服务组织系统，用 Python、LangChain / LangGraph 把模型、工具和执行状态接起来。除了功能本身，我也会追到接口边界、工作流、搜索和可观测性这些细节，让各个环节配合起来。</p><p>最近主要在大模型应用与 Infra 方向折腾，尤其关注 Agent 怎么执行、怎么管理上下文，以及应用背后的运行基础设施。模型微调也在我的长期关注清单里。下面这些项目，就是我边做边探索留下的记录。</p></div>
         </div>
+        <div class="about-links reveal" aria-label="邮箱与 GitHub 主页"><a href="mailto:1539631420@qq.com"><span class="mono">EMAIL</span><span>1539631420@qq.com</span><span aria-hidden="true">↗</span></a><a href="https://github.com/sherlockmen" target="_blank" rel="noopener noreferrer"><span class="mono">GITHUB</span><span>github.com/sherlockmen</span><span aria-hidden="true">↗</span></a></div>
         <dl class="about-focus reveal"><div><dt><span class="mono">01 / AGENT ENGINEERING</span>大模型应用工程</dt><dd>围绕规则、证据与工具调用组织智能审核，让推理过程连接到可执行的应用流程。</dd></div><div><dt><span class="mono">02 / REALTIME SYSTEMS</span>通信与全栈系统</dt><dd>连接文字会话、音视频链路与坐席工作台，通过服务接口串起工单和知识能力。</dd></div><div><dt><span class="mono">03 / PLATFORM &amp; INFRA</span>平台与基础设施</dt><dd>关注系统接入、任务执行与数据流转，在应用能力和底层支撑之间建立清晰的边界。</dd></div></dl>
       </div>
     </section>
@@ -78,7 +79,7 @@
 
     <section id="featured" class="featured open-source section" aria-labelledby="featured-title"><div class="container">
       <div class="section-heading reveal"><p class="eyebrow mono">03 / BUILT IN THE OPEN</p><span>开源项目</span></div>
-      <div class="featured-heading reveal"><h2 id="featured-title" class="display-heading" tabindex="-1">把探索写成代码，<br>把过程留在开源里。</h2><p>从 Agent 到日常开发工具，记录我动手构建与学习的过程。</p><a class="open-source-profile text-button" href="https://github.com/sherlockmen" target="_blank" rel="noopener noreferrer">GitHub / sherlockmen <span aria-hidden="true">↗</span></a></div>
+      <div class="featured-heading reveal"><h2 id="featured-title" class="display-heading" tabindex="-1">把探索写成代码，<br>把过程留给开源。</h2><p>从 Agent 到日常开发工具，记录我动手构建与学习的过程。</p><a class="open-source-profile text-button" href="https://github.com/sherlockmen" target="_blank" rel="noopener noreferrer">GitHub / sherlockmen <span aria-hidden="true">↗</span></a></div>
       <div class="repo-heading reveal"><span class="mono">PINNED REPOSITORIES</span><span class="mono">01 — 05</span></div>
       <article class="repo-feature reveal">
         <a class="repo-feature-link" href="https://github.com/sherlockmen/hello-my-agent" target="_blank" rel="noopener noreferrer" aria-label="在 GitHub 查看 hello-my-agent（新窗口）">
@@ -105,7 +106,7 @@
       <button class="particle-hit" data-particle-scene="claude" aria-label="Claude 放射星粒子图标，可拖动或用方向键旋转，Home 键重置"></button>
     </section>
 
-    <section id="contact" class="contact" aria-labelledby="contact-title"><div class="container"><div class="section-heading"><p class="eyebrow mono">04 / UNTIL OUR NEXT ORBIT</p><span>保持联结</span></div><div class="contact-main reveal"><p class="eyebrow mono">THE UNIVERSE IS STILL UNFOLDING.</p><h2 id="contact-title" tabindex="-1">Stay curious<span>.</span></h2><p>下一次灵感，可能从一次相遇开始。<br>欢迎收藏我的个人宇宙。</p><div class="contact-actions"><button class="pill-button" id="copy-link">复制主页链接 </button><button class="text-button share-button" id="share-page">分享这个宇宙 </button></div></div><footer><a class="wordmark" href="#home">SherlockMen</a><span class="mono">© 2026 / A PERSONAL UNIVERSE</span><a href="#home" class="back-top">回到顶部 </a></footer></div></section>
+    <section id="contact" class="contact" aria-labelledby="contact-title"><div class="container"><div class="section-heading"><p class="eyebrow mono">04 / UNTIL OUR NEXT ORBIT</p></div><div class="contact-main reveal"><p class="eyebrow mono">THE UNIVERSE IS STILL UNFOLDING.</p><h2 id="contact-title" tabindex="-1">Stay curious<span>.</span></h2><p>下一次灵感，可能从一次相遇开始。<br>欢迎收藏我的个人宇宙。</p><div class="contact-actions"><button class="pill-button" id="copy-link">复制主页链接 </button><button class="text-button share-button" id="share-page">分享这个宇宙 </button></div></div><footer><a class="wordmark" href="#home">SherlockMen</a><span class="mono">© 2026 / A PERSONAL UNIVERSE</span><a href="#home" class="back-top">回到顶部 </a></footer></div></section>
   </main>
 
   <dialog id="project-dialog" class="project-dialog" aria-labelledby="case-title"><div class="case-header"><a class="wordmark" href="#home" id="case-home">SherlockMen</a><p class="mono" id="case-index">CREATIVE EXPERIMENT / 01</p><button id="close-case" class="close-button" aria-label="关闭作品详情">×</button></div><div class="case-content"><div class="case-intro"><p class="eyebrow mono" id="case-eyebrow">INTERACTIVE / DEMO PROJECT</p><h2 id="case-title" class="display-heading" tabindex="-1">INFINITY<br>KNOT.</h2><p id="case-description"></p><div class="case-tags" id="case-tags"></div></div><div class="case-stage" id="case-stage"><canvas id="hero-canvas" tabindex="0" role="img" aria-label="可交互三维雕塑，拖动或方向键旋转"></canvas><div class="case-static-art" id="case-static-art" hidden></div><p id="scene-status" role="status"></p><div class="case-controls" id="case-controls"><button class="text-button" id="reset-scene">重置视角 </button></div></div></div><div class="case-story"><div><p class="eyebrow mono">THE IDEA</p><h3 id="case-story-title">把一条线，变成一种可能。</h3></div><p id="case-story-text"></p></div><div class="case-next"><button id="previous-case" class="text-button">上一个作品</button><span class="mono" id="case-counter">01 / 06</span><button id="next-case" class="text-button">下一个作品</button></div></dialog>
@@ -119,7 +120,7 @@
   <div class="case-next"><button id="portfolio-previous" class="text-button">上一个项目</button><span class="mono" id="portfolio-counter"></span><button id="portfolio-next" class="text-button">下一个项目</button></div>
 </dialog>
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
-  <script src="scene.js?v=open-space-1"></script><script type="module" src="galaxy.js?v=word-clear-1"></script><script src="app.js?v=technical-13"></script>
-<script type="module" src="portfolio.js?v=technical-13"></script>
+  <script src="scene.js?v=open-space-1"></script><script type="module" src="galaxy.js?v=word-clear-1"></script><script src="app.js?v=technical-14"></script>
+<script type="module" src="portfolio.js?v=technical-14"></script>
 <script type="module" src="collection-visuals.js?v=showcase-8"></script>
 </body></html>

@@ -52,150 +52,264 @@ export function describeArchitecture(architecture) {
   return [...layers,...edges].join('；');
 }
 
-export function renderArchitecture(project) {
-  const {nodes,edges,layers} = project.architecture;
-  const width = 1080, minBoxHeight = 132, left = 144, right = 154, gapX = 32;
-  const positions = {}, rows = [], bands = [];
-  layers.forEach(layer => {
-    const group = nodes.filter(node => node.layer === layer.id);
-    const columns = group.length === 4 ? 2 : 3;
-    for (let offset = 0; offset < group.length; offset += columns) {
-      const lane = group.slice(offset,offset + columns);
-      const boxWidth = Math.min(290,(width - left - right - (lane.length - 1) * gapX) / lane.length);
-      const start = left + (width - left - right - lane.length * boxWidth - (lane.length - 1) * gapX) / 2;
-      let rowHeight = minBoxHeight;
-      lane.forEach((node,index) => {
-        const titleLines = wrapText(node.label,boxWidth - 28,17);
-        const detailLines = (node.items || []).flatMap(detail => wrapText(detail,boxWidth - 28,12));
-        const detailY = 64 + titleLines.length * 23;
-        const lastBaseline = detailLines.length ? detailY + (detailLines.length - 1) * 18 : 53 + Math.max(0,titleLines.length - 1) * 23;
-        rowHeight = Math.max(rowHeight,Math.ceil((lastBaseline + 22) / 4) * 4);
-        positions[node.id] = {x:start + index * (boxWidth + gapX),width:boxWidth,row:rows.length,column:index,titleLines,detailLines,detailY};
-      });
-      lane.forEach(node => {positions[node.id].height = rowHeight;});
-      rows.push({nodes:lane,layer,first:offset === 0,height:rowHeight});
-    }
-  });
+const edgeWeight = edge => edge.kind === 'flow' ? 5 : edge.kind === 'call' ? 3 : 1;
+const columnCache = new WeakMap();
 
-  // Every connection gets a horizontal track in the relevant row gap. Long
-  // connections use separate outer lanes, leaving the cards and layer headers
-  // clear. Reserve the space before positioning cards, rather than squeezing
-  // all routes into a fixed-height gap.
+// Keep one row per technical layer. Choose column assignments from the real
+// dependencies, so a main execution path aligns vertically and same-layer
+// processing chains run left to right. Four-component layers stay on one row.
+const arrangeColumns = architecture => {
+  if (columnCache.has(architecture)) return columnCache.get(architecture);
+  const {nodes,edges,layers,focus} = architecture;
+  const rows = layers.map(layer => nodes.filter(node => node.layer === layer.id));
+  const rank = Object.fromEntries(rows.flatMap((row,index) => row.map(node => [node.id,index])));
+  const candidates = rows.map(row => {
+    const options = [];
+    const visit = (index,used,columns) => {
+      if (index === row.length) {options.push({...columns}); return;}
+      for (let column = 0; column < 4; column++) {
+        if (used.has(column) || row[index].id === focus && column !== 1) continue;
+        used.add(column); columns[row[index].id] = column;
+        visit(index + 1,used,columns); used.delete(column);
+      }
+    };
+    visit(0,new Set(),{});
+    return options;
+  });
+  const inversions = [];
+  for (let index = 0; index < edges.length; index++) {
+    const a = edges[index];
+    if (Math.abs(rank[a.from] - rank[a.to]) !== 1) continue;
+    const aTop = rank[a.from] < rank[a.to] ? a.from : a.to;
+    const aBottom = aTop === a.from ? a.to : a.from;
+    for (const b of edges.slice(index + 1)) {
+      if (Math.abs(rank[b.from] - rank[b.to]) !== 1 || Math.min(rank[b.from],rank[b.to]) !== rank[aTop]) continue;
+      const bTop = rank[b.from] < rank[b.to] ? b.from : b.to;
+      inversions.push([aTop,aBottom,bTop,bTop === b.from ? b.to : b.from]);
+    }
+  }
+  const score = columns => {
+    let cost = nodes.reduce((sum,node) => sum + Math.abs(columns[node.id] - 1.5) * .025,0);
+    for (const edge of edges) {
+      const from = columns[edge.from], to = columns[edge.to];
+      const distance = Math.abs(from - to), separation = Math.abs(rank[edge.from] - rank[edge.to]);
+      cost += distance * edgeWeight(edge) * (separation === 0 ? 1.7 : separation === 1 ? 1 : .45);
+      if (!separation && edge.kind === 'flow' && to < from) cost += 2;
+      if (separation > 1) cost += (6 - from - to) * .18;
+    }
+    // A column swap that reduces distance can still introduce a crossing.
+    // Penalize actual endpoint inversions between adjacent technical layers.
+    for (const [aTop,aBottom,bTop,bBottom] of inversions) {
+      if ((columns[aTop] - columns[bTop]) * (columns[aBottom] - columns[bBottom]) < 0) cost += 11;
+    }
+    return cost;
+  };
+  let bestCost = Infinity, best;
+  const search = (row,columns) => {
+    if (row === candidates.length) {
+      const cost = score(columns);
+      if (cost < bestCost) {bestCost = cost; best = {...columns};}
+      return;
+    }
+    for (const candidate of candidates[row]) search(row + 1,{...columns,...candidate});
+  };
+  search(0,{});
+  columnCache.set(architecture,best);
+  return best;
+};
+
+const compactPath = points => {
+  const clean = [];
+  for (const point of points) {
+    const last = clean.at(-1), previous = clean.at(-2);
+    if (last && point[0] === last[0] && point[1] === last[1]) continue;
+    if (previous && (previous[0] === last[0] && last[0] === point[0] && (last[1] - previous[1]) * (point[1] - last[1]) >= 0 || previous[1] === last[1] && last[1] === point[1] && (last[0] - previous[0]) * (point[0] - last[0]) >= 0)) clean.pop();
+    clean.push(point);
+  }
+  return clean.map(([x,y],index) => !index ? `M${x} ${y}` : clean[index - 1][0] === x ? ` V${y}` : ` H${x}`).join('');
+};
+
+export function layoutArchitecture(architecture) {
+  const {nodes,edges,layers} = architecture;
+  const columns = arrangeColumns(architecture);
+  const left = 144, boxWidth = 224, columnStep = 256;
+  const positions = {}, rows = layers.map(layer => ({layer,nodes:nodes.filter(node => node.layer === layer.id),height:148}));
+  rows.forEach((row,index) => row.nodes.forEach(node => {
+    const titleLines = wrapText(node.label,boxWidth - 32,17);
+    const detailLines = (node.items || []).flatMap(detail => wrapText(detail,boxWidth - 32,12));
+    const detailY = 62 + titleLines.length * 23;
+    row.height = Math.max(row.height,Math.ceil((detailY + Math.max(0,detailLines.length - 1) * 18 + 24) / 4) * 4);
+    positions[node.id] = {x:left + columns[node.id] * columnStep,width:boxWidth,row:index,column:columns[node.id],titleLines,detailLines,detailY};
+  }));
+  rows.forEach(row => row.nodes.forEach(node => {positions[node.id].height = row.height;}));
+
   const gaps = Array.from({length:rows.length + 1},() => []);
   const ports = new Map();
-  const sideCounts = {left:0,right:0};
+  let outerCount = 0;
   const routes = edges.map((edge,index) => {
     const from = positions[edge.from], to = positions[edge.to];
-    const same = from.row === to.row, forward = to.row > from.row;
-    const adjacent = Math.abs(to.row - from.row) === 1;
-    const route = {edge,index,same,adjacent,forward,fromFace:same || !forward ? 'top' : 'bottom',toFace:same || forward ? 'top' : 'bottom'};
-    for (const [end,node,peer] of [['from',from,to],['to',to,from]]) {
+    const same = from.row === to.row, forward = from.row < to.row;
+    const direct = same && Math.abs(from.column - to.column) === 1;
+    const aligned = !same && Math.abs(from.row - to.row) === 1 && from.column === to.column;
+    const route = {edge,index,same,direct,aligned,forward};
+    route.fromFace = direct ? from.column < to.column ? 'right' : 'left' : same || !forward ? 'top' : 'bottom';
+    route.toFace = direct ? from.column < to.column ? 'left' : 'right' : same || forward ? 'top' : 'bottom';
+    for (const end of ['from','to']) {
       const key = `${edge[end]}:${route[`${end}Face`]}`;
       if (!ports.has(key)) ports.set(key,[]);
-      ports.get(key).push({route,end,x:peer.x + peer.width / 2});
+      ports.get(key).push({route,end,peer:positions[edge[end === 'from' ? 'to' : 'from']]});
     }
-    if (!same && !adjacent) {
-      const center = (from.x + from.width / 2 + to.x + to.width / 2) / 2;
-      const leftCost = center - (left - 38) + sideCounts.left * 180;
-      const rightCost = width - right + 38 - center + sideCounts.right * 180;
-      route.side = leftCost <= rightCost ? 'left' : 'right';
-      route.lane = sideCounts[route.side]++;
-    }
+    if (!same && Math.abs(from.row - to.row) > 1) route.outerLane = outerCount++;
     return route;
   });
-  for (const entries of ports.values()) {
-    entries.sort((a,b) => a.x - b.x || a.route.index - b.route.index);
+  // Same-layer links use opposing side ports. Cross-layer links enter the
+  // actual top or bottom edge instead of circling around the card's side.
+  for (const [key,entries] of ports) {
+    const face = key.split(':').at(-1);
+    entries.sort((a,b) => a.peer.column - b.peer.column || a.peer.row - b.peer.row || a.route.index - b.route.index);
     entries.forEach((entry,index) => {
       const node = positions[entry.route.edge[entry.end]];
-      if (entry.route[`${entry.end}Face`] === 'top') {
-        // Enter the card from its left edge. The vertical segment stays in
-        // the inter-card gutter (or the first-column margin), so it cannot
-        // cross the layer heading that sits above the cards.
-        entry.route[`${entry.end}X`] = node.x;
-        entry.route[`${entry.end}LaneX`] = (node.column === 0 ? left : node.x) - 8 - 20 * (index + 1) / (entries.length + 1);
-        entry.route[`${entry.end}OffsetY`] = 35 + (node.height - 60) * (index + 1) / (entries.length + 1);
-      } else entry.route[`${entry.end}X`] = node.x + 22 + (node.width - 44) * (index + 1) / (entries.length + 1);
+      const center = index - (entries.length - 1) / 2;
+      entry.route[`${entry.end}Offset`] = ['left','right'].includes(face) ? node.height / 2 + center * 18 : node.width / 2 + center * 22;
     });
   }
-  const reserveTrack = (route,key,gap) => {
-    route[key] = {gap,index:gaps[gap].length};
-    gaps[gap].push(route);
+  const addTrack = (route,name,gap) => {
+    route[name] = {gap,index:gaps[gap].length};
+    gaps[gap].push({route,name});
   };
-  [...routes].sort((a,b) => Number(b.edge.kind === 'flow') - Number(a.edge.kind === 'flow') || a.index - b.index).forEach(route => {
+  routes.filter(route => !route.direct).sort((a,b) => {
+    const aSpan = Math.abs(positions[a.edge.from].column - positions[a.edge.to].column);
+    const bSpan = Math.abs(positions[b.edge.from].column - positions[b.edge.to].column);
+    return aSpan - bSpan || a.index - b.index;
+  }).forEach(route => {
     const from = positions[route.edge.from], to = positions[route.edge.to];
-    if (route.same) reserveTrack(route,'track',from.row);
-    else if (route.adjacent) reserveTrack(route,'track',Math.max(from.row,to.row));
+    if (route.same) addTrack(route,'track',from.row);
+    else if (route.outerLane === undefined) addTrack(route,'track',Math.max(from.row,to.row));
     else {
-      reserveTrack(route,'exit',route.forward ? from.row + 1 : from.row);
-      reserveTrack(route,'entry',route.forward ? to.row : to.row + 1);
+      addTrack(route,'exit',route.forward ? from.row + 1 : from.row);
+      addTrack(route,'entry',route.forward ? to.row : to.row + 1);
     }
   });
   let cursor = 0;
   rows.forEach((row,index) => {
-    const headerSpace = row.first ? 48 : 0;
-    const gapHeight = Math.max(84 + headerSpace,56 + Math.max(0,gaps[index].length - 1) * 26 + headerSpace);
-    gaps[index].forEach((_,track) => {gaps[index][track] = cursor + 28 + track * 26;});
+    const gapHeight = Math.max(index ? 80 : 36,40 + gaps[index].length * 16);
+    gaps[index].forEach((track,trackIndex) => {track.y = cursor + 24 + trackIndex * 16;});
     cursor += gapHeight;
+    row.y = cursor;
     row.nodes.forEach(node => {positions[node.id].y = cursor;});
-    const band = bands.find(item => item.id === row.layer.id);
-    if (band) band.height = cursor + row.height - band.y;
-    else bands.push({...row.layer,y:cursor - 56,height:row.height + 56});
     cursor += row.height;
   });
-  const graphBottom = cursor;
-  const markerId = `arrow-${project.id}`;
-  const bandMarkup = bands.map((layer,index) => `<g data-layer="${escapeXML(layer.id)}"><rect x="${left - 14}" y="${layer.y}" width="${width - left - right + 28}" height="${layer.height + 12}" rx="6" fill="#0b141d" stroke="#253541"/>${textLines(wrapText(`${String(index + 1).padStart(2,'0')} / ${layer.label}`,200,15),left,layer.y + 30,15,'#d0e2ef')}${textLines(wrapText(layer.caption || '',200,10),width - right,layer.y + 29,10,'#7994a8',14,'end')}</g>`).join('');
-  const trackY = track => gaps[track.gap][track.index];
-  const lineMarkup = routes.map(route => {
-    const {edge,index,fromX:x1,toX:x2} = route;
-    const from = positions[edge.from], to = positions[edge.to];
-    const y1 = from.y + (route.fromFace === 'bottom' ? from.height : route.fromOffsetY);
-    const y2 = to.y + (route.toFace === 'bottom' ? to.height : route.toOffsetY);
-    const startX = route.fromLaneX ?? x1, endX = route.toLaneX ?? x2;
-    const start = `M${x1} ${y1}${route.fromFace === 'top' ? ` H${startX}` : ''}`;
-    const end = `V${y2}${route.toFace === 'top' ? ` H${x2}` : ''}`;
-    let path, labelX, labelY;
-    if (route.same || route.adjacent) {
-      labelY = trackY(route.track);
-      path = `${start} V${labelY} H${endX} ${end}`;
-      labelX = (startX + endX) / 2;
+  gaps.at(-1).forEach((track,trackIndex) => {track.y = cursor + 24 + trackIndex * 16;});
+  const point = (route,end) => {
+    const node = positions[route.edge[end]], face = route[`${end}Face`], offset = route[`${end}Offset`];
+    return [face === 'left' ? node.x : face === 'right' ? node.x + node.width : node.x + offset,face === 'top' ? node.y : face === 'bottom' ? node.y + node.height : node.y + offset];
+  };
+  const trackY = track => gaps[track.gap][track.index].y;
+  const routePoints = route => {
+    const from = point(route,'from'), to = point(route,'to');
+    let points;
+    if (route.direct) {
+      const middle = (from[0] + to[0]) / 2;
+      points = [from,[middle,from[1]],[middle,to[1]],to];
+    } else if (route.outerLane === undefined) {
+      const y = trackY(route.track);
+      points = [from,[from[0],y],[to[0],y],to];
     } else {
-      const routeX = route.side === 'left' ? left - 38 - route.lane * 24 : width - right + 38 + route.lane * 24;
-      const exitY = trackY(route.exit), entryY = trackY(route.entry);
-      path = `${start} V${exitY} H${routeX} V${entryY} H${endX} ${end}`;
-      labelX = (startX + routeX) / 2; labelY = exitY;
+      const x = 1172 + route.outerLane * 18, exit = trackY(route.exit), entry = trackY(route.entry);
+      points = [from,[from[0],exit],[x,exit],[x,entry],[to[0],entry],to];
     }
-    const color = edge.kind === 'flow' ? '#afcee3' : '#5c7b92';
+    return points;
+  };
+  const crossingCost = () => {
+    const segments = routes.flatMap(route => {
+      const points = routePoints(route);
+      return points.slice(1).map((to,index) => ({route,from:points[index],to})).filter(segment => segment.from[0] !== segment.to[0] || segment.from[1] !== segment.to[1]);
+    });
+    let cost = 0;
+    for (let index = 0; index < segments.length; index++) {
+      const a = segments[index];
+      for (const b of segments.slice(index + 1)) {
+        if (a.route === b.route) continue;
+        const av = a.from[0] === a.to[0], bv = b.from[0] === b.to[0];
+        if (av === bv) {
+          const constant = av ? 0 : 1, axis = 1 - constant;
+          if (a.from[constant] === b.from[constant] && Math.min(Math.max(a.from[axis],a.to[axis]),Math.max(b.from[axis],b.to[axis])) > Math.max(Math.min(a.from[axis],a.to[axis]),Math.min(b.from[axis],b.to[axis]))) cost += 100;
+        } else {
+          const vertical = av ? a : b, horizontal = av ? b : a;
+          if (Math.min(horizontal.from[0],horizontal.to[0]) < vertical.from[0] && vertical.from[0] < Math.max(horizontal.from[0],horizontal.to[0]) && Math.min(vertical.from[1],vertical.to[1]) < horizontal.from[1] && horizontal.from[1] < Math.max(vertical.from[1],vertical.to[1])) cost += a.route.edge.kind === 'flow' && b.route.edge.kind === 'flow' ? 3 : 1;
+        }
+      }
+    }
+    return cost;
+  };
+  // Track order matters as much as card order. Swap independent tracks and
+  // outer lanes until the actual routed geometry has fewer crossings.
+  let cost = crossingCost();
+  for (let pass = 0; pass < 3; pass++) {
+    let improved = false;
+    for (const tracks of gaps) {
+      for (let a = 0; a < tracks.length; a++) for (let b = a + 1; b < tracks.length; b++) {
+        [tracks[a].y,tracks[b].y] = [tracks[b].y,tracks[a].y];
+        const next = crossingCost();
+        if (next < cost) {cost = next; improved = true;}
+        else [tracks[a].y,tracks[b].y] = [tracks[b].y,tracks[a].y];
+      }
+    }
+    const outer = routes.filter(route => route.outerLane !== undefined);
+    for (let a = 0; a < outer.length; a++) for (let b = a + 1; b < outer.length; b++) {
+      [outer[a].outerLane,outer[b].outerLane] = [outer[b].outerLane,outer[a].outerLane];
+      const next = crossingCost();
+      if (next < cost) {cost = next; improved = true;}
+      else [outer[a].outerLane,outer[b].outerLane] = [outer[b].outerLane,outer[a].outerLane];
+    }
+    if (!improved) break;
+  }
+  for (const route of routes) {
+    route.path = compactPath(routePoints(route));
+    route.fromPoint = point(route,'from'); route.toPoint = point(route,'to');
+  }
+  return {positions,rows,routes,width:Math.max(1216,1190 + outerCount * 18),graphBottom:cursor};
+}
+
+export function renderArchitecture(project) {
+  const {nodes,edges,layers} = project.architecture;
+  const {positions,rows,routes,width,graphBottom} = layoutArchitecture(project.architecture);
+  const markerId = `arrow-${project.id}`;
+  const bandMarkup = rows.map((row,index) => `<g data-layer="${escapeXML(row.layer.id)}"><rect x="132" y="${row.y - 12}" width="1016" height="${row.height + 24}" rx="10" fill="#0d1720" fill-opacity=".86" stroke="#263847"/>${textLines([String(index + 1).padStart(2,'0')],24,row.y + 18,10,'#81afcc')}${textLines(wrapText(row.layer.label,96,14),24,row.y + 47,14,'#d0e2ef',20)}${textLines(wrapText(row.layer.caption || '',96,9),24,row.y + row.height - 20,9,'#6f92aa',13)}</g>`).join('');
+  const lineMarkup = [...routes].sort((a,b) => Number(a.edge.kind === 'flow') - Number(b.edge.kind === 'flow')).map(route => {
+    const {edge,index,path} = route;
+    const color = edge.kind === 'flow' ? '#b8dbf2' : '#6d91ac';
     const number = String(index + 1).padStart(2,'0');
-    return `<g data-edge="${number}" data-kind="${escapeXML(edge.kind)}"><path class="architecture-route" d="${path}" fill="none" stroke="${color}" stroke-width="${edge.kind === 'flow' ? '1.5' : '1.1'}" ${edge.kind === 'flow' ? '' : 'stroke-dasharray="4 7"'} ${edge.bidirectional ? `marker-start="url(#${markerId})"` : ''} marker-end="url(#${markerId})"/>${renderPackets(path,edge,index)}<circle cx="${labelX}" cy="${labelY}" r="10" fill="#0a1015" stroke="${color}"/>${textLines([number],labelX,labelY + 3.5,10,'#c1d9ea',14,'middle')}</g>`;
+    // A dark clearance stroke separates unavoidable perpendicular crossings.
+    // Crossing paths never look like an unintended branch or shared junction.
+    return `<g data-edge="${number}" data-kind="${escapeXML(edge.kind)}" data-from="${escapeXML(edge.from)}" data-to="${escapeXML(edge.to)}"><path d="${path}" fill="none" stroke="#0a1119" stroke-width="6"/><path class="architecture-route" d="${path}" fill="none" stroke="${color}" stroke-width="${edge.kind === 'flow' ? '1.7' : '1.2'}" stroke-linejoin="round" ${edge.kind === 'flow' ? '' : 'stroke-dasharray="4 6"'} ${edge.bidirectional ? `marker-start="url(#${markerId})"` : ''} marker-end="url(#${markerId})"/>${renderPackets(path,edge,index)}</g>`;
   }).join('');
   const nodeMarkup = nodes.map(node => {
     const {x,y,width:boxWidth,height:boxHeight,titleLines,detailLines,detailY} = positions[node.id];
     const core = node.id === project.architecture.focus;
-    const dataGlyph = node.type === 'data' ? `<path d="M${x + 14} ${y + 19} q5 -5 10 0 v9 q-5 5 -10 0 z m0 -5 q5 5 10 0" fill="none" stroke="#85a9c2"/>` : '';
-    const badgeX = x + (node.type === 'data' ? 31 : 14);
-    return `<g data-node="${escapeXML(node.id)}"><rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="5" fill="${core ? '#152b3a' : '#101e29'}" stroke="${core ? '#a6d0eb' : '#405c70'}"/>${dataGlyph}${textLines([types[node.type] || 'COMPONENT'],badgeX,y + 22,10,'#85a9c2')}${textLines(titleLines,x + 14,y + 53,17,'#edf4f8',23)}${textLines(detailLines,x + 14,y + detailY,12,'#a4bacb',18)}</g>`;
+    const dataGlyph = node.type === 'data' ? `<path d="M${x + 16} ${y + 20} q5 -5 10 0 v9 q-5 5 -10 0 z m0 -5 q5 5 10 0" fill="none" stroke="#85a9c2"/>` : '';
+    return `<g data-node="${escapeXML(node.id)}"><rect x="${x}" y="${y}" width="${boxWidth}" height="${boxHeight}" rx="8" fill="${core ? '#173244' : '#111f2b'}" stroke="${core ? '#a6d0eb' : '#426278'}" stroke-width="${core ? 1.5 : 1}"/>${dataGlyph}${textLines([types[node.type] || 'COMPONENT'],x + (node.type === 'data' ? 33 : 16),y + 23,10,'#85a9c2')}${textLines(titleLines,x + 16,y + 54,17,'#edf4f8',23)}${textLines(detailLines,x + 16,y + detailY,12,'#a4bacb',18)}</g>`;
   }).join('');
-  let legendY = graphBottom + 54;
-  const legendHeading = textLines(['技术连接 / 调用与数据流'],24,legendY,16,'#d0e2ef');
-  legendY += 36;
+  let legendY = graphBottom + 70;
+  const legendHeading = textLines(['CONNECTION MAP'],24,legendY,11,'#85a9c2');
+  legendY += 34;
   let legendMarkup = '';
   for (let offset = 0; offset < edges.length; offset += 2) {
     let rowHeight = 0;
     edges.slice(offset,offset + 2).forEach((edge,index) => {
-      const number = String(offset + index + 1).padStart(2,'0');
-      const x = 24 + index * 468;
+      const number = String(offset + index + 1).padStart(2,'0'), x = 24 + index * (width / 2);
       const from = nodes.find(node => node.id === edge.from), to = nodes.find(node => node.id === edge.to);
-      const nameLines = wrapText(`${from.label} ${edge.bidirectional ? '↔' : '→'} ${to.label}`,404,13);
-      const detailLines = wrapText(relationLabel(edge),404,12);
+      const available = width / 2 - 88;
+      const nameLines = wrapText(`${from.label} ${edge.bidirectional ? '↔' : '→'} ${to.label}`,available,13);
+      const detailLines = wrapText(relationLabel(edge),available,12);
       const detailY = legendY + nameLines.length * 19 + 3;
-      rowHeight = Math.max(rowHeight,nameLines.length * 19 + detailLines.length * 18 + 25);
+      rowHeight = Math.max(rowHeight,nameLines.length * 19 + detailLines.length * 18 + 27);
       legendMarkup += `${textLines([number],x,legendY,10,'#85a9c2')}${textLines(nameLines,x + 30,legendY,13,'#d0e2ef',19)}${textLines(detailLines,x + 30,detailY,12,'#8da9bd',18)}`;
     });
     legendY += rowHeight;
   }
-  const height = legendY + 12;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="title-${project.id}" aria-describedby="desc-${project.id}" style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a1015"><title id="title-${project.id}">${escapeXML(project.title)} · ${escapeXML(project.architecture.title || '技术架构')}</title><desc id="desc-${project.id}">${escapeXML([project.architecture.note,describeArchitecture(project.architecture)].filter(Boolean).join('；'))}</desc><style>.architecture-packet{pointer-events:none}svg[data-motion="paused"] .architecture-packet{visibility:hidden}@media(prefers-reduced-motion:reduce){.architecture-packet{display:none}}</style><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#85a9c2"/></marker></defs>${bandMarkup}${lineMarkup}${nodeMarkup}${legendHeading}${legendMarkup}</svg>`;
+  const height = legendY + 16;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMin meet" role="img" aria-labelledby="title-${project.id}" aria-describedby="desc-${project.id}" style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;background:transparent"><title id="title-${project.id}">${escapeXML(project.title)} · ${escapeXML(project.architecture.title || '技术架构')}</title><desc id="desc-${project.id}">${escapeXML([project.architecture.note,describeArchitecture(project.architecture)].filter(Boolean).join('；'))}</desc><style>.architecture-packet{pointer-events:none}svg[data-motion="paused"] .architecture-packet{visibility:hidden}@media(prefers-reduced-motion:reduce){.architecture-packet{display:none}}</style><defs><marker id="${markerId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10" fill="#91bcd7"/></marker></defs>${bandMarkup}${lineMarkup}${nodeMarkup}${legendHeading}${legendMarkup}</svg>`;
 }
 
 export function relationLabel(edge) {return edge.label || labels[edge.kind];}
