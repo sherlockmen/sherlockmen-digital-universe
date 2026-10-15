@@ -1,9 +1,9 @@
-import {renderArchitecture,renderResponsiveArchitecture,renderFocusedArchitecture,layoutFocusedArchitecture,componentType} from './portfolio-diagrams.mjs?v=technical-20';
-import {createDialogStarfield} from './dialog-background.js?v=technical-20';
+import {renderArchitecture,renderResponsiveArchitecture,renderFocusedArchitecture,layoutFocusedArchitecture,componentType} from './portfolio-diagrams.mjs?v=technical-21';
+import {createDialogStarfield} from './dialog-background.js?v=technical-21';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-20',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-21',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -38,7 +38,7 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-20';
   overview.append(implementation);
   const modelEngineering = create('section','portfolio-diagram portfolio-model-engineering');
   modelEngineering.hidden = true;
-  modelEngineering.setAttribute('aria-label','项目推荐技术方案');
+  modelEngineering.setAttribute('aria-label','模型工程与运行架构');
   diagram.after(modelEngineering);
   let pageSuspended = false;
   const activeSVGs = new Map();
@@ -283,7 +283,7 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-20';
       heading.append(create('p','mono','ALGORITHM / MODEL / INFRA'),create('h3','',infra.title));
       const stack = create('ul','portfolio-stack-list model-engineering-stack');
       stack.setAttribute('role','list');
-      stack.setAttribute('aria-label','Recommended Tech Stack');
+      stack.setAttribute('aria-label','Model Engineering Tech Stack');
       stack.append(...infra.stack.map(name => create('li','',name)));
       const canvas = create('div','architecture-canvas');
       setArchitecture(canvas,infra);
