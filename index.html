@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="portfolio.css?v=technical-21">
   <link rel="stylesheet" href="collection-visuals.css?v=technical-21">
   <link rel="stylesheet" href="open-source.css?v=technical-22">
+  <link rel="stylesheet" href="showcase.css?v=demo-24">
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -75,6 +76,28 @@
 <p id="portfolio-load-status" role="status" hidden></p>
 <div id="portfolio-panel" class="portfolio-panel" hidden><div class="folder-panel-heading"><div><p class="eyebrow mono" id="portfolio-panel-label"></p><h3 id="portfolio-panel-title" tabindex="-1"></h3></div><button id="portfolio-close-group" class="close-button" aria-label="收起项目分类">×</button></div><div id="portfolio-list" class="portfolio-list"></div><p class="folder-tip mono">打开项目，查看介绍与技术架构 · ESC 收起</p></div>
 </div></section>
+
+    <section id="demo" class="showcase section" aria-labelledby="showcase-title"><div class="container">
+      <div class="section-heading"><p class="eyebrow mono">SYSTEMS IN MOTION</p><span>技术现场</span></div>
+      <div class="showcase-heading"><h2 id="showcase-title" class="display-heading" tabindex="-1">从架构，<br>走进执行现场。</h2><p>看模型、Skill 与工具如何协同完成一次审核，也看看模型部署背后的工程取舍。</p></div>
+      <dl class="showcase-metrics" aria-label="当前公开项目统计"><div><dt>项目实践</dt><dd>11<span>项</span></dd></div><div><dt>技术领域</dt><dd>3<span>类</span></dd></div><div><dt>Agent 应用链路</dt><dd>3<span>条</span></dd></div></dl>
+      <p class="showcase-source">按本站当前展示项目统计：Agent 与流程自动化 4 项、通信与客服系统 4 项、平台工程与数据集成 3 项。</p>
+      <figure class="showcase-film">
+        <div class="showcase-film-heading"><div><p class="mono">01 / AGENT IN ACTION</p><h3>发布之前，把遗漏找出来。</h3></div><span class="showcase-label">合成材料 · 场景演示</span></div>
+        <video id="showcase-video" controls playsinline preload="none" poster="media/pre-review-demo-poster.jpg" aria-label="事前审核 Agent 技术演示，无声短片" aria-describedby="showcase-film-caption"><source src="media/pre-review-demo.mp4" type="video/mp4"><p>浏览器无法播放时，可<a href="media/pre-review-demo.mp4">打开演示视频</a>，或阅读下方演示过程。</p></video>
+        <figcaption id="showcase-film-caption">原创无声演示短片。材料、规则与审核结果均为合成示例，用于展示技术机制，未使用内部系统界面或客户数据。</figcaption>
+        <details class="showcase-transcript"><summary>演示过程与文字说明 <span aria-hidden="true">＋</span></summary><ol><li><strong>接收材料</strong><p>合成宣传文案写着“首月免费，随时取消”，配套说明则包含适用人群与次月计费条件。</p></li><li><strong>执行核查</strong><p>FastAPI 接收任务，pi 装载费用披露与适用条件 Skill，qwen3.8-27b 对照文案和附件逐项检查。</p></li><li><strong>关联证据</strong><p>将“免费”的适用限制与取消说明的缺项关联到具体文本；演示规则不对应任何真实监管文件。</p></li><li><strong>生成结果</strong><p>Pydantic 校验输出结构，报告呈现问题、来源与修订参考。样例中的问题数量不代表模型实测效果。</p></li></ol></details>
+      </figure>
+      <article class="showcase-engineering" aria-labelledby="showcase-engineering-title">
+        <p class="mono">02 / THE ENGINEERING TRADE-OFF</p><h3 id="showcase-engineering-title">27B 参数，三种权重预算。</h3><p class="showcase-engineering-intro">量化改变权重的存储位宽。以事前审核的 27B 参数规模为例，先算清权重体积，再结合任务评测决定部署方案。</p>
+        <div class="showcase-budget"><div class="showcase-bars" role="group" aria-label="选择精度，比较理论模型权重体积">
+          <button type="button" class="showcase-precision" data-bits="16" aria-pressed="false"><span class="showcase-bar-heading"><span>BF16 <small>16-bit</small></span><span>54 <small>GB</small></span></span><span class="showcase-track"><span style="--bar-size:100%"></span></span></button>
+          <button type="button" class="showcase-precision" data-bits="8" aria-pressed="false"><span class="showcase-bar-heading"><span>INT8 <small>8-bit</small></span><span>27 <small>GB</small></span></span><span class="showcase-track"><span style="--bar-size:50%"></span></span></button>
+          <button type="button" class="showcase-precision" data-bits="4" aria-pressed="true"><span class="showcase-bar-heading"><span>INT4 <small>4-bit</small></span><span>13.5 <small>GB</small></span></span><span class="showcase-track"><span style="--bar-size:25%"></span></span></button>
+        </div><div class="showcase-budget-result" aria-live="polite" aria-atomic="true"><p class="mono">WEIGHT STORAGE / THEORETICAL</p><p class="showcase-saving"><span id="showcase-saving">75</span><span>%</span></p><p id="showcase-budget-caption">INT4 相对 BF16 的理论权重体积减少</p><p id="showcase-budget-detail">AWQ / GPTQ 可用于低位宽权重量化；量化后仍需评测规则遵循、证据引用与结构化输出。</p></div></div>
+        <p class="showcase-calculation">计算口径：27 × 10⁹ 参数 × 位宽 ÷ 8，使用十进制 GB。图中只计算权重原始位宽体积，不含量化元数据、KV Cache、激活与运行时开销；不是实际显存占用或性能测试结果。</p>
+      </article>
+    </div></section>
 
     <section id="featured" class="featured open-source section" aria-labelledby="featured-title"><div class="container">
       <div class="section-heading reveal"><p class="eyebrow mono">03 / BUILT IN THE OPEN</p><span>开源项目</span></div>
@@ -137,4 +160,5 @@
   <script src="scene.js?v=open-space-1"></script><script type="module" src="galaxy.js?v=word-clear-1"></script><script src="app.js?v=technical-21"></script>
 <script type="module" src="portfolio.js?v=technical-22-fix"></script>
 <script type="module" src="collection-visuals.js?v=showcase-8"></script>
+<script type="module" src="showcase.mjs?v=demo-24"></script>
 </body></html>
