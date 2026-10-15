@@ -97,15 +97,17 @@
 
     <section id="opc" class="opc section" aria-labelledby="opc-title"><div class="container">
       <div class="section-heading reveal"><p class="eyebrow mono">04 / ONE PERSON, A WHOLE PRODUCT</p><span>OPC 经验</span></div>
-      <div class="opc-heading reveal"><p class="opc-kicker mono">INDEPENDENT BUILDER / 吃什么安庆量科技</p><h2 id="opc-title" class="display-heading" tabindex="-1">一个人，<br>做好一个产品。</h2><p class="opc-intro">做完功能之后，产品才刚刚开始。独立做微信小程序「吃什么安庆量科技」，让我把视角从代码延伸到选题、交付和日常运营：用有限的精力，完成一个能被反复使用的小闭环。</p></div>
-      <div class="opc-principle reveal"><span class="mono">THE WORK BEYOND CODE</span><p>把问题做小，<br>把体验做完整。</p><div class="opc-cycle" aria-label="从选题到运营的产品闭环"><span>选题</span><i aria-hidden="true">→</i><span>取舍</span><i aria-hidden="true">→</i><span>交付</span><i aria-hidden="true">→</i><span>回访</span></div></div>
+      <div class="opc-heading reveal"><p class="opc-kicker mono">INDEPENDENT BUILDER / 吃什么安庆量科技</p><h2 id="opc-title" class="display-heading" tabindex="-1">一个人，<br>做好一个产品。</h2><p class="opc-intro">「吃什么安庆量科技」是我独立设计、开发并上线运营的微信小程序。从“今天吃什么”这个日常难题出发，产品定义、交互设计、推荐规则、技术开发、上线发布和持续运营，都由我一个人串起来。这段 OPC 实践，让我在写代码之外，也要为每一次产品取舍和上线后的体验负责。</p></div>
+      <div class="opc-principle reveal"><span class="mono">PRODUCT → ENGINEERING → OPERATIONS</span><p>从一个用餐难题，<br>到一套持续运转的产品。</p><div class="opc-cycle" aria-label="独立完成设计、开发、上线和运营"><span>设计</span><i aria-hidden="true">→</i><span>开发</span><i aria-hidden="true">→</i><span>上线</span><i aria-hidden="true">→</i><span>运营</span></div></div>
       <div class="opc-lessons">
-        <article class="opc-lesson reveal"><p class="mono">01 / FOCUS</p><h3>从一个小问题切入</h3><p>“今天吃什么”足够具体，也会反复出现。我把产品围绕一次用餐选择来组织，让用户打开后知道能解决什么。一个人做产品，先把一个场景做顺，比不断增加功能更能集中开发和维护的精力。</p></article>
-        <article class="opc-lesson reveal"><p class="mono">02 / CONSTRAINTS</p><h3>把产品取舍写进规则</h3><p>步行范围、预计用时和近期吃过的记录，把模糊的“随便”变成可处理的条件。推荐先考虑是否合适，再考虑提供多少选择。清晰的边界既降低用户的决策负担，也让规则、状态和异常更容易维护。</p></article>
-        <article class="opc-lesson reveal"><p class="mono">03 / FEEDBACK</p><h3>让每次使用留下价值</h3><p>吃过的记录参与下一次推荐，避免每次打开都从头开始。这也让我形成一条迭代检查线：推荐是否合适、记录是否顺手、再次使用是否更省事。产品的连续性，来自这些具体环节的衔接。</p></article>
-        <article class="opc-lesson reveal"><p class="mono">04 / OPERATIONS</p><h3>把运营纳入工程取舍</h3><p>打卡、积分和榜单，为一次性的选择工具留下日常回访的入口。做 OPC，运营同样消耗维护精力；规则要清楚，反馈要及时，复杂度要可控，让开发与持续运营都能落在一个人的工作半径里。</p></article>
+        <article class="opc-lesson reveal"><p class="mono">01 / PRODUCT DEFINITION</p><h3>把“随便吃点”变成明确任务</h3><p>选项不少，决定却迟迟做不出来，这是我切入的具体问题。我把产品目标收在“帮用户决定这一顿”上，围绕步行就餐与外卖组织使用场景，把距离、时间和近期吃过什么纳入考虑。先定义一次选择怎样才算完成，再决定需要哪些页面和功能，让一个人也能把产品的边界和交付范围握在手里。</p></article>
+        <article class="opc-lesson reveal"><p class="mono">02 / INTERACTION DESIGN</p><h3>把选择成本藏进交互细节</h3><p>步行场景提供 0.5、1、2、3、5 km 的范围选择，并展示预计步行时间，让“附近”变成可以判断的距离；记住偏好，减少下次打开时的重复设置。外卖场景用“滑动决定”推进选择。我把条件设置和做决定分开处理：先缩小范围，再让用户轻松选定，避免把一次吃饭变成一轮复杂筛选。</p></article>
+        <article class="opc-lesson reveal"><p class="mono">03 / ENGINEERING</p><h3>让推荐拥有记忆和约束</h3><p>开发时，我把距离、偏好和近期用餐记录转成推荐条件，用“排除近七天”处理连续推荐重复的问题。推荐结果与用餐记录衔接，这次吃过什么会影响下一次选择。技术上的重点落在条件如何组合、历史如何参与、页面间的状态如何保持一致，让每次使用都能接上前一次。</p></article>
+        <article class="opc-lesson reveal"><p class="mono">04 / RELEASE &amp; DELIVERY</p><h3>一个人接住从开发到上线的全程</h3><p>从界面与交互、推荐逻辑、偏好和记录管理，到微信小程序的上线发布，整条交付链路都由我承担。我按完整用餐路径组织交付：设置条件、获得推荐、做出选择、留下记录，再次进入时继续使用。范围切换、偏好回显、历史排重和跨页面衔接，都要放回这条路径里考虑；功能连起来之后，才是一个可以交给用户的产品。</p></article>
+        <article class="opc-lesson reveal"><p class="mono">05 / PRODUCT OPERATIONS</p><h3>把一次选择延伸成日常回访</h3><p>上线之后，我继续负责产品运营，把用餐记录、打卡积分和榜单接进日常体验。记录保留个人的用餐轨迹，打卡给每次参与一个反馈，热门查询榜与积分榜分别承接内容发现和持续参与。运营因此进入了产品设计与开发范围：入口放在哪里、行为怎样对应积分、榜单怎样呈现，都需要我一起考虑。</p></article>
+        <article class="opc-lesson reveal"><p class="mono">06 / ITERATION &amp; OWNERSHIP</p><h3>用下一次吃饭检验产品取舍</h3><p>产品、开发和运营由同一个人负责，每项能力也要算上长期维护的成本。我的迭代检查线落在具体体验里：距离是否方便判断、近期排重能否带来变化、偏好是否需要重设、记录和打卡是否顺手。围绕这些问题安排投入，把推荐、历史和回访机制持续接好，让有限精力投入到用户下一次打开时真正用得上的地方。</p></article>
       </div>
-      <p class="opc-outro reveal">对我来说，OPC 的练习，是把产品判断、技术实现和持续维护放在同一张桌子上。</p>
+      <p class="opc-outro reveal">这段经历让我把责任从“功能写完”延伸到“产品持续运转”：自己定义问题、完成实现、交付上线，也接住之后的运营与维护。</p>
     </div></section>
 
     <section id="particle-logos" class="particle-interlude particle-logo-row" aria-label="DeepSeek、GPT 与 Claude 星云">
