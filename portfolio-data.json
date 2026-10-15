@@ -279,14 +279,15 @@
           "modelEngineering": {
             "id": "order-review-reliability",
             "eyebrow": "EVIDENCE RELIABILITY / EVALUATION",
-            "title": "推荐技术方案 · 证据链可靠性与评测",
-            "summary": "复杂投诉审单的关键，是多轮调查始终使用同一组事实，并能追溯责任建议所引用的材料。推荐围绕 DeepSeek Harness 增加模型请求预算、受控工具执行、案件状态持久化和引用校验；以人工复核样本构建回放集，比较 Skill、提示词及工具版本的差异。模型调用沿用 deepseek-v4-pro 接口，工程投入优先放在执行可靠性与评测闭环。",
+            "title": "推荐技术方案 · 证据驱动的推理与评测工程",
+            "summary": "事后定责的模型工程重点是让复杂调查保持事实一致、工具受控和结论可检验。核心推理保留 deepseek-v4-pro 模型 API，围绕共享案件状态、证据校验、执行预算与错单回放组织可靠性方案；训练能力优先用于可独立评测的辅助任务。",
             "stack": [
               "DeepSeek Harness",
               "deepseek-v4-pro",
+              "Model API Adapter",
+              "JSON Schema",
               "Docker",
               "PostgreSQL",
-              "JSON Schema",
               "Langfuse",
               "Dataset Replay",
               "Tool Contract Testing"
@@ -483,7 +484,29 @@
                   "from": "harness"
                 }
               ]
-            }
+            },
+            "sections": [
+              {
+                "label": "用争议驱动调查，把判断落到证据",
+                "text": "以争议点组织待核查事项，DeepSeek Harness 根据已有事实与缺失信息选择工具和专业 Skill。新材料与冲突证据更新同一份案件状态，避免不同步骤各自生成不一致的事实。金额、日期、字段口径和引用有效性交给确定性工具校验；证据不足时保留待核查事项，完成条件由问题覆盖与材料依据共同约束。"
+              },
+              {
+                "label": "保留错单原因，比较整条调查过程",
+                "text": "建议按复核结果整理脱敏案例，标注争议点、应查事实、关键证据和可接受结论。回放固定材料与规则版本，分别观察判断偏差、遗漏核查、无效引用、工具失败和执行成本。错单归因进一步区分材料解析、字段选取、Skill 分支与提交校验问题，候选改动通过独立留出样本回归后再进入发布流程。"
+              },
+              {
+                "label": "控制多步执行的容量和故障边界",
+                "text": "建议由 Model API Adapter 统一处理超时、并发与调用预算，工具任务通过 Docker 隔离依赖和资源限制；案件状态与证据索引持久化，允许失败步骤重试并保留前序进展。缓存以材料版本和权限范围为边界，避免跨案件复用错误结果。Langfuse 关联模型、工具与 Skill 版本，追踪耗时、用量及异常链路。"
+              },
+              {
+                "label": "把微调放在边界明确的辅助任务",
+                "text": "主推理模型通过 API 接入，当前不将其描述为本地训练或量化。若附件分类、证据字段提取等稳定子任务需要进一步适配，可选用可获得权重的辅助模型，使用 PyTorch / PEFT 进行 LoRA 或 QLoRA 实验，并以字段正确性和证据覆盖率决定是否替换原有方法。量化仅针对通过质量回归的辅助模型，独立比较资源收益。"
+              }
+            ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "一张投诉工单往往包含多个争议、分散附件和不断出现的新线索。固定核查路径容易漏查，局部结论变化后也难以同步修正责任判断。项目因此围绕争议建立共享事实，让 Agent 按需调用业务工具与专业 Skill 补充调查，并将判断关联到具体证据，减少人工反复翻阅与核对的负担。"
           }
         },
         {
@@ -774,22 +797,23 @@
           "modelEngineering": {
             "id": "pre-review-model-serving",
             "eyebrow": "TASK ADAPTATION / PRIVATE INFERENCE",
-            "title": "推荐技术方案 · 领域适配与私有推理",
-            "summary": "事前审核更适合围绕规则一致性和批量审核成本优化模型：监管要求继续以 Skill 管理，整理要素提取、风险识别及报告格式的任务样本，推荐用 PyTorch / PEFT 按需选择 LoRA 或 QLoRA。部署侧以原始版本为基线，比较适配版本与可选 AWQ / GPTQ 量化版本的审核质量、显存和延迟，再通过 vLLM 向 LangChain 能力服务提供统一推理接口。",
+            "title": "推荐技术方案 · 规则约束下的模型适配与推理服务",
+            "summary": "事前审核将高频变化的规则留在 Skill 层，将模型适配集中在材料理解、要素抽取和结构化表达。推荐以脱敏任务样本比较基座与 LoRA / QLoRA 适配效果，再评估 AWQ / GPTQ 对审核质量和推理成本的影响；通过 vLLM / Docker 形成版本可控的候选推理链路。",
             "stack": [
+              "Python",
+              "FastAPI",
+              "Pydantic",
+              "pi",
+              "LangChain",
+              "Langfuse",
               "qwen3.8-27b",
               "PyTorch",
               "PEFT",
-              "LoRA",
-              "QLoRA",
+              "LoRA / QLoRA",
               "bitsandbytes",
-              "AWQ",
-              "GPTQ",
+              "AWQ / GPTQ",
               "vLLM",
-              "Docker",
-              "LangChain",
-              "pi",
-              "Langfuse"
+              "Docker"
             ],
             "architecture": {
               "title": "审核模型的任务适配、评测与服务接入",
@@ -999,7 +1023,29 @@
                   "from": "langchain"
                 }
               ]
-            }
+            },
+            "sections": [
+              {
+                "label": "规则可执行，语义判断有边界",
+                "text": "OCR / ASR 把不同材料转换为带来源位置的内容；LangChain 组织模型与解析工具，pi 根据任务装载对应审核 Skill。格式、必填项和数值条件使用确定性检查，隐含限制、提示充分性及跨材料冲突交给模型辅助判断。每个风险项关联触发条件、原文位置与修订建议，使结果能够被业务人员理解和复核。"
+              },
+              {
+                "label": "微调稳定任务行为，规则继续独立演进",
+                "text": "推荐围绕要素提取、风险标签、冲突识别和报告结构建立脱敏任务样本，纳入易混淆的正常内容、缺失要素及长尾表达。PyTorch / PEFT 提供 LoRA 或 QLoRA 适配路径，训练目标聚焦领域语言和输出行为；监管口径及其生效版本继续由 Skill 管理，避免每次规则变化都依赖重新训练。按业务场景和材料来源划分留出集，减少模板重复导致的评测偏高。"
+              },
+              {
+                "label": "先守住漏检边界，再比较服务成本",
+                "text": "推荐分别比较基座、适配器与候选量化版本，检查风险漏检、要素正确率和结构化输出稳定性，再观察显存占用、吞吐和请求延迟。LoRA / QLoRA 是可选择的适配方式，AWQ / GPTQ 是可选择的部署优化方式，不要求串成固定步骤。兼容权重通过 vLLM 暴露推理接口，以 Docker 固定运行依赖和模型配置。"
+              },
+              {
+                "label": "把审核链路和模型版本一起纳入追踪",
+                "text": "Python API 管理送审任务、材料引用和结果状态，pi Runtime 负责 Skill 执行，LangChain 适配模型与工具，保持应用状态与推理服务的边界清晰。推荐在服务层统一请求预算、并发和超时，记录模型、Skill 与解析器版本；Langfuse 将审核项映射到对应调用，支持对异常样本回放和版本比较。"
+              }
+            ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "宣传文案、服务告知和业务材料在发布前需要核对多类合规要求，人工逐项检查依赖经验，面对不同格式材料也容易出现尺度不一、问题定位慢的情况。项目将监管要求与审核经验组织为可执行 Skill，串联材料解析、要素核对、语义判断和证据定位，让风险在内容发布前被识别并进入可追踪的处置流程。"
           }
         },
         {
@@ -1274,20 +1320,21 @@
           "modelEngineering": {
             "id": "video-review-media-infra",
             "eyebrow": "MEDIA PIPELINE / RESUMABLE INFERENCE",
-            "title": "推荐技术方案 · 媒体流水线与可恢复审核",
-            "summary": "直播审核的资源压力主要来自长视频处理和多模态调用，推荐把抽帧、音轨解析与审核推理拆成独立任务。FFmpeg 按时间窗口生成素材，Celery / Redis 分配工作与重试；画面、口播和商品资料共享时间索引，交给 LangGraph 选择核查路径。qwen3.6-397b 通过独立模型端点接入，按片段限制并发与调用预算；持久化 checkpoint 支持中断后继续审核。",
+            "title": "推荐技术方案 · 时序证据、多模态核查与媒体 Infra",
+            "summary": "视频审核的核心工程问题是时间对齐、长素材调度和中断恢复。推荐按时间窗口拆分画面与音轨，将 OCR / ASR 结果与商品资料绑定到片段索引，LangGraph 根据核查项选择处理路径；核心多模态模型保留 qwen3.6-397b 端点调用，训练优先服务于可独立验证的轻量辅助任务。",
             "stack": [
               "Python",
               "LangGraph",
               "qwen3.6-397b",
               "FFmpeg",
+              "ASR / OCR",
               "Celery",
               "Redis",
               "PostgreSQL",
+              "Object Storage",
               "HTTPX",
               "Docker",
-              "Langfuse",
-              "ASR / OCR"
+              "Langfuse"
             ],
             "architecture": {
               "title": "分片解析、状态恢复与多模态推理",
@@ -1506,7 +1553,29 @@
                   "from": "queue"
                 }
               ]
-            }
+            },
+            "sections": [
+              {
+                "label": "沿同一时间轴核对画面、口播和资料",
+                "text": "推荐由 FFmpeg 生成带起止时间的媒体窗口，抽样帧、音轨及 OCR / ASR 结果统一关联 Segment ID。LangGraph 按材料类型和核查项选择画面理解、语义核验或专业 Skill，模型在同一片段上下文内比较口播、画面文字与商品资料。结果保留时间偏移、素材引用和相互冲突的表述，避免把整段视频压成难以复查的一条结论。"
+              },
+              {
+                "label": "评估能否找到正确片段，而不只看最终标签",
+                "text": "推荐样本同时标注风险类型、起止时间、关键帧、口播文本及相关资料；将相似视频或同源直播放入同一数据划分，避免片段泄漏。评测分别检查风险发现、证据片段定位、跨模态冲突识别和报告引用完整性。错例进一步区分抽帧遗漏、ASR / OCR 误差、模型判断与图路由问题，使优化能够落到具体环节。"
+              },
+              {
+                "label": "媒体解析与模型推理独立调度",
+                "text": "推荐使用 Celery / Redis 分配媒体与推理任务，Docker 固定解析工具和 Worker 依赖；对象存储保存原始素材与片段，图状态只保留引用和核查进度。持久化 Checkpointer 支持任务中断后继续执行，重试以片段任务标识避免重复处理。多模态端点独立设置并发和预算，Langfuse 记录排队、节点耗时、失败片段与调用用量，区分媒体处理瓶颈和模型容量瓶颈。"
+              },
+              {
+                "label": "优先适配可控子任务，谨慎改变多模态主模型",
+                "text": "推荐先用标注片段验证是否存在稳定的分类或要素抽取瓶颈，再对可获得权重的辅助模型采用 PyTorch / PEFT 与 LoRA / QLoRA。视觉理解、语音转写与文本判断分别评估，不把文本侧的收益直接推断为视频审核提升。主模型当前按 qwen3.6-397b 接口使用；若未来考虑本地服务或量化，需要单独验证权重、视觉组件、推理后端与时间证据质量，避免把大模型训练当成媒体流水线的默认步骤。"
+              }
+            ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "直播内容同时包含画面、口播和商品信息，风险可能隐藏在不同时间片段或相互矛盾的表达中。人工逐段复核耗时，单独检查文本又难以覆盖跨模态线索。项目以有状态的 Agent 流程组织素材解析与分支核验，将问题关联到视频时段、表达内容和参考依据，帮助审核人员更快复核并保留可追溯证据。"
           }
         },
         {
@@ -1536,6 +1605,10 @@
             {
               "label": "运行记录与管理",
               "text": "执行端汇集步骤状态、错误信息、运行日志与录屏，供排查操作过程。TypeScript / React 提供任务及机器人管理入口，关联执行记录、状态查询与任务操作，并按角色组织访问范围。"
+            },
+            {
+              "label": "执行工程：让机器人识别变化、停在可恢复的位置",
+              "text": "自动化难点不只在点击，而在页面加载、元素变化和部分步骤已经执行后的失败恢复。现有 Python 执行器、操作适配器与步骤记录为排查提供基础。推荐为关键动作增加执行前条件、元素等待与执行后结果校验，优先使用稳定元素定位，无法直接读取时再调用 OCR；按任务和步骤保存进度，对查询与写入分别设置重试边界，避免重复提交。调度端限制单机器人并发，将异常截图、日志与任务标识关联，定位“没找到、没执行、已执行但未确认”等不同失败原因。"
             }
           ],
           "architecture": {
@@ -1790,6 +1863,10 @@
                 "text": "自动化任务失败时，只看到最终状态难以判断是哪一步出了问题。将步骤状态、异常、执行日志和录屏关联到任务与机器人，React 管理界面集中呈现执行记录，便于回看操作过程、排查定位问题并调整流程定义。"
               }
             ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "日常运营中存在大量规则明确、频繁重复的跨系统操作：下载材料、录入数据、查询核对，再把结果搬到另一套工具。部分系统缺少适合直接集成的接口，人工执行难以持续追踪。项目将这些动作沉淀为可编排流程，通过 Python 机器人操作网页和桌面，并统一管理调度、异常与运行记录，让重复任务可以稳定复用。"
           }
         }
       ]
@@ -1798,7 +1875,7 @@
       "id": "service",
       "title": "通信与客服系统",
       "index": "02",
-      "summary": "连接会话消息、呼叫控制和语音处理，以共用业务 API 与交互组件组织多渠道服务。",
+      "summary": "连接在线与语音服务，以统一平台承接工单协作、知识检索、质量管理和客户运营。",
       "projects": [
         {
           "id": "customer-service-online",
@@ -1831,6 +1908,10 @@
             {
               "label": "微服务协作与事件处理",
               "text": "Spring Boot 拆分会话、坐席调度、消息接入与辅助服务，Nacos 承担服务注册和配置，OpenFeign 组织服务间调用。RabbitMQ 传递会话事件，Redis 保存活动上下文与重复检查信息，MyBatis-Plus 将接待记录与会话历史写入 MySQL。"
+            },
+            {
+              "label": "调度工程：高峰分配与转接中的状态一致性",
+              "text": "咨询高峰时，多个分配请求可能同时选中同一坐席，坐席切换状态和客户转接也会改变可用容量。推荐将排队、容量占用和接待关系作为一组受控状态转换，以 Redis 原子操作完成容量校验与占用，按租户和技能范围筛选可用坐席；转接使用独立状态与确认步骤，防止双方同时接待或无人承接。异步会话事件保留消息标识和顺序信息，结合幂等消费、超时回收与状态核对，使重复通知和短暂服务故障能够被识别和修复。"
             }
           ],
           "implementation": {
@@ -2126,6 +2207,10 @@
                 "kind": "config"
               }
             ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "在线服务需要把持续进入的咨询及时交给合适坐席，同时兼顾排队、并行接待、转接和后续受理。服务入口、坐席状态与客户资料一旦脱节，就容易出现重复询问和处理断点。项目以 SaaS 微服务组织接待与调度能力，将历史会话、知识辅助和工单受理汇入工作台，帮助坐席在连续上下文中完成服务。"
           }
         },
         {
@@ -2159,6 +2244,10 @@
             {
               "label": "微服务状态与业务协同",
               "text": "Spring Cloud Gateway 与接入适配服务 处理坐席 API 接入，Nacos 与 OpenFeign 组织微服务治理与调用。MySQL 保存通话和任务记录，Redis 维护活动呼叫状态，RabbitMQ 传递呼叫与任务事件；共享工单与知识接口提供坐席服务下单和话术辅助。通话转写、呼叫状态和任务进度形成质检与服务分析输入。"
+            },
+            {
+              "label": "语音工程：把实时媒体与异步呼叫事件对齐",
+              "text": "语音服务要同时面对电话接续、媒体播放、识别结果和坐席操作，事件到达顺序与实际通话阶段可能不同。推荐以呼叫标识关联 FreeSWITCH 事件、坐席任务与语音交互轮次，通过状态机校验事件能否推进当前通话，重复或过期事件只记录、不重复执行。ASR、意图识别与 TTS 各自设置超时和结果关联，避免上一轮识别或播报影响下一轮对话；媒体与控制链路分别观测，结合呼叫阶段、接口耗时与异常原因区分接续失败和智能交互失败。"
             }
           ],
           "implementation": {
@@ -2450,292 +2539,329 @@
                 "kind": "event"
               }
             ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "电话服务需要同时处理呼入排队、坐席接听、人工外呼和自动触达，语音导航与业务处理还必须保持一致的呼叫状态。媒体链路和业务流程相互交织，使异常恢复与上下文衔接更复杂。项目以 FreeSWITCH 承接通话能力，由 Java 微服务编排呼叫任务，结合识别、意图理解和语音合成，减少重复操作并提高服务连续性。"
           }
         },
         {
           "id": "customer-service-ticket-knowledge",
-          "title": "客服工单与知识库",
+          "title": "客户服务与运营平台",
           "role": "项目主要负责人",
-          "summary": "以 Java 微服务承接多渠道工单，使用 Activiti BPMN 管理流程实例、任务分配与流转历史，独立 Elasticsearch 搜索服务通过异步索引支撑话术查询。",
+          "summary": "以 Java 微服务统一工单协同、知识服务、服务质检、客户资产与企微运营，通过 Activiti 工作流和 Elasticsearch 搜索连接服务处理与知识供给，为客服渠道提供可复用的平台能力。",
           "tags": [
-            "Java 微服务",
-            "Activiti BPMN",
+            "Java Microservices",
+            "Activiti",
             "Elasticsearch",
-            "异步索引"
+            "Customer Operations"
           ],
           "sections": [
             {
-              "label": "统一工作台与微服务接口",
-              "text": "TypeScript、React 与 Ant Design 组织工单处理和知识维护界面，在线、语音与客户入口共用业务 API。Spring Cloud Gateway 与 Spring Security 处理接入和角色权限，Spring Boot 将工单业务、知识发布、搜索查询和索引更新按职责拆分，通过 Nacos 与 OpenFeign 完成服务治理与调用。"
+              "label": "统一服务底座",
+              "text": "在线与语音渠道负责接待，平台负责接待之后的协同与运营。统一工作台汇集待办、客户信息、知识与质量记录，后台管理组织、角色、策略和租户范围，让不同服务入口复用一致的业务能力与数据边界。"
             },
             {
-              "label": "BPMN 定义与流程实例",
-              "text": "Activiti 执行 BPMN 流程定义，工单创建后关联流程实例，后续受理和处理动作作用于实例与任务。工单服务通过 MyBatis-Plus 保存业务记录，流程引擎管理节点执行及自身运行与历史数据，业务标识与流程标识连接两类状态。"
+              "label": "工单流程与跨团队协同",
+              "text": "工单记录客户诉求与办理材料，Activiti 将受理、分派、处理、复核等动作组织为流程实例与任务。业务记录关联流程标识，当前待办与历史轨迹分别可查，解决跨团队转交后责任不清、进度难追踪的问题。"
             },
             {
-              "label": "任务分配、转派与时限",
-              "text": "流程任务承载处理人分配和转派，时限信息参与任务跟踪；坐席提交处理动作后推进流程并更新工单状态。流程运行数据与历史记录保留节点、任务和处理信息，使当前进度、任务归属和历史轨迹可以分别查询。"
+              "label": "知识维护与检索服务",
+              "text": "知识管理覆盖内容维护、发布和更新，Elasticsearch 为坐席及渠道提供全文检索。业务内容与检索索引分工，知识变更通过索引更新机制传递，使回答辅助能够跟随发布状态变化，同时避免把搜索过程与工单状态流转混在一起。"
             },
             {
-              "label": "知识发布与异步索引",
-              "text": "知识服务维护话术内容及发布状态，将发布后的知识变更通过 RabbitMQ 交给索引更新服务。索引服务读取已发布内容并更新 Elasticsearch，内容存储与搜索索引分别承担知识维护和查询职责，发布操作与索引处理通过事件衔接。"
+              "label": "服务质检与质量回流",
+              "text": "结合自动初检与人工复核，围绕服务记录形成质量问题、复核结论与后续处理线索。质检既需要找到问题，也需要能回到具体记录和办理过程，为知识修订、人员辅导与流程调整提供依据。"
             },
             {
-              "label": "独立搜索与回答辅助",
-              "text": "搜索微服务接收用户问题，利用 Elasticsearch 分词与倒排索引执行全文检索，结合条件过滤和相关性排序返回话术。工单任务经 Activiti 流转，知识查询经独立搜索接口返回；两条能力供客服渠道组合调用，知识查询不推进工单状态。"
+              "label": "客户资产与企微运营",
+              "text": "将客户资料、标签、归属和跟进记录组织为持续更新的客户视图，承接企微客户跟进、社群运营任务与客户交接。服务中积累的信息能够进入后续运营，同时对沟通记录和客户资产的访问保留清晰边界。"
+            },
+            {
+              "label": "智能辅助与自动化接入",
+              "text": "平台通过模型与自动化能力提供坐席辅助、服务小结、标签提取和重复任务处理。智能结果进入可检查的业务字段或待办，由应用控制采纳和执行；模型与 RPA 的调用作为可替换的集成能力，不与工单和客户数据直接耦合。"
+            },
+            {
+              "label": "运营治理与租户隔离",
+              "text": "运营端管理服务策略、组织人员、权限与服务数据。Java 微服务按工单、知识、客户运营和质量分析拆分职责，在租户和组织范围内访问业务数据，通过流程历史、操作记录和指标视图定位服务堵点。"
             }
           ],
           "implementation": {
             "stack": [
               "TypeScript",
               "React",
-              "Ant Design",
               "Java",
               "Spring Boot",
               "Spring Cloud",
               "Spring Cloud Gateway",
               "Nacos",
               "OpenFeign",
-              "Spring Security",
+              "Activiti",
+              "Elasticsearch",
               "MyBatis-Plus",
               "MySQL",
               "RabbitMQ",
-              "Activiti",
-              "Elasticsearch"
+              "Docker"
             ],
             "highlights": [
               {
-                "label": "把服务受理变成可执行任务",
-                "text": "多渠道受理的问题需要按流程交给相应人员办理，业务状态不能只依赖人工修改。Java 工单服务关联 Activiti 流程实例，BPMN 定义节点和流转路径，业务标识与流程标识衔接工单内容、当前任务和处理动作。"
+                "label": "让接待之后的协作也有系统承接",
+                "text": "服务诉求可能跨越多个组织与处理环节。以工单作为业务载体，以 Activiti 实例和任务管理执行过程，关联办理材料、处理动作和历史记录，让转派与复核保持连续的上下文。"
               },
               {
-                "label": "跟踪分派、转派与处理时限",
-                "text": "办理过程中可能经历不同处理人和组织，当前责任归属与历史过程都需要可查询。工作流任务承接分配和转派，时限信息参与跟踪；提交处理动作后推进实例并更新工单状态，通过运行数据和历史记录还原办理轨迹。"
+                "label": "在高频查询与持续更新之间保持一致",
+                "text": "知识查询读多、内容发布相对集中，两类负载不宜绑在一起。内容服务管理发布状态，独立索引与检索链路更新 Elasticsearch；查询返回可直接使用的话术与内容出处，降低坐席在多个系统中寻找答案的成本。"
               },
               {
-                "label": "协调知识发布与搜索更新",
-                "text": "知识维护和搜索查询承担不同任务，发布内容后需要让搜索索引同步变化。Java 知识服务管理话术与发布状态，通过 RabbitMQ 将变更交给索引服务，更新 Elasticsearch，使内容维护与索引处理按各自职责执行。"
+                "label": "把质量检查变成可回到原记录的问题线索",
+                "text": "自动初检需要与人工判断衔接。质量结果关联原始服务记录、问题类型与复核动作，使运营人员能够找到具体问题并推动处理，而不只获得一个分数或汇总结果。"
               },
               {
-                "label": "从客户问题找到回答话术",
-                "text": "客户表达与知识标题未必一致，坐席需要在大量内容中找到相关回答。独立搜索微服务利用 Elasticsearch 分词、倒排索引、条件过滤和相关性排序返回话术，供在线与语音渠道调用，同时保持查询过程与工单流转相互独立。"
+                "label": "让客户运营复用服务上下文",
+                "text": "客户信息分散在咨询、工单与跟进记录里时，持续运营容易重复采集。通过客户标识关联标签、办理情况与企微跟进，把社群任务和客户交接纳入平台，维持客户归属与数据权限。"
+              },
+              {
+                "label": "控制智能输出进入业务动作的边界",
+                "text": "小结、标签和助手回答需要可检查，自动化调用需要受控。由应用层规定输入字段、输出结构和执行范围，保留原记录与结果关联，使模型能力能够被业务复用，也能被人工复核和后续评估。"
+              },
+              {
+                "label": "把租户边界贯彻到服务调用与数据查询",
+                "text": "平台需同时服务不同业务空间。以租户、组织和角色共同限定业务访问范围，在入口、服务调用和数据查询链路传递作用域，避免只隔离菜单而没有隔离实际数据。"
               }
             ]
           },
           "architecture": {
-            "title": "Java 工单微服务、Activiti BPMN 与独立搜索",
-            "note": "工单业务记录关联 Activiti 流程实例与任务；知识发布通过事件驱动异步索引更新，Elasticsearch 分词、倒排、过滤与相关性排序支撑独立话术查询。",
-            "focus": "workflow",
+            "title": "客服协同、知识服务与运营治理的微服务平台",
+            "note": "按接入、领域服务、执行引擎、数据与外部能力分层；工单主链路与知识检索链路分开，客户运营和质量服务横向复用统一上下文。 工单采用 Activiti，知识检索采用 Elasticsearch；其余细化组件为结合业务场景的推荐选型。",
             "layers": [
               {
                 "id": "access",
-                "label": "渠道与统一接口",
-                "caption": "REACT / GATEWAY / SECURITY"
+                "label": "工作台与渠道接入",
+                "caption": "REACT / API GATEWAY"
               },
               {
-                "id": "service",
-                "label": "工单、知识与搜索微服务",
+                "id": "domain",
+                "label": "平台领域服务",
                 "caption": "SPRING BOOT / OPENFEIGN"
               },
               {
                 "id": "execution",
-                "label": "流程与索引执行",
-                "caption": "FLOWABLE / ELASTICSEARCH"
+                "label": "流程、检索与智能执行",
+                "caption": "ACTIVITI / ELASTICSEARCH"
               },
               {
                 "id": "data",
-                "label": "内容、记录与发布事件",
-                "caption": "MYSQL / RABBITMQ"
+                "label": "业务数据与事件",
+                "caption": "MYSQL / RABBITMQ / MODEL API"
               }
             ],
             "nodes": [
               {
-                "id": "channels",
-                "label": "客服渠道调用方",
-                "layer": "access",
-                "type": "external",
-                "items": [
-                  "在线 / 语音 / 客户入口",
-                  "服务受理 / 话术查询"
-                ]
-              },
-              {
-                "id": "ui",
-                "label": "工单与知识工作台",
+                "id": "workspace",
+                "label": "Unified Workbench",
                 "layer": "access",
                 "type": "ui",
                 "items": [
-                  "TypeScript / React / Ant Design",
-                  "任务处理 / 知识维护"
+                  "TypeScript / React",
+                  "Tasks / Knowledge / Operations"
                 ]
               },
               {
                 "id": "gateway",
-                "label": "业务 API 网关",
+                "label": "Platform API Gateway",
                 "layer": "access",
                 "type": "api",
                 "items": [
-                  "Spring Cloud Gateway / Security",
-                  "身份权限 / 接口路由"
+                  "Spring Cloud Gateway",
+                  "Tenant Scope / Access Policy",
+                  "Channel API / WeCom Adapter"
                 ]
               },
               {
                 "id": "ticket",
-                "label": "工单业务微服务",
-                "layer": "service",
+                "label": "Work Order Service",
+                "layer": "domain",
                 "type": "service",
                 "items": [
                   "Spring Boot / OpenFeign",
-                  "工单与流程实例关联",
-                  "状态更新 / 任务操作"
+                  "Business State / Process Link",
+                  "Assignment / SLA / History"
                 ]
               },
               {
                 "id": "knowledge",
-                "label": "知识内容微服务",
-                "layer": "service",
+                "label": "Knowledge Service",
+                "layer": "domain",
                 "type": "service",
                 "items": [
                   "Spring Boot / MyBatis-Plus",
-                  "知识维护 / 发布状态",
-                  "发布变更事件"
+                  "Publication / Search API",
+                  "Index Change Events"
                 ]
               },
               {
-                "id": "query",
-                "label": "知识搜索微服务",
-                "layer": "service",
+                "id": "customer",
+                "label": "Customer & SCRM Service",
+                "layer": "domain",
                 "type": "service",
                 "items": [
-                  "Spring Boot",
-                  "问题查询 / 条件过滤",
-                  "匹配话术返回"
+                  "Customer Profile / Tags",
+                  "WeCom Operations",
+                  "Ownership / Handover"
+                ]
+              },
+              {
+                "id": "operations",
+                "label": "Quality & Operations",
+                "layer": "domain",
+                "type": "service",
+                "items": [
+                  "Automated Check / Human Review",
+                  "Service Metrics / Policies",
+                  "Summary / Tagging Tasks"
                 ]
               },
               {
                 "id": "workflow",
-                "label": "Activiti BPMN 引擎",
+                "label": "Activiti BPMN Engine",
                 "layer": "execution",
                 "type": "runtime",
                 "items": [
-                  "流程定义 / 流程实例",
-                  "任务分配 / 转派 / 时限",
-                  "流程状态 / 历史查询"
+                  "Process Definition / Instance",
+                  "User Tasks / Timers",
+                  "Runtime / History"
                 ]
               },
               {
                 "id": "search",
-                "label": "Elasticsearch 搜索",
+                "label": "Elasticsearch",
                 "layer": "execution",
                 "type": "runtime",
                 "items": [
-                  "分词 / 倒排索引",
-                  "条件过滤 / 相关性排序"
+                  "Full-text Index / Filters",
+                  "Relevance Ranking",
+                  "Published Knowledge Search"
                 ]
               },
               {
-                "id": "indexer",
-                "label": "异步索引更新服务",
+                "id": "automation",
+                "label": "AI & RPA Orchestrator",
                 "layer": "execution",
                 "type": "service",
                 "items": [
-                  "Spring Boot / 事件消费",
-                  "已发布内容读取",
-                  "搜索索引更新"
+                  "Structured Outputs / Task Dispatch",
+                  "Model API / RPA Adapter",
+                  "Reviewable Results"
                 ]
               },
               {
-                "id": "records",
-                "label": "工单与流程数据",
+                "id": "store",
+                "label": "Platform Data Store",
                 "layer": "data",
                 "type": "data",
                 "items": [
-                  "MySQL：工单与流程数据",
-                  "MyBatis-Plus：工单记录访问",
-                  "实例 / 任务 / 历史轨迹"
-                ]
-              },
-              {
-                "id": "content",
-                "label": "知识内容存储",
-                "layer": "data",
-                "type": "data",
-                "items": [
-                  "MySQL",
-                  "话术内容 / 发布状态"
+                  "MySQL / Tenant Scope",
+                  "Tickets / Knowledge / Profiles",
+                  "Process / Audit Records"
                 ]
               },
               {
                 "id": "events",
-                "label": "知识发布事件通道",
+                "label": "Domain Event Bus",
                 "layer": "data",
                 "type": "runtime",
                 "items": [
                   "RabbitMQ",
-                  "发布变更 / 异步索引任务"
+                  "Publication / Index Updates",
+                  "Task Results / Notifications"
+                ]
+              },
+              {
+                "id": "external",
+                "label": "Model & Automation APIs",
+                "layer": "data",
+                "type": "external",
+                "items": [
+                  "Model Gateway / RPA Runtime",
+                  "External Capabilities",
+                  "Invocation Results"
                 ]
               }
             ],
             "edges": [
               {
-                "from": "channels",
+                "from": "workspace",
                 "to": "gateway",
-                "label": "工单与话术 API 请求",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "ui",
-                "to": "gateway",
-                "label": "任务操作 / 内容维护",
+                "label": "管理操作与任务处理",
                 "kind": "call",
                 "bidirectional": true
               },
               {
                 "from": "gateway",
                 "to": "ticket",
-                "label": "工单创建 / 任务处理",
+                "label": "工单受理与办理",
                 "kind": "call",
                 "bidirectional": true
               },
               {
                 "from": "gateway",
                 "to": "knowledge",
-                "label": "内容维护 / 知识发布",
+                "label": "内容维护与话术查询",
                 "kind": "call",
                 "bidirectional": true
               },
               {
                 "from": "gateway",
-                "to": "query",
-                "label": "问题查询 / 匹配话术",
+                "to": "customer",
+                "label": "客户资料与企微运营",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "gateway",
+                "to": "operations",
+                "label": "质量复核与运营配置",
                 "kind": "call",
                 "bidirectional": true
               },
               {
                 "from": "ticket",
                 "to": "workflow",
-                "label": "实例与任务操作 / 状态",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "workflow",
-                "to": "records",
-                "label": "实例 / 任务 / 历史读写",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "ticket",
-                "to": "records",
-                "label": "工单记录与流程关联",
+                "label": "流程实例与任务操作",
                 "kind": "call",
                 "bidirectional": true
               },
               {
                 "from": "knowledge",
-                "to": "content",
+                "to": "search",
+                "label": "检索请求与搜索结果",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "operations",
+                "to": "automation",
+                "label": "小结、打标与初检任务",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "customer",
+                "to": "store",
+                "label": "客户资产与跟进记录",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "workflow",
+                "to": "store",
+                "label": "流程运行与历史记录",
+                "kind": "call",
+                "bidirectional": true
+              },
+              {
+                "from": "knowledge",
+                "to": "store",
                 "label": "知识内容与发布状态",
                 "kind": "call",
                 "bidirectional": true
@@ -2743,42 +2869,41 @@
               {
                 "from": "knowledge",
                 "to": "events",
-                "label": "发布后变更事件",
+                "label": "知识发布变更事件",
                 "kind": "event"
               },
               {
                 "from": "events",
-                "to": "indexer",
-                "label": "异步索引任务消费",
-                "kind": "event"
-              },
-              {
-                "from": "indexer",
-                "to": "content",
-                "label": "已发布知识读取",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "indexer",
                 "to": "search",
-                "label": "搜索索引更新",
+                "label": "异步索引更新",
                 "kind": "flow"
               },
               {
-                "from": "query",
-                "to": "search",
-                "label": "分词 / 过滤 / 相关性查询",
+                "from": "automation",
+                "to": "external",
+                "label": "模型与自动化调用",
                 "kind": "call",
                 "bidirectional": true
               },
               {
-                "from": "workflow",
-                "to": "ticket",
-                "label": "流程状态与任务变化",
+                "from": "automation",
+                "to": "events",
+                "label": "任务结果与后续处理",
                 "kind": "event"
+              },
+              {
+                "from": "ticket",
+                "to": "store",
+                "label": "工单业务记录",
+                "kind": "call",
+                "bidirectional": true
               }
-            ]
+            ],
+            "focus": "ticket"
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "一次客户咨询常常需要继续查资料、跨团队办理、回访并追踪结果，仅有接待入口无法完成整个服务过程。这个项目把工单、知识、质量检查与客户运营放进统一平台，让服务信息能够进入可追踪的办理流程，让知识与处理经验能够继续回到坐席和运营工作中，减少信息重复整理与协作过程中的断点。"
           }
         },
         {
@@ -2808,6 +2933,10 @@
             {
               "label": "连接人工与后续处理",
               "text": "当问题需要人工介入或进一步办理时，将已有咨询上下文交给在线坐席，并关联共享工单的处理进度。客户从发起问题到跟进结果使用同一服务入口。"
+            },
+            {
+              "label": "交互工程：让多种输入与服务转交保持连贯",
+              "text": "推荐问题、语音转写和数字人展示并行存在时，旧回答覆盖新问题、转写未确认就发起查询，以及转人工后上下文丢失，都会打断咨询。推荐按咨询轮次管理输入、检索和呈现任务，为异步结果携带请求标识，仅将当前轮次结果更新到界面；语音文本经客户确认后查询，数字人输出与文字答案共享同一回答对象。问题推荐按服务场景和可用知识组织，转人工时提交结构化的问题与处理摘要，让形象交互真正接上后续服务。"
             }
           ],
           "architecture": {
@@ -3017,6 +3146,10 @@
                 "text": "自助回答无法覆盖所有诉求，进一步办理时还要减少客户重复描述。将已有咨询上下文交给在线坐席，并关联共享工单和处理进度，让客户从发起咨询到人工接待、后续反馈都能沿着同一服务路径继续。"
               }
             ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "面向客户的服务入口需要照顾不同表达习惯：有人希望直接提问，有人习惯语音，也有人需要更直观的引导。入口与后台服务脱节时，用户转人工或提交问题往往要重新说明。项目将问题推荐、语音转写和数字人交互组合起来，并衔接共享知识、坐席与工单能力，让咨询更容易发起，也让后续处理能够延续已有上下文。"
           }
         }
       ]
@@ -3054,6 +3187,10 @@
             {
               "label": "能力组合与场景方案",
               "text": "围绕商户准入、信息补录和表单返填设计组合方案，将识别结果与信息核验衔接到业务页面。组合场景展示接口和能力之间的协同方式，按方案设计范围呈现。"
+            },
+            {
+              "label": "通道工程：统一结果语义与外部调用故障边界",
+              "text": "不同核验通道在字段、错误码、响应时长和同步方式上存在差异，直接透传会让业务方承担大量适配。推荐用标准请求与结果模型统一核验状态，将“核验未通过”“资料不完整”和“通道调用失败”分别表达；请求标识贯穿能力路由、外部适配和回调处理，支持同步查询与异步结果核对。通道侧配置超时、并发限制和健康状态，回调执行验签与幂等校验，关键资料按最小必要范围留存，从接口语义和运行控制两方面降低接入复杂度。"
             }
           ],
           "architecture": {
@@ -3295,6 +3432,10 @@
                 "text": "认证能力涉及内部组件和外部接口，异常结果需要区分发生在哪个环节。路由服务组织调用状态与异常反馈，监测组件关联运行信息，帮助业务系统判断请求进展，也为排查能力调用与通道交互问题提供依据。"
               }
             ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "企业、商户和借贷等业务都需要核验身份与资料，但不同认证能力的数据来源、材料格式和调用方式各不相同。各业务分别对接会重复建设，也增加路由、异常处理与结果解释的复杂度。项目将资料识别、信息核验与媒介检测封装为统一认证能力，通过标准接口与可配置组合支持不同场景，降低业务接入和后续维护成本。"
           }
         },
         {
@@ -3324,6 +3465,10 @@
             {
               "label": "证据、权限与全过程留痕",
               "text": "MyBatis-Plus / MySQL 保存工单记录，Activiti 管理流程运行与历史数据，文件存储承载证明材料，Redis 支持状态缓存与提交幂等。Nacos 管理注册与配置，OpenFeign 组织服务间调用；角色和数据范围约束办理权限，节点操作与状态变更支持过程追溯。"
+            },
+            {
+              "label": "流程工程：跨组织协作中的一致办理与时限追踪",
+              "text": "投诉工单可能被多人同时处理，也可能在转派、退回和补充材料后反复进入同一节点；只更新工单状态容易与实际待办脱节。推荐以工单标识关联 Activiti 流程实例，在提交动作时校验当前任务、处理权限与数据版本，将业务变更和任务推进纳入一致的提交边界。SLA 按节点记录开始时间、截止时间和办理结果，定时扫描逾期待办，以幂等通知避免重复催办；材料使用稳定引用关联办理版本，使后续复核能够还原当时的事实与处理过程。"
             }
           ],
           "architecture": {
@@ -3607,6 +3752,10 @@
                 "text": "跨组织办理需要看清每一步操作，也需要控制不同角色可见的材料范围。MySQL 保存工单内容，Activiti 管理运行与历史数据，文件存储关联证明材料；角色和数据范围约束访问，将节点操作、状态变化和反馈组成可追溯的记录。"
               }
             ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "欠薪欠款诉求需要把当事人的问题、相关材料和后续办理联系起来，处理过程还涉及受理、分派、协同与结果反馈。单纯收集表单难以支撑持续跟进，也不便于核对责任与办理状态。项目按工单系统组织投诉流程，以工作流串联处理节点，围绕材料归档、时限提醒与操作留痕设计能力，让每次诉求都有可追踪的办理路径。"
           }
         },
         {
@@ -3636,6 +3785,10 @@
             {
               "label": "多视角展示方案",
               "text": "新版界面方案从整体服务、客户问题和业务表现组织多视角图表，并设计重点问题下钻与客户声音展示。这些展示扩展保持设计方案范围。"
+            },
+            {
+              "label": "数据工程：让跨来源指标可比较、可追溯",
+              "text": "跨系统服务量看似可以直接相加，实际常受统计周期、场景标签和汇总层级差异影响，同一服务也可能同时出现在明细与统计数据中。推荐先定义指标粒度、来源优先级和标签映射，再按批次组织入湖与 SQL 聚合；明细去重、空值校验、来源对账与周期完整性检查分别执行。指标结果保留数据周期、来源和加工批次，重跑时按目标周期覆盖，避免重复累计。页面明确最新完成批次与统计范围，让驾驶舱的每个数字都能追溯到相应的数据输入。"
             }
           ],
           "architecture": {
@@ -3817,6 +3970,10 @@
                 "text": "整体服务量能够反映规模，进一步分析还需要连接客户问题和业务表现。新版界面方案将这些视角组合展示，并设计重点问题下钻与客户声音入口，让指标到问题的查看路径更清楚；这些扩展按当前设计方案范围呈现。"
               }
             ]
+          },
+          "background": {
+            "label": "项目背景",
+            "text": "服务数据分散在多个业务系统中，采集方式、统计口径和数据粒度不一致，单看某个系统很难了解整体服务情况。项目通过定时采集与数据入湖，统一加工口径和指标结果，再以驾驶舱呈现服务规模、结构与变化，帮助跨系统比较和问题观察建立共同的数据基础，也为后续分析与服务改进提供入口。"
           }
         }
       ]

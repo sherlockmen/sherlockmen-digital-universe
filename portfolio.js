@@ -1,9 +1,9 @@
-import {renderArchitecture,renderResponsiveArchitecture,renderFocusedArchitecture,layoutFocusedArchitecture,componentType} from './portfolio-diagrams.mjs?v=technical-18';
-import {createDialogStarfield} from './dialog-background.js?v=technical-18';
+import {renderArchitecture,renderResponsiveArchitecture,renderFocusedArchitecture,layoutFocusedArchitecture,componentType} from './portfolio-diagrams.mjs?v=technical-19';
+import {createDialogStarfield} from './dialog-background.js?v=technical-19';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-18',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-19',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
@@ -30,6 +30,9 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-18';
   overview.setAttribute('aria-label','项目概述与实现');
   intro.before(overview);
   overview.append(intro);
+  const background = create('section','portfolio-background');
+  background.setAttribute('aria-label','项目背景');
+  overview.append(background);
   const implementation = create('section','portfolio-implementation');
   implementation.setAttribute('aria-label','技术组件与实现要点');
   overview.append(implementation);
@@ -207,6 +210,10 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-18';
     $('#portfolio-group').textContent = project.group;
     $('#portfolio-role').textContent = project.role;
     $('#portfolio-counter').textContent = `${String(selected + 1).padStart(2,'0')} / ${String(projects.length).padStart(2,'0')}`;
+    const backgroundHeading = create('div','portfolio-section-heading');
+    backgroundHeading.append(create('p','mono','CONTEXT / WHY THIS PROJECT'),create('h3','','项目背景'));
+    background.replaceChildren(backgroundHeading,create('p','',project.background?.text));
+    background.hidden = !project.background?.text;
     const stack = project.implementation?.stack || [];
     const highlights = project.implementation?.highlights || [];
     const tags = $('#portfolio-tags');
@@ -273,14 +280,20 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-18';
     modelEngineering.hidden = !infra;
     if (!modelEngineering.hidden) {
       const heading = create('div','portfolio-section-heading');
-      heading.append(create('p','mono','PROJECT-SPECIFIC / RECOMMENDED STACK'),create('h3','',infra.title));
+      heading.append(create('p','mono','ALGORITHM / MODEL / INFRA'),create('h3','',infra.title));
       const stack = create('ul','portfolio-stack-list model-engineering-stack');
       stack.setAttribute('role','list');
       stack.setAttribute('aria-label','Recommended Tech Stack');
       stack.append(...infra.stack.map(name => create('li','',name)));
       const canvas = create('div','architecture-canvas');
       setArchitecture(canvas,infra);
-      modelEngineering.append(heading,create('p','',infra.summary),stack,create('p','model-engineering-note',infra.architecture.note),canvas);
+      const notes = create('div','model-engineering-details');
+      (infra.sections || []).forEach(section => {
+        const item = create('section','model-engineering-detail');
+        item.append(create('h4','',section.label),create('p','',section.text));
+        notes.append(item);
+      });
+      modelEngineering.append(heading,create('p','',infra.summary),stack,notes,create('p','model-engineering-note',infra.architecture.note),canvas);
     }
     dialog.scrollTop = 0;
     bindMotion();

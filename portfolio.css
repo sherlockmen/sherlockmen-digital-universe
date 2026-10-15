@@ -14,6 +14,10 @@
 .portfolio-dialog>.case-header{position:sticky;top:0;z-index:3;background:#050a10e6;backdrop-filter:blur(14px);border-color:#b9d9ee1c}
 .portfolio-dialog .case-content{grid-template-columns:1fr;max-width:1180px;gap:64px;padding:56px 56px 64px;align-items:start}
 .portfolio-overview{display:grid;gap:32px;min-width:0}
+.portfolio-background{padding:clamp(20px,3vw,24px) clamp(16px,3vw,28px);border-left:2px solid #86b6d1;background:linear-gradient(110deg,#16344766,#0d1d2922);min-width:0}
+.portfolio-background[hidden]{display:none}
+.portfolio-background .portfolio-section-heading{margin-bottom:16px}
+.portfolio-background>p{font-size:16px;line-height:1.95;color:#b4c7d4;max-width:88ch;margin:0;text-wrap:pretty;overflow-wrap:anywhere}
 .portfolio-overview .case-intro{position:static;min-width:0}
 .portfolio-dialog .case-intro .eyebrow{font-size:10px;line-height:1.8;letter-spacing:.12em;color:#89aac1}
 .portfolio-dialog .case-intro .display-heading{font-size:48px;max-width:30ch;line-height:1.25;letter-spacing:-.04em;margin-top:18px;text-wrap:balance}
@@ -86,6 +90,10 @@
 .portfolio-model-engineering[hidden]{display:none}
 .portfolio-model-engineering .portfolio-section-heading{margin-bottom:20px}
 .model-engineering-stack{margin:20px 0}
+.model-engineering-details{margin-block:28px}
+.model-engineering-detail{padding:22px 0;border-top:1px solid #b9d9ee26}
+.model-engineering-detail h4{margin:0 0 10px;font-size:18px;line-height:1.6;font-weight:500;color:#d1e3ef}
+.model-engineering-detail p{margin:0;color:#afc4d2;line-height:1.95}
 .portfolio-diagram .model-engineering-note{font-size:14px;line-height:1.8;color:#89aac1}
 .diagram-legend{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:12px;color:var(--muted);padding-top:20px;border-top:1px solid var(--line)}.diagram-legend span{display:flex;align-items:center;gap:9px}.diagram-legend i{display:block;width:24px;border-top:1px solid var(--accent)}.diagram-legend .support-line{border-top:1px dashed #657f91}
 .portfolio-questions{list-style:none;padding:0;margin:26px 0 0;counter-reset:question}.portfolio-questions li{counter-increment:question;display:grid;grid-template-columns:30px 1fr;gap:14px;padding:16px 0;border-top:1px solid var(--line);font-size:16px;color:#b5c2cb}.portfolio-questions li::before{content:'0' counter(question);font-family:'SFMono-Regular',Consolas,monospace;font-size:11px;padding-top:4px;color:var(--accent)}
