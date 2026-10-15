@@ -153,11 +153,4 @@
     catch {notify('请复制浏览器地址栏中的主页链接');}
   }
   $('#copy-link').addEventListener('click',copyLink);
-  $('#share-page').addEventListener('click',async () => {
-    if (!navigator.share) {await copyLink();return;}
-    const button=$('#share-page');button.disabled=true;
-    try {await navigator.share({title:'SherlockMen — 个人宇宙',text:'从好奇，走向无限。欢迎来到我的个人宇宙。',url:location.origin+location.pathname});}
-    catch(error){if(error.name!=='AbortError')await copyLink();}
-    finally{button.disabled=false;}
-  });
 })();
