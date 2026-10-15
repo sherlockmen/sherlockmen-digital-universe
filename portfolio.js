@@ -3,7 +3,7 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-21';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-22',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-22-fix',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
