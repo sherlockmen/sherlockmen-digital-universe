@@ -289,186 +289,219 @@
               "vLLM"
             ],
             "architecture": {
-              "title": "审单执行可靠性与回放评测",
-              "note": "Harness 管理调查上下文和执行步骤，模型接口管理调用容量，工具运行环境隔离依赖；任务微调与量化支撑附件分类和证据提取，共享事实、证据校验与标注样本共同支撑审核回放。",
+              "title": "证据辅助模型适配与争议推理协同",
+              "note": "附件分类与证据字段样本训练辅助模型，经量化回归后由 vLLM / Docker 部署为证据工具。DeepSeek Harness 通过 API 调用 deepseek-v4-pro 执行核心调查与定责，辅助服务返回带来源的结构化证据，写入共享案件状态并接受引用校验与回放评测。",
               "focus": "harness",
               "layers": [
                 {
-                  "id": "input",
-                  "label": "案件与执行约束",
-                  "caption": "TASK / CONTEXT"
+                  "id": "source",
+                  "label": "案件样本与系统接入",
+                  "caption": "CASE DATA / MODEL API"
                 },
                 {
-                  "id": "execution",
-                  "label": "Agent 与受控调用",
-                  "caption": "HARNESS / MODEL / TOOLS"
+                  "id": "adaptation",
+                  "label": "证据适配与自主调查",
+                  "caption": "PEFT / HARNESS / SKILL"
                 },
                 {
-                  "id": "verification",
-                  "label": "证据一致性与结果检查",
-                  "caption": "STATE / VALIDATION"
+                  "id": "evidence",
+                  "label": "量化产物与证据处理",
+                  "caption": "QUANTIZATION / TOOLS / STATE"
                 },
                 {
-                  "id": "evaluation",
-                  "label": "样本回放与版本评测",
-                  "caption": "REPLAY / LANGFUSE"
+                  "id": "delivery",
+                  "label": "推理服务与质量校验",
+                  "caption": "VLLM / VALIDATION / REPLAY"
                 }
               ],
               "nodes": [
                 {
-                  "id": "task",
-                  "label": "Task Adapter",
-                  "layer": "input",
-                  "type": "api",
+                  "id": "dataset",
+                  "label": "Evidence Training Set",
+                  "layer": "source",
+                  "type": "data",
                   "items": [
-                    "Java / Spring",
-                    "Task ID / Idempotency",
-                    "Attachment Metadata"
+                    "Reviewed Attachments / Field Labels",
+                    "Source Spans / Holdout Cases"
                   ]
                 },
                 {
-                  "id": "context",
-                  "label": "Skill Registry",
-                  "layer": "input",
-                  "type": "data",
+                  "id": "task",
+                  "label": "Case Task Adapter",
+                  "layer": "source",
+                  "type": "api",
                   "items": [
-                    "Skill / Policy Version",
-                    "Tool Contracts / Output Schema"
+                    "Java / Spring",
+                    "Task ID / Idempotency / Materials"
+                  ]
+                },
+                {
+                  "id": "core",
+                  "label": "deepseek-v4-pro API",
+                  "layer": "source",
+                  "type": "model",
+                  "items": [
+                    "HTTP / Timeout / Token Budget",
+                    "Dispute Planning / Liability Reasoning"
+                  ]
+                },
+                {
+                  "id": "training",
+                  "label": "Evidence Model Fine-tuning",
+                  "layer": "adaptation",
+                  "type": "service",
+                  "items": [
+                    "PyTorch / PEFT / LoRA / QLoRA",
+                    "Document Classification / Extraction",
+                    "Adapter / Field Accuracy Regression"
                   ]
                 },
                 {
                   "id": "harness",
                   "label": "DeepSeek Harness",
-                  "layer": "execution",
+                  "layer": "adaptation",
                   "type": "runtime",
                   "items": [
-                    "Context Management",
-                    "Step Budget / Retry Policy"
+                    "Context Management / Tool Calling",
+                    "Shared Facts / Investigation Steps"
                   ]
                 },
                 {
-                  "id": "gateway",
-                  "label": "Model API Adapter",
-                  "layer": "execution",
-                  "type": "service",
+                  "id": "skills",
+                  "label": "Skill Registry",
+                  "layer": "adaptation",
+                  "type": "data",
                   "items": [
-                    "deepseek-v4-pro",
-                    "Timeout / Concurrency Limit",
-                    "Token Budget / Usage"
+                    "Versioned Policy / Tool Contracts",
+                    "Investigation Rules / Output Schema"
+                  ]
+                },
+                {
+                  "id": "quantization",
+                  "label": "Evidence Model Quantization",
+                  "layer": "evidence",
+                  "type": "tool",
+                  "items": [
+                    "AWQ / GPTQ / Evidence Calibration",
+                    "Quantized Weights / Tokenizer",
+                    "Field Accuracy / Citation Coverage"
                   ]
                 },
                 {
                   "id": "tools",
-                  "label": "Tool Execution Runtime",
-                  "layer": "execution",
+                  "label": "Evidence Tool Runtime",
+                  "layer": "evidence",
                   "type": "tool",
                   "items": [
-                    "Docker / Resource Limits",
-                    "Evidence ID / Tool Result",
-                    "Contract Tests"
+                    "Python / Docker / Tool Contracts",
+                    "Attachment Classification / Fields",
+                    "Source Span / Evidence ID"
                   ]
                 },
                 {
                   "id": "state",
-                  "label": "Case State Store",
-                  "layer": "verification",
+                  "label": "Shared Case State",
+                  "layer": "evidence",
                   "type": "data",
                   "items": [
-                    "PostgreSQL",
-                    "Shared Facts / Pending Checks",
-                    "Document Citation Index"
+                    "PostgreSQL / Document Citation Index",
+                    "Verified Facts / Pending Checks",
+                    "Model / Skill / Material Version"
                   ]
                 },
                 {
-                  "id": "guard",
-                  "label": "Evidence Validator",
-                  "layer": "verification",
+                  "id": "serving",
+                  "label": "Evidence Inference Service",
+                  "layer": "delivery",
                   "type": "service",
                   "items": [
-                    "JSON Schema",
-                    "Citation / Calculation Check",
-                    "Missing Evidence Detection"
+                    "vLLM / Docker / Quantized Model",
+                    "Batch Inference / Concurrency Limit",
+                    "Versioned Extraction Endpoint"
                   ]
                 },
                 {
-                  "id": "dataset",
-                  "label": "Case Replay Dataset",
-                  "layer": "evaluation",
-                  "type": "data",
-                  "items": [
-                    "Reviewed Cases / Expected Facts",
-                    "Skill / Prompt / Tool Version"
-                  ]
-                },
-                {
-                  "id": "evaluation",
-                  "label": "Evaluation Pipeline",
-                  "layer": "evaluation",
+                  "id": "validation",
+                  "label": "Evidence Validation & Replay",
+                  "layer": "delivery",
                   "type": "service",
                   "items": [
+                    "JSON Schema / Citation Validation",
                     "Langfuse / Dataset Replay",
-                    "Judgment / Citation Accuracy",
-                    "Tool Errors / Cost / Latency"
+                    "Judgment / Tool Error / Cost"
                   ]
                 }
               ],
               "edges": [
                 {
-                  "to": "harness",
-                  "kind": "flow",
-                  "label": "审核任务与材料引用",
-                  "from": "task"
+                  "from": "dataset",
+                  "to": "training",
+                  "label": "附件类别、字段及原文位置监督样本",
+                  "kind": "flow"
                 },
                 {
-                  "to": "harness",
-                  "kind": "config",
-                  "label": "版本化 Skill 与工具契约",
-                  "from": "context"
+                  "from": "training",
+                  "to": "quantization",
+                  "label": "适配权重与独立证据样本回归",
+                  "kind": "flow"
                 },
                 {
-                  "to": "gateway",
-                  "kind": "call",
-                  "label": "模型请求 / 推理结果",
+                  "from": "quantization",
+                  "to": "serving",
+                  "label": "通过字段与引用检查的量化模型",
+                  "kind": "flow"
+                },
+                {
+                  "from": "task",
+                  "to": "harness",
+                  "label": "审核任务、材料引用与任务标识",
+                  "kind": "flow"
+                },
+                {
+                  "from": "skills",
+                  "to": "harness",
+                  "label": "装载核查 Skill、工具契约与输出约束",
+                  "kind": "config"
+                },
+                {
                   "from": "harness",
+                  "to": "core",
+                  "label": "核心推理请求 / 调查步骤与责任判断",
+                  "kind": "call",
                   "bidirectional": true
                 },
                 {
+                  "from": "harness",
                   "to": "tools",
+                  "label": "受控工具调用 / 带来源的证据返回",
                   "kind": "call",
-                  "label": "受控工具调用 / 证据返回",
-                  "from": "harness",
                   "bidirectional": true
                 },
                 {
+                  "from": "tools",
+                  "to": "serving",
+                  "label": "附件分类与字段抽取请求 / 结构化要素",
+                  "kind": "call",
+                  "bidirectional": true
+                },
+                {
+                  "from": "harness",
                   "to": "state",
+                  "label": "共享事实读取 / 调查进展更新",
                   "kind": "call",
-                  "label": "共享事实读取 / 步骤状态更新",
-                  "from": "harness",
                   "bidirectional": true
                 },
                 {
-                  "to": "guard",
-                  "kind": "flow",
-                  "label": "责任建议与证据引用",
-                  "from": "harness"
+                  "from": "tools",
+                  "to": "state",
+                  "label": "证据字段、原文位置与材料版本",
+                  "kind": "flow"
                 },
                 {
-                  "to": "dataset",
-                  "kind": "flow",
-                  "label": "校验结果 / 复核样本",
-                  "from": "guard"
-                },
-                {
-                  "to": "evaluation",
-                  "kind": "flow",
-                  "label": "按版本回放并比较结果",
-                  "from": "dataset"
-                },
-                {
-                  "to": "evaluation",
-                  "kind": "event",
-                  "label": "执行步骤 / 工具异常 / 模型用量",
-                  "from": "harness"
+                  "from": "state",
+                  "to": "validation",
+                  "label": "案件事实、证据引用及执行版本",
+                  "kind": "flow"
                 }
               ]
             },
@@ -807,24 +840,24 @@
               "Docker"
             ],
             "architecture": {
-              "title": "审核模型的任务适配、评测与服务接入",
-              "note": "监管规则在 Skill 中独立版本管理；任务微调适配领域表达与输出行为，量化围绕质量、显存和延迟进行比较，模型产物通过 vLLM / Docker 接入审核链路。",
+              "title": "监管审核模型微调、量化发布与 Skill 执行",
+              "note": "qwen3.8-27b 面向监管语义、风险标签和结构化审核进行 LoRA / QLoRA 适配；AWQ / GPTQ 产物通过风险漏检、结构稳定性与显存延迟回归后部署到 vLLM / Docker。LangChain 连接私有推理端点，pi 执行独立版本的监管 Skill，Langfuse 关联审核记录与模型版本。",
               "focus": "serving",
               "layers": [
                 {
                   "id": "source",
-                  "label": "模型与任务样本",
-                  "caption": "MODEL / DATASET"
+                  "label": "审核模型与任务样本",
+                  "caption": "QWEN / AUDIT DATASET"
                 },
                 {
-                  "id": "optimization",
-                  "label": "任务适配与模型量化",
-                  "caption": "PEFT / POST-TRAINING"
+                  "id": "training",
+                  "label": "领域语义与输出适配",
+                  "caption": "PYTORCH / PEFT"
                 },
                 {
-                  "id": "gate",
-                  "label": "审核质量与发布准入",
-                  "caption": "REGRESSION / RESOURCE"
+                  "id": "release",
+                  "label": "量化校准与审核准入",
+                  "caption": "AWQ / GPTQ / REGRESSION"
                 },
                 {
                   "id": "serving",
@@ -833,83 +866,73 @@
                 },
                 {
                   "id": "application",
-                  "label": "审核应用接入",
-                  "caption": "LANGCHAIN / PI / TRACE"
+                  "label": "监管 Skill 与应用执行",
+                  "caption": "PI / LANGCHAIN / LANGFUSE"
                 }
               ],
               "nodes": [
                 {
                   "id": "base",
-                  "label": "Base Model",
+                  "label": "qwen3.8-27b",
                   "layer": "source",
                   "type": "model",
                   "items": [
-                    "qwen3.8-27b",
-                    "Weights / Tokenizer / Config"
+                    "Base Weights / Tokenizer / Config"
                   ]
                 },
                 {
                   "id": "dataset",
-                  "label": "Audit Task Dataset",
+                  "label": "Regulatory Audit Dataset",
                   "layer": "source",
                   "type": "data",
                   "items": [
-                    "Element Extraction / Risk Labels",
-                    "Structured Reports / Holdout Set"
+                    "Risk Labels / Missing Disclosures",
+                    "Cross-material Conflicts / Schema",
+                    "Business-split Holdout / Hard Negatives"
                   ]
                 },
                 {
                   "id": "training",
-                  "label": "Task Fine-tuning",
-                  "layer": "optimization",
+                  "label": "Audit Task Fine-tuning",
+                  "layer": "training",
                   "type": "service",
                   "items": [
-                    "PyTorch / PEFT",
-                    "LoRA | QLoRA (bitsandbytes)",
-                    "Adapter / Checkpoint"
+                    "PyTorch / PEFT / LoRA / QLoRA",
+                    "Domain Semantics / Structured Output",
+                    "Adapter Merge / Checkpoint"
                   ]
                 },
                 {
                   "id": "quantization",
-                  "label": "Model Quantization",
-                  "layer": "optimization",
+                  "label": "AWQ / GPTQ Calibration",
+                  "layer": "release",
                   "type": "tool",
                   "items": [
-                    "AWQ | GPTQ",
-                    "Calibration Dataset",
-                    "Compatible Weights / Kernels"
+                    "Audit Material Calibration Set",
+                    "Quantized Weights / Kernel Config",
+                    "GPU Memory / Inference Precision"
                   ]
                 },
                 {
                   "id": "gate",
-                  "label": "Model Release Gate",
-                  "layer": "gate",
+                  "label": "Audit Model Release Gate",
+                  "layer": "release",
                   "type": "service",
                   "items": [
-                    "Audit Quality / False Negatives",
-                    "Schema / Rule Regression",
-                    "GPU Memory / Latency / Throughput"
+                    "Risk Recall / False Negative Review",
+                    "Element Accuracy / Schema Regression",
+                    "Latency / Throughput / GPU Memory"
                   ]
                 },
                 {
                   "id": "serving",
-                  "label": "vLLM Model Serving",
+                  "label": "vLLM Audit Model Service",
                   "layer": "serving",
                   "type": "service",
                   "items": [
-                    "Docker / Model Version",
-                    "Base | LoRA | Quantized Model",
-                    "Inference API / Batch Capacity"
-                  ]
-                },
-                {
-                  "id": "langchain",
-                  "label": "LangChain Adapter",
-                  "layer": "application",
-                  "type": "service",
-                  "items": [
-                    "Python / Model Client",
-                    "Structured Output / Tool Adapter"
+                    "Docker / qwen3.8-27b",
+                    "Quantized Weights / Model Version",
+                    "Inference API / Batching / Capacity"
                   ]
                 },
                 {
@@ -919,90 +942,102 @@
                   "type": "runtime",
                   "items": [
                     "TypeScript / Node.js",
-                    "Regulatory Skill Version",
-                    "Audit Task / Report"
+                    "Audit Context / Risk Report"
+                  ]
+                },
+                {
+                  "id": "langchain",
+                  "label": "LangChain Model Adapter",
+                  "layer": "application",
+                  "type": "service",
+                  "items": [
+                    "Python / FastAPI / Pydantic",
+                    "Structured Output / Timeout / Budget"
+                  ]
+                },
+                {
+                  "id": "skills",
+                  "label": "Regulatory Skill Registry",
+                  "layer": "application",
+                  "type": "data",
+                  "items": [
+                    "Versioned Regulatory Skills",
+                    "Scenario Checks / Required Elements"
                   ]
                 },
                 {
                   "id": "trace",
-                  "label": "Inference Observability",
+                  "label": "Langfuse Audit Trace",
                   "layer": "application",
                   "type": "service",
                   "items": [
-                    "Langfuse",
-                    "Model Version / Audit Trace",
-                    "Tokens / Cost / Latency"
+                    "Model / Skill / Parser Version",
+                    "Risk Item / Trace / Sample Replay"
                   ]
                 }
               ],
               "edges": [
                 {
+                  "from": "base",
                   "to": "training",
-                  "kind": "flow",
-                  "label": "基础权重 / 按需领域适配",
-                  "from": "base"
+                  "label": "基础权重与分词配置",
+                  "kind": "flow"
                 },
                 {
+                  "from": "dataset",
                   "to": "training",
-                  "kind": "flow",
-                  "label": "监督样本与独立验证集",
-                  "from": "dataset"
+                  "label": "监管场景样本、正常反例与结构化结果",
+                  "kind": "flow"
                 },
                 {
+                  "from": "training",
                   "to": "quantization",
-                  "kind": "flow",
-                  "label": "按需量化原始权重",
-                  "from": "base"
+                  "label": "合并适配权重并校准量化",
+                  "kind": "flow"
                 },
                 {
-                  "to": "quantization",
-                  "kind": "flow",
-                  "label": "兼容的合并模型权重",
-                  "from": "training"
-                },
-                {
+                  "from": "training",
                   "to": "gate",
-                  "kind": "flow",
-                  "label": "原始模型基线",
-                  "from": "base"
+                  "label": "适配版本的审核质量基线",
+                  "kind": "flow"
                 },
                 {
+                  "from": "quantization",
                   "to": "gate",
-                  "kind": "flow",
-                  "label": "Adapter / 适配版本评测",
-                  "from": "training"
+                  "label": "量化版本的漏检、结构与资源回归",
+                  "kind": "flow"
                 },
                 {
-                  "to": "gate",
-                  "kind": "flow",
-                  "label": "量化版本质量与资源回归",
-                  "from": "quantization"
-                },
-                {
+                  "from": "gate",
                   "to": "serving",
-                  "kind": "flow",
-                  "label": "通过评测的模型版本",
-                  "from": "gate"
+                  "label": "通过质量和资源检查的模型版本",
+                  "kind": "flow"
                 },
                 {
-                  "to": "langchain",
-                  "kind": "call",
-                  "label": "审核能力调用 / 结构化结果",
                   "from": "pi",
-                  "bidirectional": true
-                },
-                {
-                  "to": "serving",
+                  "to": "langchain",
+                  "label": "审核语义核验请求 / 结构化模型结果",
                   "kind": "call",
-                  "label": "统一推理请求 / 模型输出",
-                  "from": "langchain",
                   "bidirectional": true
                 },
                 {
+                  "from": "langchain",
+                  "to": "serving",
+                  "label": "统一推理调用 / 风险与要素输出",
+                  "kind": "call",
+                  "bidirectional": true
+                },
+                {
+                  "from": "skills",
+                  "to": "pi",
+                  "label": "独立装载监管 Skill 与审核口径",
+                  "kind": "config"
+                },
+                {
+                  "from": "langchain",
                   "to": "trace",
-                  "kind": "event",
-                  "label": "模型版本 / 推理指标 / 审核记录",
-                  "from": "langchain"
+                  "label": "模型版本、风险项与推理用量",
+                  "kind": "event"
                 }
               ]
             },
@@ -1318,210 +1353,233 @@
               "vLLM"
             ],
             "architecture": {
-              "title": "分片解析、状态恢复与多模态推理",
-              "note": "媒体处理、图执行与模型调用分层调度。片段索引保留画面和口播的时间关系，Checkpointer 保存核查进展，独立模型端点管理并发、超时与调用预算；辅助模型的任务微调与量化优化片段分类和要素抽取。",
+              "title": "片段模型适配、时序解析与多模态核查",
+              "note": "片段分类和关键要素样本适配辅助模型，量化后部署到 vLLM / Docker，为口播与画面文字处理提供分类和要素抽取能力。FFmpeg、ASR / OCR 与片段索引保持同一时间轴，LangGraph 调用独立的 qwen3.6-397b 多模态 API 核查冲突，并通过持久化状态、证据报告和 Langfuse 保留执行依据。",
               "focus": "graph",
               "layers": [
                 {
-                  "id": "input",
-                  "label": "素材接入与任务调度",
-                  "caption": "API / QUEUE"
+                  "id": "source",
+                  "label": "片段样本与媒体接入",
+                  "caption": "SEGMENT DATA / CELERY"
                 },
                 {
-                  "id": "media",
-                  "label": "媒体解析与时间对齐",
-                  "caption": "FFMPEG / ASR / OCR"
+                  "id": "processing",
+                  "label": "任务适配与媒体处理",
+                  "caption": "PEFT / FFMPEG / MODEL API"
+                },
+                {
+                  "id": "verification",
+                  "label": "量化产物与时序核查",
+                  "caption": "ASR / OCR / LANGGRAPH"
                 },
                 {
                   "id": "runtime",
-                  "label": "核查状态与模型容量",
-                  "caption": "LANGGRAPH / ENDPOINT"
-                },
-                {
-                  "id": "output",
-                  "label": "片段证据与运行观测",
-                  "caption": "EVIDENCE / LANGFUSE"
+                  "label": "辅助推理与证据交付",
+                  "caption": "VLLM / CHECKPOINT / TRACE"
                 }
               ],
               "nodes": [
                 {
-                  "id": "api",
-                  "label": "Video Task API",
-                  "layer": "input",
-                  "type": "api",
+                  "id": "dataset",
+                  "label": "Annotated Segment Dataset",
+                  "layer": "source",
+                  "type": "data",
                   "items": [
-                    "Python / Material Reference",
-                    "Stream Window / Task ID"
+                    "Clip / Transcript / Domain Labels",
+                    "Risk Class / Entity / Time Range",
+                    "Source-separated Train / Holdout"
                   ]
                 },
                 {
                   "id": "queue",
-                  "label": "Media Task Queue",
-                  "layer": "input",
+                  "label": "Video Task Queue",
+                  "layer": "source",
                   "type": "service",
                   "items": [
-                    "Celery / Redis",
-                    "Worker Routing / Retry",
-                    "Idempotent Segment Tasks"
+                    "Python / Celery / Redis",
+                    "Window ID / Retry / Idempotency"
                   ]
                 },
                 {
-                  "id": "ffmpeg",
-                  "label": "FFmpeg Worker",
-                  "layer": "media",
+                  "id": "training",
+                  "label": "Segment Extraction Fine-tuning",
+                  "layer": "processing",
+                  "type": "service",
+                  "items": [
+                    "PyTorch / PEFT / LoRA / QLoRA",
+                    "Domain Terms / Segment Class / Entities",
+                    "Adapter / Segment Recall Regression"
+                  ]
+                },
+                {
+                  "id": "media",
+                  "label": "FFmpeg Media Worker",
+                  "layer": "processing",
                   "type": "tool",
                   "items": [
                     "Docker / FFmpeg",
                     "Window Slicing / Frame Sampling",
-                    "Audio Track Extraction"
+                    "Audio Tracks / Segment Timestamps"
+                  ]
+                },
+                {
+                  "id": "core",
+                  "label": "qwen3.6-397b API",
+                  "layer": "processing",
+                  "type": "model",
+                  "items": [
+                    "Multimodal API / HTTPX",
+                    "Frame / Speech / Product Comparison",
+                    "Concurrency Limit / Request Budget"
+                  ]
+                },
+                {
+                  "id": "quantization",
+                  "label": "Segment Model Quantization",
+                  "layer": "verification",
+                  "type": "tool",
+                  "items": [
+                    "AWQ / GPTQ / Clip Calibration",
+                    "Quantized Weights / Tokenizer",
+                    "Entity / Risk Recall Regression"
                   ]
                 },
                 {
                   "id": "parse",
-                  "label": "Speech / Text Worker",
-                  "layer": "media",
+                  "label": "Speech / Frame Text Worker",
+                  "layer": "verification",
                   "type": "tool",
                   "items": [
-                    "ASR / OCR Adapter",
-                    "Timestamped Transcript",
-                    "Frame Text / Product Content"
+                    "ASR / OCR / Python",
+                    "Timestamped Transcript / Frame Text",
+                    "Segment Classification / Entity Extraction"
                   ]
                 },
                 {
                   "id": "timeline",
                   "label": "Temporal Evidence Index",
-                  "layer": "media",
+                  "layer": "verification",
                   "type": "data",
                   "items": [
-                    "Object Storage / Media URI",
-                    "Segment ID / Start / End",
-                    "Frame / Transcript Alignment"
+                    "Object Storage / Segment ID",
+                    "Start / End / Frame / Transcript",
+                    "Product Context / Source URI"
                   ]
                 },
                 {
                   "id": "graph",
                   "label": "LangGraph Audit Graph",
-                  "layer": "runtime",
+                  "layer": "verification",
                   "type": "runtime",
                   "items": [
                     "StateGraph / Conditional Routing",
-                    "Segment State / Skill Checks",
-                    "Evidence Aggregation"
+                    "Segment Context / Regulatory Skills",
+                    "Cross-modal Evidence Aggregation"
                   ]
                 },
                 {
-                  "id": "checkpoint",
-                  "label": "Persistent Checkpointer",
+                  "id": "serving",
+                  "label": "Segment Inference Service",
                   "layer": "runtime",
-                  "type": "data",
+                  "type": "service",
                   "items": [
-                    "PostgreSQL / thread_id",
-                    "Checkpoint / Resume",
-                    "Processed Segment State"
-                  ]
-                },
-                {
-                  "id": "model",
-                  "label": "Multimodal Model Endpoint",
-                  "layer": "runtime",
-                  "type": "model",
-                  "items": [
-                    "qwen3.6-397b / HTTPX",
-                    "Concurrency / Request Budget",
-                    "Timeout / Endpoint Capacity"
+                    "vLLM / Docker / Quantized Model",
+                    "Clip Batching / Extraction Endpoint",
+                    "Model Version / Worker Capacity"
                   ]
                 },
                 {
                   "id": "report",
                   "label": "Temporal Evidence Report",
-                  "layer": "output",
+                  "layer": "runtime",
                   "type": "service",
                   "items": [
-                    "Issue / Rule / Segment Citation",
-                    "Frames / Transcript / Product",
-                    "Reviewable Media Links"
+                    "Risk / Rule / Segment Citation",
+                    "Frame / Transcript / Product Evidence",
+                    "React / Reviewable Media Links"
                   ]
                 },
                 {
-                  "id": "trace",
-                  "label": "Pipeline Observability",
-                  "layer": "output",
+                  "id": "checkpoint",
+                  "label": "Graph Persistence & Trace",
+                  "layer": "runtime",
                   "type": "service",
                   "items": [
-                    "Langfuse",
-                    "Queue Wait / Node Latency",
-                    "Model Usage / Failed Segments"
+                    "PostgreSQL / Checkpointer / thread_id",
+                    "Checkpoint / Resume / Segment State",
+                    "Langfuse / Node Latency / Model Usage"
                   ]
                 }
               ],
               "edges": [
                 {
-                  "to": "queue",
-                  "kind": "flow",
-                  "label": "素材引用与分片任务",
-                  "from": "api"
+                  "from": "dataset",
+                  "to": "training",
+                  "label": "片段类别、领域口播与要素抽取监督样本",
+                  "kind": "flow"
                 },
                 {
-                  "to": "ffmpeg",
-                  "kind": "flow",
-                  "label": "按工作容量分配媒体任务",
-                  "from": "queue"
+                  "from": "queue",
+                  "to": "media",
+                  "label": "按窗口派发媒体解析任务",
+                  "kind": "flow"
                 },
                 {
+                  "from": "training",
+                  "to": "quantization",
+                  "label": "适配权重与独立片段样本校准",
+                  "kind": "flow"
+                },
+                {
+                  "from": "quantization",
+                  "to": "serving",
+                  "label": "通过片段召回与要素回归的量化模型",
+                  "kind": "flow"
+                },
+                {
+                  "from": "media",
                   "to": "parse",
-                  "kind": "flow",
-                  "label": "音轨 / 抽样帧 / 时间戳",
-                  "from": "ffmpeg"
+                  "label": "带时间戳的音轨与抽样画面",
+                  "kind": "flow"
                 },
                 {
+                  "from": "parse",
+                  "to": "serving",
+                  "label": "片段分类 / 领域要素抽取请求与结果",
+                  "kind": "call",
+                  "bidirectional": true
+                },
+                {
+                  "from": "parse",
                   "to": "timeline",
-                  "kind": "flow",
-                  "label": "媒体片段与存储引用",
-                  "from": "ffmpeg"
+                  "label": "口播、画面文字、分类与原始时间位置",
+                  "kind": "flow"
                 },
                 {
-                  "to": "timeline",
-                  "kind": "flow",
-                  "label": "口播 / 画面文字 / 时间索引",
-                  "from": "parse"
-                },
-                {
+                  "from": "timeline",
                   "to": "graph",
-                  "kind": "flow",
-                  "label": "对齐后的多模态核查上下文",
-                  "from": "timeline"
+                  "label": "按片段对齐的核查上下文",
+                  "kind": "flow"
                 },
                 {
+                  "from": "graph",
+                  "to": "core",
+                  "label": "多模态核查请求 / 跨载体冲突结果",
+                  "kind": "call",
+                  "bidirectional": true
+                },
+                {
+                  "from": "graph",
                   "to": "checkpoint",
+                  "label": "图状态保存 / 断点恢复 / 调用记录",
                   "kind": "call",
-                  "label": "保存执行状态 / 断点恢复",
-                  "from": "graph",
                   "bidirectional": true
                 },
                 {
-                  "to": "model",
-                  "kind": "call",
-                  "label": "片段推理请求 / 核查结果",
                   "from": "graph",
-                  "bidirectional": true
-                },
-                {
                   "to": "report",
-                  "kind": "flow",
-                  "label": "核查结论与片段证据",
-                  "from": "graph"
-                },
-                {
-                  "to": "trace",
-                  "kind": "event",
-                  "label": "图路径 / 模型调用 / 节点状态",
-                  "from": "graph"
-                },
-                {
-                  "to": "trace",
-                  "kind": "event",
-                  "label": "排队时长 / 重试与失败分片",
-                  "from": "queue"
+                  "label": "风险判断与原始片段证据",
+                  "kind": "flow"
                 }
               ]
             },
@@ -1544,1775 +1602,7 @@
               },
               {
                 "label": "以片段样本适配分类与要素抽取",
-                "text": "将标注片段、口播文本和画面要素整理为任务样本，使用 PyTorch / PEFT 与 LoRA / QLoRA 适配辅助模型，改善行业术语、场景分类和关键要素抽取。视觉理解、语音转写与文本判断分别评测，并结合风险片段命中、时间定位和跨模态证据完整性检验整条链路。辅助模型使用 AWQ / GPTQ 降低显存与服务成本，通过 vLLM / Docker 提供推理能力；qwen3.6-397b 端点承担核心多模态核查，模型版本与媒体解析版本共同纳入回放评测。"
-              }
-            ]
-          },
-          "background": {
-            "label": "项目背景",
-            "text": "直播营销监管既要发现违规宣传和信息披露不足，也要把线索定位到具体片段，供后续核查与处置。相关信息分布在视频画面、主播口播和商品资料中，同一商品在不同载体上的说法还可能存在差异，单看文字或画面难以形成完整判断。人工逐段审看、交叉比对和整理证据，对审核人力与专业经验要求较高。项目因此围绕多模态内容核验与线索追溯展开建设，让疑点能够对应到时间片段、原始内容和核查依据，减轻重复审看负担并支持人工复核。"
-          }
-        },
-        {
-          "id": "desktop-workflow-automation",
-          "title": "RPA 流程编排与执行",
-          "role": "项目主要负责人",
-          "summary": "以 Python 承接流程执行与任务调度，将可视化定义转为机器人步骤，通过 Web 与桌面操作适配器完成重复任务，并回传状态、日志与录屏。",
-          "tags": [
-            "Python",
-            "流程编排",
-            "Celery / Redis",
-            "Web / 桌面适配"
-          ],
-          "sections": [
-            {
-              "label": "流程定义与任务接入",
-              "text": "可视化设计器通过组件拖拽、操作记录、条件逻辑和元素拾取组织流程，保存操作步骤、参数与条件。Python / FastAPI 接入执行请求，连接手动、定时及批量任务。"
-            },
-            {
-              "label": "Python 调度与队列",
-              "text": "调度选型采用 Celery 执行任务、Celery Beat 发布定时任务，Redis 承接任务消息与结果状态。流程定义进入执行配置，Python Worker 消费任务并回传执行结果，管理界面查询任务和机器人状态。"
-            },
-            {
-              "label": "机器人与操作适配",
-              "text": "Python 执行器按流程推进步骤，通过工具与适配接口定位元素、点击、读取和录入数据。Web 操作采用 Playwright，桌面操作连接独立适配器；OCR、NLP 和模型接口辅助材料识别、意图理解与动作拆解。"
-            },
-            {
-              "label": "运行记录与管理",
-              "text": "执行端汇集步骤状态、错误信息、运行日志与录屏，供排查操作过程。TypeScript / React 提供任务及机器人管理入口，关联执行记录、状态查询与任务操作，并按角色组织访问范围。"
-            },
-            {
-              "label": "执行工程：让机器人识别变化、停在可恢复的位置",
-              "text": "自动化难点不只在点击，而在页面加载、元素变化和部分步骤已经执行后的失败恢复。现有 Python 执行器、操作适配器与步骤记录为排查提供基础。关键动作设置执行前条件、元素等待与执行后结果校验，优先使用稳定元素定位，无法直接读取时再调用 OCR；按任务和步骤保存进度，对查询与写入分别设置重试边界，避免重复提交。调度端限制单机器人并发，将异常截图、日志与任务标识关联，定位“没找到、没执行、已执行但未确认”等不同失败原因。"
-            }
-          ],
-          "architecture": {
-            "title": "Python 流程执行、队列调度与操作适配",
-            "note": "Python 负责执行与调度；任务 API、消息调度和 Web 操作采用 FastAPI、Celery、Redis、Playwright 的技术选型。桌面操作通过适配接口连接，任务结果与运行记录分别支持状态查询和过程排查。",
-            "focus": "robot",
-            "layers": [
-              {
-                "id": "design",
-                "label": "设计与接入",
-                "caption": "DESIGN / PYTHON API"
-              },
-              {
-                "id": "control",
-                "label": "流程与调度",
-                "caption": "CELERY / REDIS"
-              },
-              {
-                "id": "execution",
-                "label": "Python 机器人执行",
-                "caption": "PYTHON / ADAPTERS"
-              },
-              {
-                "id": "operation",
-                "label": "运行管理",
-                "caption": "REACT / RECORDS"
-              }
-            ],
-            "nodes": [
-              {
-                "id": "designer",
-                "label": "流程设计器",
-                "layer": "design",
-                "type": "ui",
-                "items": [
-                  "组件拖拽 / 操作记录",
-                  "条件逻辑 / 元素拾取"
-                ]
-              },
-              {
-                "id": "components",
-                "label": "流程组件库",
-                "layer": "design",
-                "type": "data",
-                "items": [
-                  "应用操作 / 条件组件"
-                ]
-              },
-              {
-                "id": "entry",
-                "label": "任务接入 API",
-                "layer": "design",
-                "type": "api",
-                "items": [
-                  "Python / FastAPI",
-                  "手动 / 文件 / API 任务"
-                ]
-              },
-              {
-                "id": "flow",
-                "label": "流程定义",
-                "layer": "control",
-                "type": "data",
-                "items": [
-                  "操作步骤 / 参数 / 条件"
-                ]
-              },
-              {
-                "id": "scheduler",
-                "label": "调度管理服务",
-                "layer": "control",
-                "type": "service",
-                "items": [
-                  "Python / Celery / Beat",
-                  "任务发布 / 定时调度"
-                ]
-              },
-              {
-                "id": "queue",
-                "label": "任务队列与结果",
-                "layer": "control",
-                "type": "data",
-                "items": [
-                  "Redis",
-                  "任务消息 / 结果状态"
-                ]
-              },
-              {
-                "id": "robot",
-                "label": "Python 执行机器人",
-                "layer": "execution",
-                "type": "runtime",
-                "items": [
-                  "Python / Celery Worker",
-                  "步骤执行 / 异常反馈"
-                ]
-              },
-              {
-                "id": "tools",
-                "label": "Python 工具与适配器",
-                "layer": "execution",
-                "type": "tool",
-                "items": [
-                  "Playwright（Web）/ 桌面适配",
-                  "OCR / NLP / 模型接口"
-                ]
-              },
-              {
-                "id": "apps",
-                "label": "Web 与桌面应用",
-                "layer": "execution",
-                "type": "external",
-                "items": [
-                  "点击 / 数据读取与录入"
-                ]
-              },
-              {
-                "id": "console",
-                "label": "运行管理界面",
-                "layer": "operation",
-                "type": "ui",
-                "items": [
-                  "TypeScript / React",
-                  "任务与机器人状态"
-                ]
-              },
-              {
-                "id": "logs",
-                "label": "执行记录",
-                "layer": "operation",
-                "type": "data",
-                "items": [
-                  "步骤日志 / 错误信息 / 录屏"
-                ]
-              }
-            ],
-            "edges": [
-              {
-                "from": "components",
-                "to": "designer",
-                "label": "流程组件配置",
-                "kind": "config"
-              },
-              {
-                "from": "designer",
-                "to": "flow",
-                "label": "流程编排结果",
-                "kind": "flow"
-              },
-              {
-                "from": "entry",
-                "to": "scheduler",
-                "label": "执行请求 / 任务参数",
-                "kind": "call"
-              },
-              {
-                "from": "flow",
-                "to": "scheduler",
-                "label": "流程与调度配置",
-                "kind": "config"
-              },
-              {
-                "from": "scheduler",
-                "to": "queue",
-                "label": "任务发布 / 结果状态查询",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "queue",
-                "to": "robot",
-                "label": "任务消费 / 执行结果写回",
-                "kind": "flow",
-                "bidirectional": true
-              },
-              {
-                "from": "flow",
-                "to": "robot",
-                "label": "可执行流程定义",
-                "kind": "config"
-              },
-              {
-                "from": "robot",
-                "to": "tools",
-                "label": "操作能力调用 / 执行反馈",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "tools",
-                "to": "apps",
-                "label": "应用操作 / 操作结果",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "robot",
-                "to": "logs",
-                "label": "步骤记录 / 错误信息 / 录屏",
-                "kind": "event"
-              },
-              {
-                "from": "logs",
-                "to": "console",
-                "label": "执行记录展示",
-                "kind": "flow"
-              },
-              {
-                "from": "console",
-                "to": "scheduler",
-                "label": "任务管理 / 状态查询",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "designer",
-                "to": "tools",
-                "label": "识别与动作拆解辅助",
-                "kind": "call",
-                "bidirectional": true
-              }
-            ]
-          },
-          "implementation": {
-            "stack": [
-              "Python",
-              "FastAPI",
-              "Celery",
-              "Redis",
-              "Playwright",
-              "TypeScript",
-              "React",
-              "RPA",
-              "OCR",
-              "NLP"
-            ],
-            "highlights": [
-              {
-                "label": "把重复操作编成流程",
-                "text": "跨页面查询、录入和资料搬运依赖人工反复操作，任务步骤又可能包含条件差异。可视化设计器将操作、参数和分支保存为流程定义，Python 执行器按步骤推进，让业务人员可以组织并重复执行同类任务。"
-              },
-              {
-                "label": "衔接调度与执行资源",
-                "text": "手动、定时和批量任务需要统一交给机器人执行，同时保持管理端能够看到进展。FastAPI 接收执行请求，Celery 与 Celery Beat 组织任务和定时发布，Redis 衔接消息与结果状态，Python Worker 执行后回传任务结果。"
-              },
-              {
-                "label": "适配 Web 与桌面操作",
-                "text": "业务操作分布在浏览器和桌面应用，元素定位与操作方式存在差异。通过独立适配器封装定位、点击、读取和录入，Web 操作交给 Playwright，桌面操作连接电脑控制能力，OCR 等组件辅助提取难以直接读取的内容。"
-              },
-              {
-                "label": "定位流程失败的步骤",
-                "text": "自动化任务失败时，只看到最终状态难以判断是哪一步出了问题。将步骤状态、异常、执行日志和录屏关联到任务与机器人，React 管理界面集中呈现执行记录，便于回看操作过程、排查定位问题并调整流程定义。"
-              }
-            ]
-          },
-          "background": {
-            "label": "项目背景",
-            "text": "业务系统已经承载了日常工作，但数据下载、表格整理、信息录入和跨系统核对仍依赖人工反复切换页面。同一批数据被多次复制和检查，占用大量操作时间，也容易因漏填、误点或步骤遗漏影响结果。部分存量应用缺少可用接口，逐一改造又受成本与业务连续性约束。因此需要一套能在现有软件上执行既定步骤的自动化能力，把重复操作组织成可配置、可调度、可追踪的任务，让人员把精力留给异常判断与复杂处理。"
-          }
-        }
-      ]
-    },
-    {
-      "id": "service",
-      "title": "通信与客服系统",
-      "index": "02",
-      "summary": "连接在线与语音服务，以统一平台承接工单协作、知识检索、质量管理和客户运营。",
-      "projects": [
-        {
-          "id": "customer-service-online",
-          "title": "SaaS 在线客服与坐席调度",
-          "role": "项目主要负责人",
-          "summary": "以 Java 微服务组织坐席状态、排队分配和并行接待，通过会话 API 与消息接入适配衔接咨询、转接、知识辅助和工单受理。",
-          "tags": [
-            "Java 微服务",
-            "SaaS 坐席服务",
-            "会话顺序与去重",
-            "排队分配"
-          ],
-          "sections": [
-            {
-              "label": "坐席工作台与服务接入",
-              "text": "TypeScript、React 与 Ant Design 组织坐席工作台，呈现接待状态、待接咨询和并行会话。HTTPS API 承接会话操作，Spring Cloud Gateway 与接入适配服务 统一处理接入路由、身份权限和租户上下文。消息接入适配定义消息与会话事件的处理边界。"
-            },
-            {
-              "label": "状态管理与排队分配",
-              "text": "坐席服务管理接待状态与可接待容量，排队分配组件根据路由规则和可用坐席组织咨询分派。Redis 保存活动状态和排队信息，会话服务承接分配结果，使坐席状态、待接队列与接待关系共同参与调度。"
-            },
-            {
-              "label": "并行接待与服务转接",
-              "text": "会话服务以会话标识组织接待关系、咨询上下文和处理状态，支持坐席并行处理多路咨询。转接时衔接目标坐席与已有上下文，消息处理围绕会话标识、消息标识和顺序信息执行重复检查与顺序整理。"
-            },
-            {
-              "label": "知识辅助与工单关联",
-              "text": "坐席辅助服务根据当前问题调用共享知识接口，返回对应话术作为接待参考；服务受理调用共享工单接口，并保留工单与会话的关联。接待、话术查询和工单处理通过接口协作，避免把不同业务状态混入会话消息。"
-            },
-            {
-              "label": "微服务协作与事件处理",
-              "text": "Spring Boot 拆分会话、坐席调度、消息接入与辅助服务，Nacos 承担服务注册和配置，OpenFeign 组织服务间调用。RabbitMQ 传递会话事件，Redis 保存活动上下文与重复检查信息，MyBatis-Plus 将接待记录与会话历史写入 MySQL。"
-            },
-            {
-              "label": "调度工程：高峰分配与转接中的状态一致性",
-              "text": "咨询高峰时，多个分配请求可能同时选中同一坐席，坐席切换状态和客户转接也会改变可用容量。将排队、容量占用和接待关系作为一组受控状态转换，以 Redis 原子操作完成容量校验与占用，按租户和技能范围筛选可用坐席；转接使用独立状态与确认步骤，防止双方同时接待或无人承接。异步会话事件保留消息标识和顺序信息，结合幂等消费、超时回收与状态核对，使重复通知和短暂服务故障能够被识别和修复。"
-            }
-          ],
-          "implementation": {
-            "stack": [
-              "TypeScript",
-              "React",
-              "Ant Design",
-              "Java",
-              "Spring Boot",
-              "Spring Cloud",
-              "Spring Cloud Gateway",
-              "Nacos",
-              "OpenFeign",
-              "MyBatis-Plus",
-              "MySQL",
-              "Redis",
-              "RabbitMQ"
-            ],
-            "highlights": [
-              {
-                "label": "把咨询分给合适的坐席",
-                "text": "咨询集中进入时，需要兼顾待接队列、坐席状态和并行接待容量。Java 微服务拆分会话与坐席调度，Redis 保存活动状态和排队信息，路由规则结合可用坐席完成分派，使接待关系与坐席容量共同参与调度。"
-              },
-              {
-                "label": "维持并行会话与转接上下文",
-                "text": "坐席同时处理多路咨询，转接时还要避免丢失客户已经描述的问题。以会话标识组织接待关系和上下文，消息处理使用消息标识、顺序信息进行重复检查与整理，将目标坐席和已有处理记录衔接到同一咨询过程。"
-              },
-              {
-                "label": "让话术查询接上服务办理",
-                "text": "坐席回答问题后，部分诉求还需要建立工单继续处理。辅助服务根据当前咨询调用共享知识接口，将话术作为接待参考；受理动作关联共享工单，保留会话与工单标识，使沟通记录能够跟随后续办理。"
-              },
-              {
-                "label": "支撑 SaaS 服务协作",
-                "text": "多租户接待既要共享平台能力，也要保持各自的服务上下文。Spring Boot / Spring Cloud 按职责拆分服务，Gateway 承接入口与租户信息，Nacos、OpenFeign 组织配置和调用，RabbitMQ 传递会话事件，MySQL 保存接待历史。"
-              }
-            ]
-          },
-          "architecture": {
-            "title": "Java 微服务下的坐席调度与会话事件处理",
-            "note": "HTTPS API 组织接待操作，消息接入适配衔接咨询；坐席状态与排队分配、并行接待、消息顺序去重、知识辅助和工单关联按职责协作。",
-            "focus": "session",
-            "layers": [
-              {
-                "id": "access",
-                "label": "交互与接入",
-                "caption": "REACT / HTTPS / GATEWAY"
-              },
-              {
-                "id": "service",
-                "label": "坐席与会话微服务",
-                "caption": "SPRING BOOT / OPENFEIGN"
-              },
-              {
-                "id": "shared",
-                "label": "共享接口与服务治理",
-                "caption": "API / NACOS"
-              },
-              {
-                "id": "data",
-                "label": "状态、事件与持久化",
-                "caption": "REDIS / RABBITMQ / MYSQL"
-              }
-            ],
-            "nodes": [
-              {
-                "id": "client",
-                "label": "客户咨询入口",
-                "layer": "access",
-                "type": "external",
-                "items": [
-                  "咨询消息 / 服务接入"
-                ]
-              },
-              {
-                "id": "seat",
-                "label": "坐席接待工作台",
-                "layer": "access",
-                "type": "ui",
-                "items": [
-                  "TypeScript / React / Ant Design",
-                  "状态 / 排队 / 并行接待",
-                  "转接 / 话术 / 工单关联"
-                ]
-              },
-              {
-                "id": "gateway",
-                "label": "统一接入网关",
-                "layer": "access",
-                "type": "api",
-                "items": [
-                  "Spring Cloud Gateway",
-                  "HTTPS 会话 API",
-                  "身份权限 / 租户上下文"
-                ]
-              },
-              {
-                "id": "routing",
-                "label": "坐席状态与分配服务",
-                "layer": "service",
-                "type": "service",
-                "items": [
-                  "Spring Boot",
-                  "接待状态 / 可接待容量",
-                  "排队分配 / 接待路由"
-                ]
-              },
-              {
-                "id": "session",
-                "label": "在线会话服务",
-                "layer": "service",
-                "type": "service",
-                "items": [
-                  "Spring Boot",
-                  "并行接待 / 上下文 / 转接",
-                  "会话与工单关联"
-                ]
-              },
-              {
-                "id": "message",
-                "label": "消息接入适配服务",
-                "layer": "service",
-                "type": "service",
-                "items": [
-                  "Spring Boot",
-                  "消息标识 / 顺序整理",
-                  "重复检查 / 会话事件"
-                ]
-              },
-              {
-                "id": "assistant",
-                "label": "坐席辅助服务",
-                "layer": "service",
-                "type": "service",
-                "items": [
-                  "Spring Boot / OpenFeign",
-                  "知识话术参考",
-                  "服务受理 / 工单关联"
-                ]
-              },
-              {
-                "id": "shared",
-                "label": "共享工单与知识接口",
-                "layer": "shared",
-                "type": "api",
-                "items": [
-                  "工单创建 / 处理查询",
-                  "问题查询 / 匹配话术"
-                ]
-              },
-              {
-                "id": "governance",
-                "label": "微服务治理",
-                "layer": "shared",
-                "type": "runtime",
-                "items": [
-                  "Nacos：服务注册 / 配置",
-                  "OpenFeign：服务间调用"
-                ]
-              },
-              {
-                "id": "store",
-                "label": "接待与会话记录",
-                "layer": "data",
-                "type": "data",
-                "items": [
-                  "MySQL / MyBatis-Plus",
-                  "接待关系 / 会话历史"
-                ]
-              },
-              {
-                "id": "cache",
-                "label": "活动状态与去重信息",
-                "layer": "data",
-                "type": "data",
-                "items": [
-                  "Redis",
-                  "坐席状态 / 排队 / 上下文",
-                  "消息标识 / 顺序信息"
-                ]
-              },
-              {
-                "id": "events",
-                "label": "会话事件通道",
-                "layer": "data",
-                "type": "runtime",
-                "items": [
-                  "RabbitMQ",
-                  "消息事件 / 接待状态事件"
-                ]
-              }
-            ],
-            "edges": [
-              {
-                "from": "client",
-                "to": "gateway",
-                "label": "HTTPS · 服务与会话请求",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "seat",
-                "to": "gateway",
-                "label": "HTTPS · 接待与会话操作",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "gateway",
-                "to": "routing",
-                "label": "坐席状态 / 排队请求",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "gateway",
-                "to": "session",
-                "label": "并行接待 / 转接操作",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "gateway",
-                "to": "message",
-                "label": "咨询与接待消息",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "routing",
-                "to": "session",
-                "label": "分配结果 / 接待关系",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "session",
-                "to": "assistant",
-                "label": "问题上下文 / 受理动作",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "assistant",
-                "to": "shared",
-                "label": "话术查询 / 工单关联",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "message",
-                "to": "cache",
-                "label": "消息标识检查 / 顺序信息",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "message",
-                "to": "events",
-                "label": "消息与会话事件发布",
-                "kind": "event"
-              },
-              {
-                "from": "events",
-                "to": "session",
-                "label": "会话事件消费",
-                "kind": "event"
-              },
-              {
-                "from": "session",
-                "to": "store",
-                "label": "接待关系与历史读写",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "session",
-                "to": "cache",
-                "label": "活动会话 / 上下文",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "routing",
-                "to": "cache",
-                "label": "坐席状态与队列读写",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "governance",
-                "to": "session",
-                "label": "注册配置 / 服务调用",
-                "kind": "config"
-              }
-            ]
-          },
-          "background": {
-            "label": "项目背景",
-            "text": "企业在线咨询既要覆盖不同业务入口，也要适配多租户隔离和不同接入条件。咨询进入后，需要按业务、客户关系和坐席忙闲合理分配，并在同一工作台完成多路接待、查阅历史、查询话术与服务下单。分流、接待和服务辅助若各自独立，坐席就需要在多个工具之间反复查找和切换，服务上下文也难以连续。项目面向这些接待与协作要求建设可配置的在线客服平台，让不同企业复用服务能力，同时保留各自的服务策略、权限边界和客户资料。"
-          }
-        },
-        {
-          "id": "customer-service-voice",
-          "title": "FreeSWITCH 呼叫控制与智能语音客服",
-          "role": "项目主要负责人",
-          "summary": "以 Java 微服务编排坐席接待、外呼任务和 IVR，连接 FreeSWITCH 媒体处理与 ASR、意图识别、TTS 链路，并支持 WebRTC 浏览器音频接入。",
-          "tags": [
-            "Java 呼叫控制",
-            "FreeSWITCH",
-            "WebRTC 音频",
-            "ASR / TTS"
-          ],
-          "sections": [
-            {
-              "label": "坐席操作与呼叫控制面",
-              "text": "TypeScript、React 与 Ant Design 构建语音坐席工作台，HTTPS API 接收接听、外呼和服务转接等操作。Spring Boot 呼叫服务组织呼叫状态与坐席服务关系，通过 FreeSWITCH 调用适配完成呼叫控制，并接收执行状态。"
-            },
-            {
-              "label": "电话与浏览器媒体面",
-              "text": "FreeSWITCH 承接电话连接和语音媒体，WebRTC 提供浏览器音频接入能力。呼叫控制服务管理操作和状态，媒体组件负责音频收发；控制请求、媒体传输和状态反馈分别建模，保持呼叫状态与通话媒体的协同。"
-            },
-            {
-              "label": "IVR 与外呼任务编排",
-              "text": "IVR 根据交互流程组织导航、播报和服务转接。外呼任务服务管理任务接入、拨打执行与进度状态，分别承接坐席外呼和智能外呼，调用呼叫服务建立连接，并将智能外呼接续到对话控制。"
-            },
-            {
-              "label": "识别、意图与语音应答",
-              "text": "语音识别将音频转为文本，意图识别提取交互意图；对话控制依据识别结果和多轮上下文组织应答，再由 TTS 生成播报音频交给媒体组件播放。识别、对话和合成通过独立能力接口协作，便于按职责接入语音能力。"
-            },
-            {
-              "label": "微服务状态与业务协同",
-              "text": "Spring Cloud Gateway 与接入适配服务 处理坐席 API 接入，Nacos 与 OpenFeign 组织微服务治理与调用。MySQL 保存通话和任务记录，Redis 维护活动呼叫状态，RabbitMQ 传递呼叫与任务事件；共享工单与知识接口提供坐席服务下单和话术辅助。通话转写、呼叫状态和任务进度形成质检与服务分析输入。"
-            },
-            {
-              "label": "语音工程：把实时媒体与异步呼叫事件对齐",
-              "text": "语音服务要同时面对电话接续、媒体播放、识别结果和坐席操作，事件到达顺序与实际通话阶段可能不同。以呼叫标识关联 FreeSWITCH 事件、坐席任务与语音交互轮次，通过状态机校验事件能否推进当前通话，重复或过期事件只记录、不重复执行。ASR、意图识别与 TTS 各自设置超时和结果关联，避免上一轮识别或播报影响下一轮对话；媒体与控制链路分别观测，结合呼叫阶段、接口耗时与异常原因区分接续失败和智能交互失败。"
-            }
-          ],
-          "implementation": {
-            "stack": [
-              "TypeScript",
-              "React",
-              "Ant Design",
-              "Java",
-              "Spring Boot",
-              "Spring Cloud",
-              "Spring Cloud Gateway",
-              "Nacos",
-              "OpenFeign",
-              "FreeSWITCH",
-              "WebRTC",
-              "ASR",
-              "TTS",
-              "MySQL",
-              "Redis",
-              "RabbitMQ"
-            ],
-            "highlights": [
-              {
-                "label": "协同呼叫控制与音频传输",
-                "text": "坐席操作、呼叫状态与实际通话音频需要同步衔接，但承担不同职责。Java 微服务管理接听、外呼和转接，FreeSWITCH 承接电话连接与媒体处理，WebRTC 提供浏览器音频接入，将控制请求、媒体传输和状态反馈分别建模。"
-              },
-              {
-                "label": "贯通接待、IVR 与外呼",
-                "text": "来电导航、人工接待和主动外呼都需要接续服务关系，任务进度又不能与单次通话混淆。IVR 编排导航和转接，外呼服务组织任务与拨打状态，通过呼叫服务连接坐席外呼和智能外呼，分别维护任务与通话状态。"
-              },
-              {
-                "label": "组织语音理解与多轮应答",
-                "text": "语音交互需要把客户表达转为可处理的意图，并依据上下文给出连贯回应。ASR 提取文本，意图识别与对话控制组织多轮应答，TTS 生成播报音频；各能力通过独立接口衔接，让识别结果、对话状态与音频输出能够对应。"
-              },
-              {
-                "label": "保留通话与服务办理关联",
-                "text": "通话结束后仍可能需要工单处理、质检和服务分析。MySQL 保存通话与任务记录，Redis 维护活动呼叫状态，RabbitMQ 传递呼叫及任务事件；共享知识与工单服务提供话术和下单能力，将通话转写、办理记录和任务进度衔接起来。"
-              }
-            ]
-          },
-          "architecture": {
-            "title": "Java 呼叫控制面与 FreeSWITCH 语音媒体面",
-            "note": "坐席 API 与外呼服务组织呼叫控制，FreeSWITCH 承担媒体处理；WebRTC 连接浏览器音频。ASR、意图识别、对话控制和 TTS 组成语音应答链路。",
-            "focus": "control",
-            "layers": [
-              {
-                "id": "access",
-                "label": "坐席、电话与 API 接入",
-                "caption": "REACT / HTTPS / WEBRTC"
-              },
-              {
-                "id": "control",
-                "label": "呼叫控制微服务",
-                "caption": "SPRING CLOUD / NACOS"
-              },
-              {
-                "id": "media",
-                "label": "媒体与智能语音",
-                "caption": "FREESWITCH / ASR / TTS"
-              },
-              {
-                "id": "shared",
-                "label": "共享业务与运行数据",
-                "caption": "API / MYSQL / REDIS / MQ"
-              }
-            ],
-            "nodes": [
-              {
-                "id": "phone",
-                "label": "电话接入",
-                "layer": "access",
-                "type": "external",
-                "items": [
-                  "客户来电 / 外呼连接"
-                ]
-              },
-              {
-                "id": "seat",
-                "label": "语音坐席工作台",
-                "layer": "access",
-                "type": "ui",
-                "items": [
-                  "TypeScript / React / Ant Design",
-                  "WebRTC 浏览器音频接入",
-                  "坐席接待 / 外呼操作"
-                ]
-              },
-              {
-                "id": "gateway",
-                "label": "坐席操作 API 网关",
-                "layer": "access",
-                "type": "api",
-                "items": [
-                  "Spring Cloud Gateway",
-                  "HTTPS 操作 / 身份权限"
-                ]
-              },
-              {
-                "id": "control",
-                "label": "Java 呼叫控制服务",
-                "layer": "control",
-                "type": "service",
-                "items": [
-                  "Spring Boot / OpenFeign",
-                  "坐席关系 / 呼叫状态",
-                  "FreeSWITCH 调用适配"
-                ]
-              },
-              {
-                "id": "outbound",
-                "label": "外呼任务服务",
-                "layer": "control",
-                "type": "service",
-                "items": [
-                  "Spring Boot",
-                  "坐席外呼 / 智能外呼",
-                  "拨打执行 / 任务进度"
-                ]
-              },
-              {
-                "id": "ivr",
-                "label": "IVR 流程控制",
-                "layer": "control",
-                "type": "service",
-                "items": [
-                  "导航 / 播报 / 服务转接"
-                ]
-              },
-              {
-                "id": "switch",
-                "label": "FreeSWITCH 媒体与呼叫",
-                "layer": "media",
-                "type": "runtime",
-                "items": [
-                  "电话连接 / 语音媒体",
-                  "呼叫控制接口"
-                ]
-              },
-              {
-                "id": "recognition",
-                "label": "语音识别与意图",
-                "layer": "media",
-                "type": "model",
-                "items": [
-                  "ASR：音频转文本",
-                  "意图识别：文本转意图"
-                ]
-              },
-              {
-                "id": "dialogue",
-                "label": "智能对话控制",
-                "layer": "media",
-                "type": "service",
-                "items": [
-                  "多轮交互上下文",
-                  "应答内容组织"
-                ]
-              },
-              {
-                "id": "tts",
-                "label": "TTS 语音合成",
-                "layer": "media",
-                "type": "model",
-                "items": [
-                  "应答文本转音频",
-                  "导航与应答播报"
-                ]
-              },
-              {
-                "id": "shared",
-                "label": "共享工单与知识接口",
-                "layer": "shared",
-                "type": "api",
-                "items": [
-                  "坐席服务下单",
-                  "回答话术查询"
-                ]
-              },
-              {
-                "id": "data",
-                "label": "运行状态与事件记录",
-                "layer": "shared",
-                "type": "data",
-                "items": [
-                  "MySQL：通话与任务记录",
-                  "Redis：活动呼叫状态",
-                  "RabbitMQ：呼叫与任务事件"
-                ]
-              }
-            ],
-            "edges": [
-              {
-                "from": "phone",
-                "to": "switch",
-                "label": "电话连接 / 语音媒体",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "seat",
-                "to": "gateway",
-                "label": "HTTPS · 接待与外呼操作",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "gateway",
-                "to": "control",
-                "label": "坐席命令 / 呼叫状态",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "control",
-                "to": "switch",
-                "label": "控制调用 / 状态事件",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "outbound",
-                "to": "control",
-                "label": "拨打任务 / 执行状态",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "control",
-                "to": "ivr",
-                "label": "呼叫交互 / 导航控制",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "outbound",
-                "to": "dialogue",
-                "label": "智能外呼对话接续",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "switch",
-                "to": "recognition",
-                "label": "待识别语音",
-                "kind": "flow"
-              },
-              {
-                "from": "recognition",
-                "to": "dialogue",
-                "label": "识别文本 / 交互意图",
-                "kind": "flow"
-              },
-              {
-                "from": "dialogue",
-                "to": "tts",
-                "label": "待播报应答文本",
-                "kind": "flow"
-              },
-              {
-                "from": "tts",
-                "to": "switch",
-                "label": "合成音频播放",
-                "kind": "call"
-              },
-              {
-                "from": "seat",
-                "to": "switch",
-                "label": "WebRTC 音频逻辑接入",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "control",
-                "to": "shared",
-                "label": "服务下单 / 话术查询",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "control",
-                "to": "data",
-                "label": "呼叫状态与通话记录",
-                "kind": "event"
-              },
-              {
-                "from": "outbound",
-                "to": "data",
-                "label": "任务进度与执行事件",
-                "kind": "event"
-              }
-            ]
-          },
-          "background": {
-            "label": "项目背景",
-            "text": "电话服务既要承接客户主动来电，也要支持回访、通知等主动触达，导航、自助应答与人工坐席需要相互接续。批量外呼还涉及拨打策略、多线路路由、任务监控和通话质检，单一通话能力难以覆盖完整的服务管理要求：任务需要受控执行，过程需要检查，结果需要回到后续运营。项目据此整合呼入接待、人工与智能外呼及语音交互能力，使日常咨询和主动服务共用可管理、可追踪的通信服务体系，减少接待、任务执行与运营反馈之间的割裂。"
-          }
-        },
-        {
-          "id": "customer-service-ticket-knowledge",
-          "title": "客户服务与运营平台",
-          "role": "项目主要负责人",
-          "summary": "以 Java 微服务统一工单协同、知识服务、服务质检、客户资产与企微运营，通过 Activiti 工作流和 Elasticsearch 搜索连接服务处理与知识供给，为客服渠道提供可复用的平台能力。",
-          "tags": [
-            "Java Microservices",
-            "Activiti",
-            "Elasticsearch",
-            "Customer Operations"
-          ],
-          "sections": [
-            {
-              "label": "统一服务底座",
-              "text": "在线与语音渠道负责接待，平台负责接待之后的协同与运营。统一工作台汇集待办、客户信息、知识与质量记录，后台管理组织、角色、策略和租户范围，让不同服务入口复用一致的业务能力与数据边界。"
-            },
-            {
-              "label": "工单流程与跨团队协同",
-              "text": "工单记录客户诉求与办理材料，Activiti 将受理、分派、处理、复核等动作组织为流程实例与任务。业务记录关联流程标识，当前待办与历史轨迹分别可查，解决跨团队转交后责任不清、进度难追踪的问题。"
-            },
-            {
-              "label": "知识维护与检索服务",
-              "text": "知识管理覆盖内容维护、发布和更新，Elasticsearch 为坐席及渠道提供全文检索。业务内容与检索索引分工，知识变更通过索引更新机制传递，使回答辅助能够跟随发布状态变化，同时避免把搜索过程与工单状态流转混在一起。"
-            },
-            {
-              "label": "服务质检与质量回流",
-              "text": "结合自动初检与人工复核，围绕服务记录形成质量问题、复核结论与后续处理线索。质检既需要找到问题，也需要能回到具体记录和办理过程，为知识修订、人员辅导与流程调整提供依据。"
-            },
-            {
-              "label": "客户资产与企微运营",
-              "text": "将客户资料、标签、归属和跟进记录组织为持续更新的客户视图，承接企微客户跟进、社群运营任务与客户交接。服务中积累的信息能够进入后续运营，同时对沟通记录和客户资产的访问保留清晰边界。"
-            },
-            {
-              "label": "智能辅助与自动化接入",
-              "text": "平台通过模型与自动化能力提供坐席辅助、服务小结、标签提取和重复任务处理。智能结果进入可检查的业务字段或待办，由应用控制采纳和执行；模型与 RPA 的调用作为可替换的集成能力，不与工单和客户数据直接耦合。"
-            },
-            {
-              "label": "运营治理与租户隔离",
-              "text": "运营端管理服务策略、组织人员、权限与服务数据。Java 微服务按工单、知识、客户运营和质量分析拆分职责，在租户和组织范围内访问业务数据，通过流程历史、操作记录和指标视图定位服务堵点。"
-            }
-          ],
-          "implementation": {
-            "stack": [
-              "TypeScript",
-              "React",
-              "Java",
-              "Spring Boot",
-              "Spring Cloud",
-              "Spring Cloud Gateway",
-              "Nacos",
-              "OpenFeign",
-              "Activiti",
-              "Elasticsearch",
-              "MyBatis-Plus",
-              "MySQL",
-              "RabbitMQ",
-              "Docker"
-            ],
-            "highlights": [
-              {
-                "label": "让接待之后的协作也有系统承接",
-                "text": "服务诉求可能跨越多个组织与处理环节。以工单作为业务载体，以 Activiti 实例和任务管理执行过程，关联办理材料、处理动作和历史记录，让转派与复核保持连续的上下文。"
-              },
-              {
-                "label": "在高频查询与持续更新之间保持一致",
-                "text": "知识查询读多、内容发布相对集中，两类负载不宜绑在一起。内容服务管理发布状态，独立索引与检索链路更新 Elasticsearch；查询返回可直接使用的话术与内容出处，降低坐席在多个系统中寻找答案的成本。"
-              },
-              {
-                "label": "把质量检查变成可回到原记录的问题线索",
-                "text": "自动初检需要与人工判断衔接。质量结果关联原始服务记录、问题类型与复核动作，使运营人员能够找到具体问题并推动处理，而不只获得一个分数或汇总结果。"
-              },
-              {
-                "label": "让客户运营复用服务上下文",
-                "text": "客户信息分散在咨询、工单与跟进记录里时，持续运营容易重复采集。通过客户标识关联标签、办理情况与企微跟进，把社群任务和客户交接纳入平台，维持客户归属与数据权限。"
-              },
-              {
-                "label": "控制智能输出进入业务动作的边界",
-                "text": "小结、标签和助手回答需要可检查，自动化调用需要受控。由应用层规定输入字段、输出结构和执行范围，保留原记录与结果关联，使模型能力能够被业务复用，也能被人工复核和后续评估。"
-              },
-              {
-                "label": "把租户边界贯彻到服务调用与数据查询",
-                "text": "平台需同时服务不同业务空间。以租户、组织和角色共同限定业务访问范围，在入口、服务调用和数据查询链路传递作用域，避免只隔离菜单而没有隔离实际数据。"
-              }
-            ]
-          },
-          "architecture": {
-            "title": "客服协同、知识服务与运营治理的微服务平台",
-            "note": "按接入、领域服务、执行引擎、数据与外部能力分层；工单主链路与知识检索链路分开，客户运营和质量服务横向复用统一上下文。 工单采用 Activiti，知识检索采用 Elasticsearch。",
-            "layers": [
-              {
-                "id": "access",
-                "label": "工作台与渠道接入",
-                "caption": "REACT / API GATEWAY"
-              },
-              {
-                "id": "domain",
-                "label": "平台领域服务",
-                "caption": "SPRING BOOT / OPENFEIGN"
-              },
-              {
-                "id": "execution",
-                "label": "流程、检索与智能执行",
-                "caption": "ACTIVITI / ELASTICSEARCH"
-              },
-              {
-                "id": "data",
-                "label": "业务数据与事件",
-                "caption": "MYSQL / RABBITMQ / MODEL API"
-              }
-            ],
-            "nodes": [
-              {
-                "id": "workspace",
-                "label": "Unified Workbench",
-                "layer": "access",
-                "type": "ui",
-                "items": [
-                  "TypeScript / React",
-                  "Tasks / Knowledge / Operations"
-                ]
-              },
-              {
-                "id": "gateway",
-                "label": "Platform API Gateway",
-                "layer": "access",
-                "type": "api",
-                "items": [
-                  "Spring Cloud Gateway",
-                  "Tenant Scope / Access Policy",
-                  "Channel API / WeCom Adapter"
-                ]
-              },
-              {
-                "id": "ticket",
-                "label": "Work Order Service",
-                "layer": "domain",
-                "type": "service",
-                "items": [
-                  "Spring Boot / OpenFeign",
-                  "Business State / Process Link",
-                  "Assignment / SLA / History"
-                ]
-              },
-              {
-                "id": "knowledge",
-                "label": "Knowledge Service",
-                "layer": "domain",
-                "type": "service",
-                "items": [
-                  "Spring Boot / MyBatis-Plus",
-                  "Publication / Search API",
-                  "Index Change Events"
-                ]
-              },
-              {
-                "id": "customer",
-                "label": "Customer & SCRM Service",
-                "layer": "domain",
-                "type": "service",
-                "items": [
-                  "Customer Profile / Tags",
-                  "WeCom Operations",
-                  "Ownership / Handover"
-                ]
-              },
-              {
-                "id": "operations",
-                "label": "Quality & Operations",
-                "layer": "domain",
-                "type": "service",
-                "items": [
-                  "Automated Check / Human Review",
-                  "Service Metrics / Policies",
-                  "Summary / Tagging Tasks"
-                ]
-              },
-              {
-                "id": "workflow",
-                "label": "Activiti BPMN Engine",
-                "layer": "execution",
-                "type": "runtime",
-                "items": [
-                  "Process Definition / Instance",
-                  "User Tasks / Timers",
-                  "Runtime / History"
-                ]
-              },
-              {
-                "id": "search",
-                "label": "Elasticsearch",
-                "layer": "execution",
-                "type": "runtime",
-                "items": [
-                  "Full-text Index / Filters",
-                  "Relevance Ranking",
-                  "Published Knowledge Search"
-                ]
-              },
-              {
-                "id": "automation",
-                "label": "AI & RPA Orchestrator",
-                "layer": "execution",
-                "type": "service",
-                "items": [
-                  "Structured Outputs / Task Dispatch",
-                  "Model API / RPA Adapter",
-                  "Reviewable Results"
-                ]
-              },
-              {
-                "id": "store",
-                "label": "Platform Data Store",
-                "layer": "data",
-                "type": "data",
-                "items": [
-                  "MySQL / Tenant Scope",
-                  "Tickets / Knowledge / Profiles",
-                  "Process / Audit Records"
-                ]
-              },
-              {
-                "id": "events",
-                "label": "Domain Event Bus",
-                "layer": "data",
-                "type": "runtime",
-                "items": [
-                  "RabbitMQ",
-                  "Publication / Index Updates",
-                  "Task Results / Notifications"
-                ]
-              },
-              {
-                "id": "external",
-                "label": "Model & Automation APIs",
-                "layer": "data",
-                "type": "external",
-                "items": [
-                  "Model Gateway / RPA Runtime",
-                  "External Capabilities",
-                  "Invocation Results"
-                ]
-              }
-            ],
-            "edges": [
-              {
-                "from": "workspace",
-                "to": "gateway",
-                "label": "管理操作与任务处理",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "gateway",
-                "to": "ticket",
-                "label": "工单受理与办理",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "gateway",
-                "to": "knowledge",
-                "label": "内容维护与话术查询",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "gateway",
-                "to": "customer",
-                "label": "客户资料与企微运营",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "gateway",
-                "to": "operations",
-                "label": "质量复核与运营配置",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "ticket",
-                "to": "workflow",
-                "label": "流程实例与任务操作",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "knowledge",
-                "to": "search",
-                "label": "检索请求与搜索结果",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "operations",
-                "to": "automation",
-                "label": "小结、打标与初检任务",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "customer",
-                "to": "store",
-                "label": "客户资产与跟进记录",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "workflow",
-                "to": "store",
-                "label": "流程运行与历史记录",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "knowledge",
-                "to": "store",
-                "label": "知识内容与发布状态",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "knowledge",
-                "to": "events",
-                "label": "知识发布变更事件",
-                "kind": "event"
-              },
-              {
-                "from": "events",
-                "to": "search",
-                "label": "异步索引更新",
-                "kind": "flow"
-              },
-              {
-                "from": "automation",
-                "to": "external",
-                "label": "模型与自动化调用",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "automation",
-                "to": "events",
-                "label": "任务结果与后续处理",
-                "kind": "event"
-              },
-              {
-                "from": "ticket",
-                "to": "store",
-                "label": "工单业务记录",
-                "kind": "call",
-                "bidirectional": true
-              }
-            ],
-            "focus": "ticket"
-          },
-          "background": {
-            "label": "项目背景",
-            "text": "客户服务的工作并不止于接起一次咨询：诉求需要跨团队办理，回答口径需要持续维护，服务质量需要检查，客户跟进与交接也需要完整记录。工单协同、知识维护、自动初检与人工复核、客户标签和私域运营共同构成服务支撑要求；这些能力若独立运行，办理经验、质量问题与客户信息就难以相互反馈。项目面向接待之后的完整服务过程建设统一平台，把办理进度、知识供给、质量反馈和客户资产连接起来，为持续跟进与运营改进提供可追溯的依据。"
-          }
-        },
-        {
-          "id": "customer-service-digital-human",
-          "title": "智能客服入口与数字人交互",
-          "role": "项目主要负责人",
-          "summary": "把问题推荐、语音转写和数字人交互组合成面向客户的服务入口，让咨询更容易发起、回答更直观，并将需要人工处理的问题连同上下文交给坐席与工单流程。",
-          "tags": [
-            "React",
-            "语音转写",
-            "数字人交互",
-            "服务连续性"
-          ],
-          "sections": [
-            {
-              "label": "让问题更容易表达",
-              "text": "TypeScript / React 组织文字、语音和推荐问题三种交互。ASR 将语音转为可编辑文本，问题推荐帮助客户快速进入咨询场景，交互状态统一管理输入、等待与回答。"
-            },
-            {
-              "label": "让回答更直观",
-              "text": "将知识服务返回的回答交给页面与数字人呈现，通过可视化交互承接咨询引导。数字人组件与咨询逻辑分离，页面可以组合文字回答、语音输入与形象交互。"
-            },
-            {
-              "label": "保持咨询上下文",
-              "text": "Java / Spring Boot 会话服务组织咨询记录和服务状态，共享知识库提供回答依据。将问题、会话记录与已有处理信息保留在同一服务上下文中，减少客户在入口切换时重复描述。"
-            },
-            {
-              "label": "连接人工与后续处理",
-              "text": "当问题需要人工介入或进一步办理时，将已有咨询上下文交给在线坐席，并关联共享工单的处理进度。客户从发起问题到跟进结果使用同一服务入口。"
-            },
-            {
-              "label": "交互工程：让多种输入与服务转交保持连贯",
-              "text": "推荐问题、语音转写和数字人展示并行存在时，旧回答覆盖新问题、转写未确认就发起查询，以及转人工后上下文丢失，都会打断咨询。按咨询轮次管理输入、检索和呈现任务，为异步结果携带请求标识，仅将当前轮次结果更新到界面；语音文本经客户确认后查询，数字人输出与文字答案共享同一回答对象。问题推荐按服务场景和可用知识组织，转人工时提交结构化的问题与处理摘要，让形象交互真正接上后续服务。"
-            }
-          ],
-          "architecture": {
-            "title": "智能交互、会话上下文与服务连续性",
-            "note": "React 统一交互状态，ASR 与问题推荐辅助问题表达；会话服务协调知识回答、人工接待与工单跟进，数字人负责交互内容的呈现。",
-            "focus": "session",
-            "layers": [
-              {
-                "id": "entry",
-                "label": "客户交互",
-                "caption": "TYPESCRIPT / REACT"
-              },
-              {
-                "id": "session",
-                "label": "会话编排",
-                "caption": "SPRING BOOT / CONTEXT"
-              },
-              {
-                "id": "intelligence",
-                "label": "智能交互能力",
-                "caption": "RECOMMEND / ASR / SEARCH"
-              },
-              {
-                "id": "continuation",
-                "label": "服务延续",
-                "caption": "AGENT / WORKFLOW / REDIS"
-              }
-            ],
-            "nodes": [
-              {
-                "id": "client",
-                "label": "客户服务入口",
-                "layer": "entry",
-                "type": "ui",
-                "items": [
-                  "TypeScript / React",
-                  "文字 / 语音 / 推荐问题",
-                  "输入与回答状态管理"
-                ]
-              },
-              {
-                "id": "avatar",
-                "label": "数字人交互组件",
-                "layer": "entry",
-                "type": "ui",
-                "items": [
-                  "数字人 SDK",
-                  "咨询引导 / 内容呈现"
-                ]
-              },
-              {
-                "id": "session",
-                "label": "会话与服务编排",
-                "layer": "session",
-                "type": "service",
-                "items": [
-                  "Java / Spring Boot",
-                  "会话上下文 / 服务状态",
-                  "知识回答与人工衔接"
-                ]
-              },
-              {
-                "id": "recommend",
-                "label": "问题推荐",
-                "layer": "intelligence",
-                "type": "service",
-                "items": [
-                  "猜你想问 / 场景引导",
-                  "推荐列表 / 选择反馈"
-                ]
-              },
-              {
-                "id": "asr",
-                "label": "语音转写",
-                "layer": "intelligence",
-                "type": "model",
-                "items": [
-                  "ASR 能力接入",
-                  "音频 → 可编辑文本"
-                ]
-              },
-              {
-                "id": "knowledge",
-                "label": "共享知识服务",
-                "layer": "intelligence",
-                "type": "service",
-                "items": [
-                  "Java / Elasticsearch",
-                  "话术搜索 / 回答依据"
-                ]
-              },
-              {
-                "id": "agent",
-                "label": "在线坐席接待",
-                "layer": "continuation",
-                "type": "service",
-                "items": [
-                  "人工接待 / 上下文交接",
-                  "延续客户咨询记录"
-                ]
-              },
-              {
-                "id": "ticket",
-                "label": "共享工单工作流",
-                "layer": "continuation",
-                "type": "service",
-                "items": [
-                  "问题受理 / 办理跟踪",
-                  "处理进度 / 结果反馈"
-                ]
-              },
-              {
-                "id": "context",
-                "label": "会话上下文存储",
-                "layer": "continuation",
-                "type": "data",
-                "items": [
-                  "Redis / 会话记录",
-                  "当前问题 / 历史交互"
-                ]
-              }
-            ],
-            "edges": [
-              {
-                "to": "avatar",
-                "label": "引导与回答呈现",
-                "kind": "call",
-                "from": "client"
-              },
-              {
-                "to": "session",
-                "label": "咨询内容 / 回答与服务状态",
-                "kind": "call",
-                "from": "client",
-                "bidirectional": true
-              },
-              {
-                "to": "recommend",
-                "label": "推荐请求 / 问题列表",
-                "kind": "call",
-                "from": "client",
-                "bidirectional": true
-              },
-              {
-                "to": "asr",
-                "label": "录音输入 / 转写文本",
-                "kind": "call",
-                "from": "client",
-                "bidirectional": true
-              },
-              {
-                "to": "knowledge",
-                "label": "问题查询 / 知识回答",
-                "kind": "call",
-                "from": "session",
-                "bidirectional": true
-              },
-              {
-                "to": "context",
-                "label": "会话状态保存 / 上下文读取",
-                "kind": "call",
-                "from": "session",
-                "bidirectional": true
-              },
-              {
-                "to": "agent",
-                "label": "问题与会话上下文 / 接待状态",
-                "kind": "call",
-                "from": "session",
-                "bidirectional": true
-              },
-              {
-                "to": "ticket",
-                "label": "服务受理 / 工单进度",
-                "kind": "call",
-                "from": "session",
-                "bidirectional": true
-              }
-            ]
-          },
-          "implementation": {
-            "stack": [
-              "TypeScript",
-              "React",
-              "ASR",
-              "Digital Human SDK",
-              "Java",
-              "Spring Boot",
-              "Redis",
-              "Elasticsearch"
-            ],
-            "highlights": [
-              {
-                "label": "降低发起咨询的门槛",
-                "text": "客户不一定知道该如何描述问题，长文本输入也增加咨询成本。React 入口组合猜你想问、文字输入与语音转写，ASR 结果允许编辑后提交，通过输入、等待和回答状态组织交互，帮助客户更顺畅地表达诉求。"
-              },
-              {
-                "label": "把知识回答变成直观交互",
-                "text": "客户获得答案后，还需要理解下一步如何操作。页面将知识回答交给文字和数字人组件呈现，用形象交互承接咨询引导；数字人 SDK 与咨询逻辑分离，使回答内容、交互状态和呈现方式能够分别维护。"
-              },
-              {
-                "label": "让咨询上下文持续保留",
-                "text": "在推荐问题、语音输入和人工服务之间切换时，已有信息容易分散。Java / Spring Boot 会话服务统一组织问题、咨询记录和处理状态，共享知识库提供回答依据，将不同入口产生的信息衔接到同一服务上下文。"
-              },
-              {
-                "label": "把未解决的问题交给后续服务",
-                "text": "自助回答无法覆盖所有诉求，进一步办理时还要减少客户重复描述。将已有咨询上下文交给在线坐席，并关联共享工单和处理进度，让客户从发起咨询到人工接待、后续反馈都能沿着同一服务路径继续。"
-              }
-            ]
-          },
-          "background": {
-            "label": "项目背景",
-            "text": "面向客户的咨询入口，需要让用户先找到可用的服务，再选择合适的方式表达问题。常见问题、菜单引导与多轮问答要能承接不同咨询场景，自助、智能与人工服务也需要在同一入口接续，避免自助无法解决后找不到下一步。项目围绕降低咨询门槛与保持服务连续性展开建设，在这一链路中组合问题推荐、语音转文字和数字人交互，让用户既能快速找到常见问题，也能用更自然的方式提问，并把需要继续处理的诉求交给人工和后续流程。"
-          }
-        }
-      ]
-    },
-    {
-      "id": "platform",
-      "title": "平台工程与数据集成",
-      "index": "03",
-      "summary": "通过标准接口、能力适配、应用分层和周期数据链路，组织平台能力与指标呈现。",
-      "projects": [
-        {
-          "id": "authentication-center",
-          "title": "认证能力集成平台",
-          "role": "项目主要负责人",
-          "summary": "通过标准 API、能力路由和外部适配组织认证调用，将 OCR、资料核验与媒介识别组合为可接入业务系统的能力。",
-          "tags": [
-            "API 集成",
-            "能力路由",
-            "OCR",
-            "调用观测"
-          ],
-          "sections": [
-            {
-              "label": "标准接口与业务接入",
-              "text": "TypeScript / React 提供认证资料提交和结果展示，Java / Spring 封装同步与异步认证接口。业务系统通过统一接口接入企业、借贷与商户认证支持。"
-            },
-            {
-              "label": "能力配置与调用路由",
-              "text": "产品配置定义认证项目和能力组合，路由服务组织通道选择与能力调用。调用状态和异常进入监测组件，让接口接入、路由和运行反馈分工明确。"
-            },
-            {
-              "label": "资料与媒介处理",
-              "text": "个人资料核验、企业商户核验和媒介识别作为独立能力组件，分别处理信息查询核验、OCR、图像检查、人脸识别及活体检测。相关外部信息交互通过适配接口封装。"
-            },
-            {
-              "label": "能力组合与场景方案",
-              "text": "围绕商户准入、信息补录和表单返填组合认证能力，将识别结果与信息核验衔接到业务页面。能力路由统一组织接口调用，组合配置复用识别和核验结果，减少业务页面重复采集与多次接入。"
-            },
-            {
-              "label": "通道工程：统一结果语义与外部调用故障边界",
-              "text": "不同核验通道在字段、错误码、响应时长和同步方式上存在差异，直接透传会让业务方承担大量适配。用标准请求与结果模型统一核验状态，将“核验未通过”“资料不完整”和“通道调用失败”分别表达；请求标识贯穿能力路由、外部适配和回调处理，支持同步查询与异步结果核对。通道侧配置超时、并发限制和健康状态，回调执行验签与幂等校验，关键资料按最小必要范围留存，从接口语义和运行控制两方面降低接入复杂度。"
-            }
-          ],
-          "architecture": {
-            "title": "认证接口、能力路由与资料核验",
-            "note": "标准接口连接能力路由，配置组件组织能力组合，适配组件封装外部交互；调用状态进入监测，识别与核验结果衔接业务页面。",
-            "focus": "router",
-            "layers": [
-              {
-                "id": "access",
-                "label": "业务接入",
-                "caption": "REACT / API"
-              },
-              {
-                "id": "platform",
-                "label": "能力组织",
-                "caption": "JAVA / SPRING"
-              },
-              {
-                "id": "capability",
-                "label": "认证组件",
-                "caption": "VERIFICATION / OCR"
-              },
-              {
-                "id": "integration",
-                "label": "外部适配",
-                "caption": "INTEGRATION"
-              }
-            ],
-            "nodes": [
-              {
-                "id": "client",
-                "label": "业务接入页面",
-                "layer": "access",
-                "type": "ui",
-                "items": [
-                  "TypeScript / React",
-                  "认证资料提交 / 结果展示"
-                ]
-              },
-              {
-                "id": "business",
-                "label": "业务调用方",
-                "layer": "access",
-                "type": "external",
-                "items": [
-                  "企业 / 借贷 / 商户场景"
-                ]
-              },
-              {
-                "id": "api",
-                "label": "标准认证接口",
-                "layer": "access",
-                "type": "api",
-                "items": [
-                  "Java / Spring",
-                  "同步 / 异步调用"
-                ]
-              },
-              {
-                "id": "config",
-                "label": "认证产品配置",
-                "layer": "platform",
-                "type": "service",
-                "items": [
-                  "Java / Spring",
-                  "认证项目 / 能力组合"
-                ]
-              },
-              {
-                "id": "router",
-                "label": "能力路由服务",
-                "layer": "platform",
-                "type": "service",
-                "items": [
-                  "Java / Spring",
-                  "通道选择 / 调用组织"
-                ]
-              },
-              {
-                "id": "monitor",
-                "label": "调用监测",
-                "layer": "platform",
-                "type": "service",
-                "items": [
-                  "调用状态 / 异常告警"
-                ]
-              },
-              {
-                "id": "personal",
-                "label": "个人资料核验",
-                "layer": "capability",
-                "type": "service",
-                "items": [
-                  "证件 / 银行卡 / 手机号",
-                  "信息核验结果"
-                ]
-              },
-              {
-                "id": "merchant",
-                "label": "企业商户核验",
-                "layer": "capability",
-                "type": "service",
-                "items": [
-                  "企业信息查询 / 资质核验",
-                  "商户资料核验"
-                ]
-              },
-              {
-                "id": "media",
-                "label": "媒介识别能力",
-                "layer": "capability",
-                "type": "tool",
-                "items": [
-                  "OCR / 图像检查",
-                  "人脸识别 / 活体检测"
-                ]
-              },
-              {
-                "id": "adapter",
-                "label": "外部能力适配",
-                "layer": "integration",
-                "type": "tool",
-                "items": [
-                  "Java / Spring",
-                  "外部接口封装"
-                ]
-              },
-              {
-                "id": "external",
-                "label": "外部数据与服务",
-                "layer": "integration",
-                "type": "external",
-                "items": [
-                  "认证相关信息与能力"
-                ]
-              }
-            ],
-            "edges": [
-              {
-                "from": "client",
-                "to": "api",
-                "label": "资料提交 / 认证结果",
-                "kind": "call",
-                "bidirectional": true
-              },
-              {
-                "from": "business",
+                "text": "将标注片段、口播文本和画面要素整理为任务样本，使用 PyTorch / PEFT 与 LoRA / QLoRA 适配辅助模型，改善行业术语、场景分类和关键要素抽取。…20556 tokens truncated…ess",
                 "to": "api",
                 "label": "认证请求 / 返回",
                 "kind": "call",
