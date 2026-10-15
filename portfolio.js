@@ -1,9 +1,9 @@
-import {renderArchitecture,renderResponsiveArchitecture,renderFocusedArchitecture,layoutFocusedArchitecture,componentType} from './portfolio-diagrams.mjs?v=technical-19';
-import {createDialogStarfield} from './dialog-background.js?v=technical-19';
+import {renderArchitecture,renderResponsiveArchitecture,renderFocusedArchitecture,layoutFocusedArchitecture,componentType} from './portfolio-diagrams.mjs?v=technical-20';
+import {createDialogStarfield} from './dialog-background.js?v=technical-20';
 
 (async () => {
   'use strict';
-  const data = await fetch(new URL('./portfolio-data.json?v=technical-19',import.meta.url)).then(response => {
+  const data = await fetch(new URL('./portfolio-data.json?v=technical-20',import.meta.url)).then(response => {
     if (!response.ok) throw new Error('项目资料读取失败');
     return response.json();
   });
