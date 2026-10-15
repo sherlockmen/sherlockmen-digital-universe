@@ -54,5 +54,4 @@ main>section{position:relative;z-index:1}.site-header.is-scrolled{background:lin
 .about-links .mono{font-size:9px;letter-spacing:.08em;color:#8fa6b8}
 .about-links a:hover{color:#fff}
 .about-links a:focus-visible{outline:2px solid #bedbf2;outline-offset:5px}
-.about-links a>span:last-child{font-size:16px}
 @media(max-width:680px){.about-links{flex-direction:column;gap:4px;margin-top:22px}.about-links a{font-size:14px}.about .about-identity .about-subtitle{max-width:35ch;line-height:1.8}}

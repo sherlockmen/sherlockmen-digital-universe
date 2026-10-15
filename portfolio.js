@@ -264,7 +264,7 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-21';
     const referenceLinks = create('nav','portfolio-reference-links');
     referenceLinks.setAttribute('aria-label','相关技术资料');
     (project.links || []).forEach(link => {
-      const anchor = create('a','',`${link.label} ↗`);
+      const anchor = create('a','',link.label);
       anchor.href = link.url; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer';
       referenceLinks.append(anchor);
     });
@@ -316,8 +316,7 @@ import {createDialogStarfield} from './dialog-background.js?v=technical-21';
       const title = document.createElement('strong'); title.textContent = project.title;
       const summary = document.createElement('span'); summary.textContent = project.summary;
       copy.append(title,summary);
-      const arrow = document.createElement('span'); arrow.className = 'project-open'; arrow.textContent = '↗'; arrow.setAttribute('aria-hidden','true');
-      item.append(number,copy,arrow); return item;
+      item.append(number,copy); return item;
     }));
     panel.hidden = false;
     panel.scrollIntoView({behavior:reduced.matches || event.detail === 0 ? 'instant' : 'smooth',block:'nearest'});
