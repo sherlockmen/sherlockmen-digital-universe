@@ -20,7 +20,7 @@
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
-  fetch('https://busuanzi.9420.ltd/api', {
+  fetch('https://bsz.iirose.cn/api', {
     method: 'POST',
     credentials: 'omit',
     referrerPolicy: 'no-referrer',
