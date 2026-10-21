@@ -45,6 +45,14 @@ main>section{position:relative;z-index:1}.site-header.is-scrolled{background:lin
 .about-focus>div{min-width:0}.about-focus dt{font-size:17px;line-height:1.6;color:#e4edf3}.about-focus .mono{display:block;font-size:9px;color:#8fa6b8;letter-spacing:.08em;margin-bottom:12px}.about-focus dd{font-size:16px;line-height:1.75;color:#a8b4bd;margin:12px 0 0;text-wrap:pretty}
 @media(max-width:680px){.about .about-identity .about-lead{font-size:29px}.about-facts{grid-template-columns:1fr;gap:16px}.about-facts>div{display:grid;grid-template-columns:90px minmax(0,1fr);gap:16px;align-items:baseline}.about-facts dd{margin:0;font-size:16px}.about-focus{grid-template-columns:1fr;gap:26px}.about-focus>div+div{border-top:1px solid #bedbf21a;padding-top:24px}.about-focus .mono{margin-bottom:8px}.about-focus dd{margin-top:8px}}
 
+/* Footer statistics share the page's quiet, compact typography. */
+.footer-meta{display:grid;gap:10px;text-align:center}
+.footer-meta>.mono{font-size:8px;color:var(--muted)}
+.visitor-stats{display:flex;justify-content:center;flex-wrap:wrap;gap:8px 22px;font-size:11px;line-height:1.6;color:var(--muted)}
+.visitor-stats>span{display:inline-flex;align-items:baseline;gap:8px;white-space:nowrap}
+.visitor-stats strong{font-weight:400;font-variant-numeric:tabular-nums;color:var(--ink)}
+@media(max-width:680px){.footer-meta{grid-column:1/-1;grid-row:2;text-align:left}.visitor-stats{justify-content:flex-start}}
+
 /* Profile links and the GitHub navigation entry. */
 .desktop-nav .nav-github,.mobile-nav .nav-github{display:inline-flex;align-items:center;gap:8px}
 .nav-github svg{flex:none}
